@@ -1,10 +1,107 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface AuthProps {
   onNavigateHome: () => void;
 }
 
+type AuthMode = 'login' | 'signup';
+
 const Auth: React.FC<AuthProps> = ({ onNavigateHome }) => {
+  const [mode, setMode] = useState<AuthMode>('login');
+  
+  // Form State
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+    username: ''
+  });
+
+  // Validation State
+  const [errors, setErrors] = useState({
+    email: '',
+    password: '',
+    username: ''
+  });
+
+  const [touched, setTouched] = useState({
+    email: false,
+    password: false,
+    username: false
+  });
+
+  // Reset form when switching modes
+  useEffect(() => {
+    setErrors({ email: '', password: '', username: '' });
+    setTouched({ email: false, password: false, username: false });
+    setFormData({ email: '', password: '', username: '' });
+  }, [mode]);
+
+  const validateField = (name: string, value: string) => {
+    let error = '';
+    switch (name) {
+      case 'email':
+        if (!value) error = 'Email is required';
+        else if (!/\S+@\S+\.\S+/.test(value)) error = 'Please enter a valid email address';
+        break;
+      case 'password':
+        if (!value) error = 'Password is required';
+        else if (value.length < 8) error = 'Password must be at least 8 characters';
+        break;
+      case 'username':
+        if (mode === 'signup') {
+          if (!value) error = 'Username is required';
+          else if (value.length < 3) error = 'Username must be at least 3 characters';
+        }
+        break;
+    }
+    return error;
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Clear error immediately when user types
+    if (errors[name as keyof typeof errors]) {
+      setErrors(prev => ({ ...prev, [name]: '' }));
+    }
+  };
+
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setTouched(prev => ({ ...prev, [name]: true }));
+    const error = validateField(name, value);
+    setErrors(prev => ({ ...prev, [name]: error }));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Validate all fields
+    const emailError = validateField('email', formData.email);
+    const passwordError = validateField('password', formData.password);
+    const usernameError = validateField('username', formData.username);
+
+    setErrors({
+      email: emailError,
+      password: passwordError,
+      username: usernameError
+    });
+
+    setTouched({
+      email: true,
+      password: true,
+      username: true
+    });
+
+    // Check if valid
+    if (!emailError && !passwordError && (mode === 'login' || !usernameError)) {
+      console.log('Form Submitted:', formData);
+      // Here you would typically call your API
+      onNavigateHome();
+    }
+  };
+
   return (
     <div className="bg-background-dark text-white min-h-screen flex relative overflow-hidden selection:bg-primary selection:text-black font-sans">
       <div className="fixed inset-0 grid-bg pointer-events-none z-0"></div>
@@ -60,7 +157,7 @@ const Auth: React.FC<AuthProps> = ({ onNavigateHome }) => {
           </div>
         </div>
 
-        {/* Right Section - Login Form */}
+        {/* Right Section - Login/Signup Form */}
         <div className="w-full lg:w-1/2 flex flex-col relative bg-background-dark/95 backdrop-blur-sm border-l border-white/5">
           <div className="absolute top-0 left-0 p-8 w-full flex justify-between items-center z-10">
             <div className="flex items-center gap-3 cursor-pointer group" onClick={onNavigateHome}>
@@ -75,50 +172,116 @@ const Auth: React.FC<AuthProps> = ({ onNavigateHome }) => {
           <div className="flex-grow flex items-center justify-center px-6 sm:px-12 md:px-24">
             <div className="w-full max-w-md space-y-8 animate-fade-in-up">
               <div className="space-y-2">
-                <h1 className="text-4xl font-medium tracking-tight text-white">Welcome back</h1>
-                <p className="text-gray-400 text-sm">Sign in to access your Strategy Lab and Analytics.</p>
+                <h1 className="text-4xl font-medium tracking-tight text-white">
+                  {mode === 'login' ? 'Welcome back' : 'Create an account'}
+                </h1>
+                <p className="text-gray-400 text-sm">
+                  {mode === 'login' 
+                    ? 'Sign in to access your Strategy Lab and Analytics.' 
+                    : 'Join thousands of coaches optimizing their gameplay.'}
+                </p>
               </div>
 
-              <form action="#" className="space-y-5" method="POST" onSubmit={(e) => e.preventDefault()}>
+              <form action="#" className="space-y-5" method="POST" onSubmit={handleSubmit} noValidate>
                 <div className="space-y-5">
+                  
+                  {/* Username Field - Only visible in Signup */}
+                  {mode === 'signup' && (
+                    <div className="group animate-fade-in-up">
+                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2 ml-1 group-focus-within:text-primary transition-colors" htmlFor="username">
+                        Username
+                      </label>
+                      <div className="relative">
+                        <span className={`material-icons absolute left-4 top-1/2 -translate-y-1/2 text-lg transition-colors ${errors.username && touched.username ? 'text-red-400' : 'text-gray-500'}`}>person</span>
+                        <input 
+                          autoComplete="username" 
+                          className={`appearance-none block w-full pl-11 pr-4 py-3.5 bg-surface-dark border placeholder-gray-600 text-white rounded-lg focus:outline-none focus:ring-1 sm:text-sm transition-all duration-200 
+                            ${errors.username && touched.username 
+                              ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
+                              : 'border-gray-800 focus:ring-primary focus:border-primary'}`}
+                          id="username" 
+                          name="username" 
+                          placeholder="MetaCoachUser"
+                          value={formData.username}
+                          onChange={handleChange}
+                          onBlur={handleBlur}
+                          required 
+                          type="text"
+                        />
+                      </div>
+                      {errors.username && touched.username && (
+                        <p className="ml-1 mt-1 text-xs text-red-400 animate-fade-in-up">{errors.username}</p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Email Field */}
                   <div className="group">
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2 ml-1 group-focus-within:text-primary transition-colors" htmlFor="email">Email Address</label>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2 ml-1 group-focus-within:text-primary transition-colors" htmlFor="email">
+                      Email Address
+                    </label>
                     <div className="relative">
-                      <span className="material-icons absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-lg">mail</span>
+                      <span className={`material-icons absolute left-4 top-1/2 -translate-y-1/2 text-lg transition-colors ${errors.email && touched.email ? 'text-red-400' : 'text-gray-500'}`}>mail</span>
                       <input 
                         autoComplete="email" 
-                        className="appearance-none block w-full pl-11 pr-4 py-3.5 bg-surface-dark border border-gray-800 placeholder-gray-600 text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary sm:text-sm transition-all duration-200" 
+                        className={`appearance-none block w-full pl-11 pr-4 py-3.5 bg-surface-dark border placeholder-gray-600 text-white rounded-lg focus:outline-none focus:ring-1 sm:text-sm transition-all duration-200 
+                          ${errors.email && touched.email 
+                            ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
+                            : 'border-gray-800 focus:ring-primary focus:border-primary'}`}
                         id="email" 
                         name="email" 
                         placeholder="coach@metacoach.gg" 
+                        value={formData.email}
+                        onChange={handleChange}
+                        onBlur={handleBlur}
                         required 
                         type="email"
                       />
                     </div>
+                    {errors.email && touched.email && (
+                      <p className="ml-1 mt-1 text-xs text-red-400 animate-fade-in-up">{errors.email}</p>
+                    )}
                   </div>
 
+                  {/* Password Field */}
                   <div className="group">
                     <div className="flex items-center justify-between mb-2 ml-1">
-                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest group-focus-within:text-primary transition-colors" htmlFor="password">Password</label>
-                      <a className="text-xs font-medium text-gray-400 hover:text-primary transition-colors cursor-pointer">Forgot password?</a>
+                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest group-focus-within:text-primary transition-colors" htmlFor="password">
+                        Password
+                      </label>
+                      {mode === 'login' && (
+                        <a className="text-xs font-medium text-gray-400 hover:text-primary transition-colors cursor-pointer">Forgot password?</a>
+                      )}
                     </div>
                     <div className="relative">
-                      <span className="material-icons absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-lg">lock</span>
+                      <span className={`material-icons absolute left-4 top-1/2 -translate-y-1/2 text-lg transition-colors ${errors.password && touched.password ? 'text-red-400' : 'text-gray-500'}`}>lock</span>
                       <input 
-                        autoComplete="current-password" 
-                        className="appearance-none block w-full pl-11 pr-4 py-3.5 bg-surface-dark border border-gray-800 placeholder-gray-600 text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary sm:text-sm transition-all duration-200" 
+                        autoComplete={mode === 'login' ? "current-password" : "new-password"}
+                        className={`appearance-none block w-full pl-11 pr-4 py-3.5 bg-surface-dark border placeholder-gray-600 text-white rounded-lg focus:outline-none focus:ring-1 sm:text-sm transition-all duration-200 
+                          ${errors.password && touched.password 
+                            ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
+                            : 'border-gray-800 focus:ring-primary focus:border-primary'}`}
                         id="password" 
                         name="password" 
                         placeholder="••••••••" 
+                        value={formData.password}
+                        onChange={handleChange}
+                        onBlur={handleBlur}
                         required 
                         type="password"
                       />
                     </div>
+                    {errors.password && touched.password && (
+                      <p className="ml-1 mt-1 text-xs text-red-400 animate-fade-in-up">{errors.password}</p>
+                    )}
                   </div>
                 </div>
 
-                <button className="w-full flex justify-center items-center gap-2 py-4 px-4 border border-transparent rounded-lg shadow-[0_0_20px_rgba(210,249,111,0.2)] text-sm font-bold text-black bg-primary hover:bg-primary-hover hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary focus:ring-offset-gray-900 transition-all duration-200 uppercase tracking-widest mt-6" type="submit">
-                  <span>Sign In</span>
+                <button 
+                  className="w-full flex justify-center items-center gap-2 py-4 px-4 border border-transparent rounded-lg shadow-[0_0_20px_rgba(210,249,111,0.2)] text-sm font-bold text-black bg-primary hover:bg-primary-hover hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary focus:ring-offset-gray-900 transition-all duration-200 uppercase tracking-widest mt-6" 
+                  type="submit"
+                >
+                  <span>{mode === 'login' ? 'Sign In' : 'Create Account'}</span>
                   <span className="material-icons text-sm font-bold">arrow_forward</span>
                 </button>
               </form>
@@ -148,8 +311,13 @@ const Auth: React.FC<AuthProps> = ({ onNavigateHome }) => {
               </div>
               
               <p className="text-center text-sm text-gray-500">
-                Don't have an account? 
-                <a className="font-bold text-primary hover:text-primary-hover hover:underline transition-all cursor-pointer">Create account</a>
+                {mode === 'login' ? "Don't have an account?" : "Already have an account?"}{" "}
+                <a 
+                  className="font-bold text-primary hover:text-primary-hover hover:underline transition-all cursor-pointer"
+                  onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
+                >
+                  {mode === 'login' ? 'Create account' : 'Sign in'}
+                </a>
               </p>
             </div>
           </div>
