@@ -4,7 +4,7 @@ interface AuthProps {
   onNavigateHome: () => void;
 }
 
-type AuthMode = 'login' | 'signup';
+type AuthMode = 'login' | 'signup' | 'forgot-password';
 
 const Auth: React.FC<AuthProps> = ({ onNavigateHome }) => {
   const [mode, setMode] = useState<AuthMode>('login');
@@ -15,6 +15,8 @@ const Auth: React.FC<AuthProps> = ({ onNavigateHome }) => {
     password: '',
     username: ''
   });
+
+  const [rememberMe, setRememberMe] = useState(false);
 
   // Validation State
   const [errors, setErrors] = useState({
@@ -34,6 +36,7 @@ const Auth: React.FC<AuthProps> = ({ onNavigateHome }) => {
     setErrors({ email: '', password: '', username: '' });
     setTouched({ email: false, password: false, username: false });
     setFormData({ email: '', password: '', username: '' });
+    // Don't reset rememberMe when switching modes
   }, [mode]);
 
   const validateField = (name: string, value: string) => {
@@ -79,7 +82,7 @@ const Auth: React.FC<AuthProps> = ({ onNavigateHome }) => {
     
     // Validate all fields
     const emailError = validateField('email', formData.email);
-    const passwordError = validateField('password', formData.password);
+    const passwordError = mode === 'forgot-password' ? '' : validateField('password', formData.password);
     const usernameError = validateField('username', formData.username);
 
     setErrors({
@@ -95,8 +98,13 @@ const Auth: React.FC<AuthProps> = ({ onNavigateHome }) => {
     });
 
     // Check if valid
-    if (!emailError && !passwordError && (mode === 'login' || !usernameError)) {
-      console.log('Form Submitted:', formData);
+    if (mode === 'forgot-password') {
+      if (!emailError) {
+        console.log('Forgot Password Submitted:', { email: formData.email });
+        // Here you would typically call your password reset API
+      }
+    } else if (!emailError && !passwordError && (mode === 'login' || !usernameError)) {
+      console.log('Form Submitted:', { ...formData, rememberMe: mode === 'login' ? rememberMe : undefined });
       // Here you would typically call your API
       onNavigateHome();
     }
@@ -172,13 +180,15 @@ const Auth: React.FC<AuthProps> = ({ onNavigateHome }) => {
           <div className="flex-grow flex items-center justify-center px-6 sm:px-12 md:px-24">
             <div className="w-full max-w-md space-y-8 animate-fade-in-up">
               <div className="space-y-2">
-                <h1 className="text-4xl font-medium tracking-tight text-white">
-                  {mode === 'login' ? 'Welcome back' : 'Create an account'}
+                <h1 className="text-4xl font-medium tracking-tight text-white animate-fade-in-up">
+                  {mode === 'login' && 'Welcome back'}
+                  {mode === 'signup' && 'Create an account'}
+                  {mode === 'forgot-password' && 'Reset Password'}
                 </h1>
-                <p className="text-gray-400 text-sm">
-                  {mode === 'login' 
-                    ? 'Sign in to access your Strategy Lab and Analytics.' 
-                    : 'Join thousands of coaches optimizing their gameplay.'}
+                <p className="text-gray-400 text-sm animate-fade-in-up delay-75">
+                  {mode === 'login' && 'Sign in to access your Strategy Lab and Analytics.'}
+                  {mode === 'signup' && 'Join thousands of coaches optimizing their gameplay.'}
+                  {mode === 'forgot-password' && 'Enter your email to receive reset instructions.'}
                 </p>
               </div>
 
@@ -243,45 +253,73 @@ const Auth: React.FC<AuthProps> = ({ onNavigateHome }) => {
                     )}
                   </div>
 
-                  {/* Password Field */}
-                  <div className="group">
-                    <div className="flex items-center justify-between mb-2 ml-1">
-                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest group-focus-within:text-primary transition-colors" htmlFor="password">
-                        Password
-                      </label>
-                      {mode === 'login' && (
-                        <a className="text-xs font-medium text-gray-400 hover:text-primary transition-colors cursor-pointer">Forgot password?</a>
+                  {/* Password Field - Hidden in Forgot Password mode */}
+                  {mode !== 'forgot-password' && (
+                    <div className="group animate-fade-in-up delay-100">
+                      <div className="flex items-center justify-between mb-2 ml-1">
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest group-focus-within:text-primary transition-colors" htmlFor="password">
+                          Password
+                        </label>
+                        {mode === 'login' && (
+                          <a 
+                            className="text-xs font-medium text-gray-400 hover:text-primary transition-colors cursor-pointer"
+                            onClick={() => setMode('forgot-password')}
+                          >
+                            Forgot password?
+                          </a>
+                        )}
+                      </div>
+                      <div className="relative">
+                        <span className={`material-icons absolute left-4 top-1/2 -translate-y-1/2 text-lg transition-colors ${errors.password && touched.password ? 'text-red-400' : 'text-gray-500'}`}>lock</span>
+                        <input 
+                          autoComplete={mode === 'login' ? "current-password" : "new-password"}
+                          className={`appearance-none block w-full pl-11 pr-4 py-3.5 bg-surface-dark border placeholder-gray-600 text-white rounded-lg focus:outline-none focus:ring-1 sm:text-sm transition-all duration-200 
+                            ${errors.password && touched.password 
+                              ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
+                              : 'border-gray-800 focus:ring-primary focus:border-primary'}`}
+                          id="password" 
+                          name="password" 
+                          placeholder="••••••••" 
+                          value={formData.password}
+                          onChange={handleChange}
+                          onBlur={handleBlur}
+                          required={mode !== 'forgot-password'} 
+                          type="password"
+                        />
+                      </div>
+                      {errors.password && touched.password && (
+                        <p className="ml-1 mt-1 text-xs text-red-400 animate-fade-in-up">{errors.password}</p>
                       )}
                     </div>
-                    <div className="relative">
-                      <span className={`material-icons absolute left-4 top-1/2 -translate-y-1/2 text-lg transition-colors ${errors.password && touched.password ? 'text-red-400' : 'text-gray-500'}`}>lock</span>
-                      <input 
-                        autoComplete={mode === 'login' ? "current-password" : "new-password"}
-                        className={`appearance-none block w-full pl-11 pr-4 py-3.5 bg-surface-dark border placeholder-gray-600 text-white rounded-lg focus:outline-none focus:ring-1 sm:text-sm transition-all duration-200 
-                          ${errors.password && touched.password 
-                            ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
-                            : 'border-gray-800 focus:ring-primary focus:border-primary'}`}
-                        id="password" 
-                        name="password" 
-                        placeholder="••••••••" 
-                        value={formData.password}
-                        onChange={handleChange}
-                        onBlur={handleBlur}
-                        required 
-                        type="password"
+                  )}
+
+                  {/* Remember Me Checkbox - Only in Login mode */}
+                  {mode === 'login' && (
+                    <div className="flex items-center animate-fade-in-up delay-150">
+                      <input
+                        id="remember-me"
+                        name="remember-me"
+                        type="checkbox"
+                        checked={rememberMe}
+                        onChange={(e) => setRememberMe(e.target.checked)}
+                        className="h-4 w-4 text-primary focus:ring-primary border-gray-700 rounded bg-surface-dark cursor-pointer accent-primary"
                       />
+                      <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-400 cursor-pointer hover:text-gray-300 select-none">
+                        Remember me
+                      </label>
                     </div>
-                    {errors.password && touched.password && (
-                      <p className="ml-1 mt-1 text-xs text-red-400 animate-fade-in-up">{errors.password}</p>
-                    )}
-                  </div>
+                  )}
                 </div>
 
                 <button 
                   className="w-full flex justify-center items-center gap-2 py-4 px-4 border border-transparent rounded-lg shadow-[0_0_20px_rgba(210,249,111,0.2)] text-sm font-bold text-black bg-primary hover:bg-primary-hover hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary focus:ring-offset-gray-900 transition-all duration-200 uppercase tracking-widest mt-6" 
                   type="submit"
                 >
-                  <span>{mode === 'login' ? 'Sign In' : 'Create Account'}</span>
+                  <span>
+                    {mode === 'login' && 'Sign In'}
+                    {mode === 'signup' && 'Create Account'}
+                    {mode === 'forgot-password' && 'Send Reset Link'}
+                  </span>
                   <span className="material-icons text-sm font-bold">arrow_forward</span>
                 </button>
               </form>
@@ -311,12 +349,16 @@ const Auth: React.FC<AuthProps> = ({ onNavigateHome }) => {
               </div>
               
               <p className="text-center text-sm text-gray-500">
-                {mode === 'login' ? "Don't have an account?" : "Already have an account?"}{" "}
+                {mode === 'login' && "Don't have an account? "}
+                {mode === 'signup' && "Already have an account? "}
+                {mode === 'forgot-password' && "Remember your password? "}
                 <a 
                   className="font-bold text-primary hover:text-primary-hover hover:underline transition-all cursor-pointer"
                   onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
                 >
-                  {mode === 'login' ? 'Create account' : 'Sign in'}
+                  {mode === 'login' && 'Create account'}
+                  {mode === 'signup' && 'Sign in'}
+                  {mode === 'forgot-password' && 'Back to Sign In'}
                 </a>
               </p>
             </div>
