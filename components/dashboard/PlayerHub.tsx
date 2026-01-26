@@ -3,7 +3,7 @@ import React from 'react';
 const PlayerHub: React.FC = () => {
     return (
         <div className="flex flex-col min-h-[calc(100vh-90px)]">
-            <header className="flex justify-between items-end mb-10">
+            <header className="flex flex-col md:flex-row justify-between items-start md:items-end mb-10 gap-4">
                 <div>
                     <div className="flex items-center gap-2 mb-1">
                         <span className="text-primary font-mono text-xs uppercase tracking-wider">Roster Management</span>
@@ -12,11 +12,11 @@ const PlayerHub: React.FC = () => {
                     </div>
                     <h1 className="text-4xl font-bold text-white tracking-tight">C9 <span className="text-gray-500">Blaber</span></h1>
                 </div>
-                <div className="flex items-center gap-3">
-                    <button className="flex items-center gap-2 px-4 py-2 rounded-lg border border-white/10 bg-surface-dark hover:border-primary/50 hover:text-white text-gray-400 text-sm transition cursor-pointer">
+                <div className="flex items-center gap-3 w-full md:w-auto">
+                    <button className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-white/10 bg-surface-dark hover:border-primary/50 hover:text-white text-gray-400 text-sm transition cursor-pointer">
                         <span className="material-icons-outlined text-sm">compare_arrows</span> Compare
                     </button>
-                    <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-black font-bold text-sm hover:bg-primary-dark transition shadow-[0_0_5px_rgba(210,249,111,0.3),0_0_15px_rgba(210,249,111,0.1)] cursor-pointer">
+                    <button className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-primary text-black font-bold text-sm hover:bg-primary-dark transition shadow-[0_0_5px_rgba(210,249,111,0.3),0_0_15px_rgba(210,249,111,0.1)] cursor-pointer">
                         <span className="material-icons-outlined text-sm">edit</span> Edit Attributes
                     </button>
                 </div>
@@ -76,7 +76,7 @@ const PlayerHub: React.FC = () => {
                     <div className="absolute w-[500px] h-[500px] bg-primary/5 rounded-full blur-[100px] top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
 
                     {/* Player Card */}
-                    <div className="relative w-[320px] h-[480px] shrink-0 z-10 perspective-1000 group">
+                    <div className="relative w-full max-w-[320px] h-[480px] shrink-0 z-10 perspective-1000 group">
                         <div className="w-full h-full relative transition-transform duration-500 transform group-hover:scale-105">
                             <div className="absolute inset-0 bg-gradient-to-br from-yellow-100/20 via-primary/10 to-black rounded-t-2xl rounded-b-[4rem] border border-primary/40 shadow-[0_0_10px_rgba(210,249,111,0.5),0_0_30px_rgba(210,249,111,0.2)] backdrop-blur-sm"></div>
                             <div className="absolute inset-1 bg-gradient-to-b from-[#1F221B] via-[#0E100A] to-[#050604] rounded-t-xl rounded-b-[3.8rem] overflow-hidden flex flex-col">

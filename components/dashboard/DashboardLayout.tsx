@@ -28,7 +28,7 @@ const DashboardLayout: React.FC = () => {
                 ></div>
             )}
 
-            <nav className="flex items-center justify-between px-6 py-5 bg-transparent w-full max-w-[1600px] mx-auto relative z-50">
+            <nav className="flex items-center justify-between px-4 md:px-6 py-5 bg-transparent w-full max-w-[1600px] mx-auto relative z-50">
                 <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center transform rotate-45 shadow-neon">
                         <span className="material-icons-outlined text-black transform -rotate-45 text-lg">sports_esports</span>
@@ -36,17 +36,32 @@ const DashboardLayout: React.FC = () => {
                     <span className="text-xl font-bold tracking-tight text-white">MetaCoach</span>
                 </div>
 
-                <div className="hidden md:flex items-center bg-surface-dark rounded-full p-1.5 shadow-sm border border-white/5">
+                {/* Desktop Nav */}
+                <div className="hidden lg:flex items-center bg-surface-dark rounded-full p-1.5 shadow-sm border border-white/5">
                     <NavItem to="/dashboard" end>Dashboard</NavItem>
-
                     <NavItem to="/dashboard/match-history">Match History</NavItem>
                     <NavItem to="/dashboard/player-hub">Player Hub</NavItem>
                     <NavItem to="/dashboard/strategy-lab">Strategy Lab</NavItem>
                     <NavItem to="/dashboard/settings">Settings</NavItem>
                 </div>
 
-                <div className="flex items-center gap-4">
-                    {/* Search button (restored from HTML or just kept as placeholder if previously removed) */}
+                <div className="flex items-center gap-2 md:gap-4">
+                    {/* Mobile Menu Toggle */}
+                    <div className="lg:hidden relative group">
+                        <button className="w-10 h-10 rounded-full bg-surface-dark border border-white/10 flex items-center justify-center text-gray-400 hover:text-white hover:border-white/30 transition peer">
+                            <span className="material-icons-outlined">menu</span>
+                        </button>
+                        {/* Mobile Dropdown */}
+                        <div className="absolute top-full right-0 mt-2 w-56 bg-[#1A1C14] border border-white/10 rounded-xl shadow-2xl overflow-hidden hidden peer-focus-within:block hover:block z-50">
+                            <div className="flex flex-col p-2 space-y-1">
+                                <NavLink to="/dashboard" end className={({ isActive }) => `px-4 py-3 rounded-lg text-sm font-medium transition ${isActive ? 'bg-primary/10 text-primary' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}>Dashboard</NavLink>
+                                <NavLink to="/dashboard/match-history" className={({ isActive }) => `px-4 py-3 rounded-lg text-sm font-medium transition ${isActive ? 'bg-primary/10 text-primary' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}>Match History</NavLink>
+                                <NavLink to="/dashboard/player-hub" className={({ isActive }) => `px-4 py-3 rounded-lg text-sm font-medium transition ${isActive ? 'bg-primary/10 text-primary' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}>Player Hub</NavLink>
+                                <NavLink to="/dashboard/strategy-lab" className={({ isActive }) => `px-4 py-3 rounded-lg text-sm font-medium transition ${isActive ? 'bg-primary/10 text-primary' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}>Strategy Lab</NavLink>
+                                <NavLink to="/dashboard/settings" className={({ isActive }) => `px-4 py-3 rounded-lg text-sm font-medium transition ${isActive ? 'bg-primary/10 text-primary' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}>Settings</NavLink>
+                            </div>
+                        </div>
+                    </div>
 
 
                     {/* Notification Button & Dropdown */}
@@ -63,7 +78,7 @@ const DashboardLayout: React.FC = () => {
                         </button>
 
                         {showNotifications && (
-                            <div className="absolute top-full right-0 mt-3 w-96 bg-[#1A1C14] border border-[#D2F96F]/30 rounded-xl shadow-[0_0_50px_rgba(0,0,0,0.8),0_0_15px_rgba(210,249,111,0.1)] overflow-hidden animate-fade-in backdrop-blur-xl">
+                            <div className="absolute top-full right-0 mt-3 w-80 md:w-96 bg-[#1A1C14] border border-[#D2F96F]/30 rounded-xl shadow-[0_0_50px_rgba(0,0,0,0.8),0_0_15px_rgba(210,249,111,0.1)] overflow-hidden animate-fade-in backdrop-blur-xl z-50">
                                 <div className="flex items-center justify-between px-5 py-4 border-b border-white/5 bg-[#141610]">
                                     <h3 className="font-bold text-white text-sm flex items-center gap-2">
                                         AI Coaching Alerts
@@ -137,7 +152,7 @@ const DashboardLayout: React.FC = () => {
                 </div>
             </nav>
 
-            <main className="px-6 pb-10 w-full max-w-[1600px] mx-auto relative z-10">
+            <main className="px-4 md:px-6 pb-10 w-full max-w-[1600px] mx-auto relative z-10">
                 <Outlet />
             </main>
         </div>

@@ -2,7 +2,7 @@ import React from 'react';
 
 const StrategyLab: React.FC = () => {
     return (
-        <div className="flex flex-col h-[calc(100vh-90px)] min-h-[800px]">
+        <div className="flex flex-col h-auto lg:h-[calc(100vh-90px)] min-h-[800px]">
             {/* Custom Styles for Map and Animations */}
             <style>{`
                 .grid-bg {

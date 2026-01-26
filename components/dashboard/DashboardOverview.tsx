@@ -19,9 +19,9 @@ const DashboardOverview: React.FC = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-auto lg:h-[700px]">
                 {/* Column 1 (Left) */}
-                <div className="lg:col-span-3 flex flex-col gap-6 h-full">
+                <div className="lg:col-span-3 flex flex-col gap-6 h-auto lg:h-full">
                     {/* Upcoming Match Card */}
-                    <div className="bg-surface-dark rounded-2xl p-6 shadow-glow border border-border-lime flex flex-col justify-between relative overflow-hidden h-1/2 group">
+                    <div className="bg-surface-dark rounded-2xl p-6 shadow-glow border border-border-lime flex flex-col justify-between relative overflow-hidden h-[300px] lg:h-1/2 group">
                         <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
                             <span className="material-icons-outlined text-6xl text-white">emoji_events</span>
                         </div>
@@ -63,7 +63,7 @@ const DashboardOverview: React.FC = () => {
                     </div>
 
                     {/* Recent Scrims */}
-                    <div className="bg-surface-dark rounded-2xl p-5 shadow-lg border border-white/5 flex-1 flex flex-col overflow-hidden h-1/2">
+                    <div className="bg-surface-dark rounded-2xl p-5 shadow-lg border border-white/5 flex-1 flex flex-col overflow-hidden h-[300px] lg:h-1/2">
                         <div className="flex justify-between items-center mb-4">
                             <h3 className="font-semibold text-white">Recent Scrims</h3>
                             <a className="text-xs text-gray-500 hover:text-primary transition" href="#">View All</a>
@@ -122,9 +122,9 @@ const DashboardOverview: React.FC = () => {
                 </div>
 
                 {/* Column 2 (Center) */}
-                <div className="lg:col-span-6 flex flex-col gap-6 h-full">
+                <div className="lg:col-span-6 flex flex-col gap-6 h-auto lg:h-full">
                     {/* Live Telemetry Map */}
-                    <div className="bg-surface-dark rounded-2xl p-0 shadow-glow border border-white/10 relative overflow-hidden h-[60%] group">
+                    <div className="bg-surface-dark rounded-2xl p-0 shadow-glow border border-white/10 relative overflow-hidden h-[400px] lg:h-[60%] group">
                         <div className="absolute inset-0 map-bg opacity-100 z-0"></div>
                         <div className="absolute top-4 left-4 z-10 bg-black/60 backdrop-blur-md border border-white/10 p-2 rounded-lg">
                             <div className="flex items-center gap-2">
@@ -167,7 +167,7 @@ const DashboardOverview: React.FC = () => {
                     </div>
 
                     {/* AI Analysis List */}
-                    <div className="bg-surface-dark rounded-2xl p-5 shadow-lg border border-white/5 flex-1 overflow-hidden h-[40%]">
+                    <div className="bg-surface-dark rounded-2xl p-5 shadow-lg border border-white/5 flex-1 overflow-hidden h-[300px] lg:h-[40%]">
                         <div className="flex justify-between items-center mb-4">
                             <h3 className="font-semibold text-white">AI Analysis: High-Impact Plays</h3>
                             <div className="flex gap-4 text-xs text-gray-500 font-mono">
@@ -231,7 +231,7 @@ const DashboardOverview: React.FC = () => {
                 </div>
 
                 {/* Column 3 (Right) - Active Roster */}
-                <div className="lg:col-span-3 h-full">
+                <div className="lg:col-span-3 h-auto lg:h-full">
                     <div className="bg-surface-dark rounded-2xl p-6 shadow-glow border border-white/5 h-full flex flex-col relative overflow-hidden text-white">
                         <div className="absolute top-0 left-0 w-full h-40 bg-gradient-to-b from-primary/5 to-transparent rounded-full blur-3xl -translate-y-20"></div>
                         <div className="flex justify-between items-start mb-6 z-10">
