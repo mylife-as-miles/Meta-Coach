@@ -369,14 +369,7 @@ const DashboardOverview: React.FC = () => {
                 </div>
             </div>
 
-            {/* Footer */}
-            <div className="mt-6 flex flex-col md:flex-row justify-between items-center text-xs text-gray-500 border-t border-white/10 pt-6">
-                <p>© 2024 MetaCoach AI Analytics. Connected to Riot Games API.</p>
-                <div className="flex gap-4 mt-2 md:mt-0 font-mono">
-                    <a className="hover:text-primary transition" href="#">System Status: <span className="text-green-500">Stable</span></a>
-                    <a className="hover:text-primary transition" href="#">Latency: <span className="text-white">12ms</span></a>
-                </div>
-            </div>
+
         </>
     );
 };
