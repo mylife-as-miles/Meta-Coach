@@ -16,9 +16,19 @@ const NavItem = ({ to, children, end = false }: { to: string, children: React.Re
 );
 
 const DashboardLayout: React.FC = () => {
+    const [showNotifications, setShowNotifications] = React.useState(false);
+
     return (
-        <div className="bg-background-dark text-text-light font-sans min-h-screen">
-            <nav className="flex items-center justify-between px-6 py-5 bg-transparent w-full max-w-[1600px] mx-auto">
+        <div className="bg-background-dark text-text-light font-sans min-h-screen relative">
+            {/* Backdrop Overlay */}
+            {showNotifications && (
+                <div
+                    className="fixed inset-0 bg-[#0E100A]/70 backdrop-blur-[2px] z-40 transition-opacity duration-300"
+                    onClick={() => setShowNotifications(false)}
+                ></div>
+            )}
+
+            <nav className="flex items-center justify-between px-6 py-5 bg-transparent w-full max-w-[1600px] mx-auto relative z-50">
                 <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center transform rotate-45 shadow-neon">
                         <span className="material-icons-outlined text-black transform -rotate-45 text-lg">sports_esports</span>
@@ -35,11 +45,79 @@ const DashboardLayout: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-4">
-                    {/* Search button removed */}
+                    {/* Search button (restored from HTML or just kept as placeholder if previously removed) */}
                     <button className="w-10 h-10 rounded-full bg-surface-dark border border-white/10 flex items-center justify-center text-gray-400 hover:text-primary hover:border-primary/50 transition relative">
-                        <span className="material-icons-outlined text-sm">notifications</span>
-                        <span className="absolute top-2 right-2.5 w-1.5 h-1.5 bg-primary rounded-full shadow-neon"></span>
+                        <span className="material-icons-outlined text-sm">search</span>
                     </button>
+
+                    {/* Notification Button & Dropdown */}
+                    <div className="relative">
+                        <button
+                            onClick={() => setShowNotifications(!showNotifications)}
+                            className={`w-10 h-10 rounded-full flex items-center justify-center transition relative ${showNotifications
+                                    ? 'bg-surface-dark border border-primary text-primary shadow-[0_0_10px_rgba(210,249,111,0.3)]'
+                                    : 'bg-surface-dark border border-white/10 text-gray-400 hover:text-primary hover:border-primary/50'
+                                }`}
+                        >
+                            <span className="material-icons-outlined text-sm">notifications</span>
+                            <span className="absolute top-2 right-2.5 w-1.5 h-1.5 bg-primary rounded-full shadow-neon"></span>
+                        </button>
+
+                        {showNotifications && (
+                            <div className="absolute top-full right-0 mt-3 w-96 bg-[#1A1C14] border border-[#D2F96F]/30 rounded-xl shadow-[0_0_50px_rgba(0,0,0,0.8),0_0_15px_rgba(210,249,111,0.1)] overflow-hidden animate-fade-in backdrop-blur-xl">
+                                <div className="flex items-center justify-between px-5 py-4 border-b border-white/5 bg-[#141610]">
+                                    <h3 className="font-bold text-white text-sm flex items-center gap-2">
+                                        AI Coaching Alerts
+                                        <span className="px-1.5 py-0.5 rounded bg-primary/20 text-primary text-[10px] border border-primary/20">3 NEW</span>
+                                    </h3>
+                                    <button className="text-[10px] text-gray-400 hover:text-primary transition font-mono">Mark all read</button>
+                                </div>
+                                <div className="flex flex-col max-h-[400px] overflow-y-auto">
+                                    <div className="p-4 border-b border-white/5 hover:bg-white/5 transition cursor-pointer relative group bg-gradient-to-r from-primary/5 to-transparent">
+                                        <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-primary shadow-neon"></div>
+                                        <div className="flex gap-3">
+                                            <div className="w-8 h-8 rounded-lg bg-[#141610] border border-primary/30 flex items-center justify-center shrink-0 group-hover:border-primary/60 transition shadow-neon">
+                                                <span className="material-icons-outlined text-sm text-red-400">warning</span>
+                                            </div>
+                                            <div className="flex-1">
+                                                <p className="text-xs font-semibold text-white leading-snug group-hover:text-primary transition">New micro-mistake detected for Blaber</p>
+                                                <p className="text-[10px] text-gray-400 mt-1 font-mono">2 mins ago • Jungle Pathing</p>
+                                            </div>
+                                            <span className="w-2 h-2 rounded-full bg-primary shadow-neon mt-1.5 shrink-0"></span>
+                                        </div>
+                                    </div>
+                                    <div className="p-4 border-b border-white/5 hover:bg-white/5 transition cursor-pointer relative group bg-gradient-to-r from-primary/5 to-transparent">
+                                        <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-primary shadow-neon"></div>
+                                        <div className="flex gap-3">
+                                            <div className="w-8 h-8 rounded-lg bg-[#141610] border border-primary/30 flex items-center justify-center shrink-0 group-hover:border-primary/60 transition shadow-neon">
+                                                <span className="material-icons-outlined text-sm text-primary">bolt</span>
+                                            </div>
+                                            <div className="flex-1">
+                                                <p className="text-xs font-semibold text-white leading-snug group-hover:text-primary transition">Strategy Shift: Baron objective now high priority</p>
+                                                <p className="text-[10px] text-gray-400 mt-1 font-mono">12 mins ago • Macro AI</p>
+                                            </div>
+                                            <span className="w-2 h-2 rounded-full bg-primary shadow-neon mt-1.5 shrink-0"></span>
+                                        </div>
+                                    </div>
+                                    <div className="p-4 hover:bg-white/5 transition cursor-pointer relative group">
+                                        <div className="flex gap-3">
+                                            <div className="w-8 h-8 rounded-lg bg-[#141610] border border-white/10 flex items-center justify-center shrink-0 group-hover:border-white/30 transition">
+                                                <span className="material-icons-outlined text-sm text-blue-400">analytics</span>
+                                            </div>
+                                            <div className="flex-1">
+                                                <p className="text-xs font-medium text-gray-300 leading-snug group-hover:text-white transition">Match analysis for vs G2 Esports is ready</p>
+                                                <p className="text-[10px] text-gray-500 mt-1 font-mono">1 hour ago • Post-Match</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="p-2 border-t border-white/5 bg-[#141610] text-center">
+                                    <button className="text-[10px] uppercase tracking-wider font-bold text-gray-500 hover:text-white py-1.5 w-full transition">View All History</button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
                     <div className="flex items-center gap-3 pl-2 border-l border-white/10 ml-2">
                         <img
                             alt="Profile"
@@ -54,7 +132,7 @@ const DashboardLayout: React.FC = () => {
                 </div>
             </nav>
 
-            <main className="px-6 pb-10 w-full max-w-[1600px] mx-auto">
+            <main className="px-6 pb-10 w-full max-w-[1600px] mx-auto relative z-10">
                 <Outlet />
             </main>
         </div>
