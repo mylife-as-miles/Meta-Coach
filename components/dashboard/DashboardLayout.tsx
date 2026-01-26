@@ -1,5 +1,5 @@
 import React from 'react';
-import { Outlet, NavLink } from 'react-router-dom';
+import { Outlet, NavLink, Link } from 'react-router-dom';
 
 const NavItem = ({ to, children, end = false }: { to: string, children: React.ReactNode, end?: boolean }) => (
     <NavLink
@@ -41,6 +41,7 @@ const DashboardLayout: React.FC = () => {
                     <NavItem to="/dashboard/match-history">Match History</NavItem>
                     <NavItem to="/dashboard/player-hub">Player Hub</NavItem>
                     <NavItem to="/dashboard/strategy-lab">Strategy Lab</NavItem>
+                    <NavItem to="/dashboard/communication-logs">Communication Logs</NavItem>
                     <NavItem to="/dashboard/settings">Settings</NavItem>
                 </div>
 
@@ -55,8 +56,8 @@ const DashboardLayout: React.FC = () => {
                         <button
                             onClick={() => setShowNotifications(!showNotifications)}
                             className={`w-10 h-10 rounded-full flex items-center justify-center transition relative ${showNotifications
-                                    ? 'bg-surface-dark border border-primary text-primary shadow-[0_0_10px_rgba(210,249,111,0.3)]'
-                                    : 'bg-surface-dark border border-white/10 text-gray-400 hover:text-primary hover:border-primary/50'
+                                ? 'bg-surface-dark border border-primary text-primary shadow-[0_0_10px_rgba(210,249,111,0.3)]'
+                                : 'bg-surface-dark border border-white/10 text-gray-400 hover:text-primary hover:border-primary/50'
                                 }`}
                         >
                             <span className="material-icons-outlined text-sm">notifications</span>
@@ -112,7 +113,13 @@ const DashboardLayout: React.FC = () => {
                                     </div>
                                 </div>
                                 <div className="p-2 border-t border-white/5 bg-[#141610] text-center">
-                                    <button className="text-[10px] uppercase tracking-wider font-bold text-gray-500 hover:text-white py-1.5 w-full transition">View All History</button>
+                                    <Link
+                                        to="/dashboard/communication-logs"
+                                        onClick={() => setShowNotifications(false)}
+                                        className="text-[10px] uppercase tracking-wider font-bold text-gray-500 hover:text-white py-1.5 w-full transition block"
+                                    >
+                                        View All History
+                                    </Link>
                                 </div>
                             </div>
                         )}
