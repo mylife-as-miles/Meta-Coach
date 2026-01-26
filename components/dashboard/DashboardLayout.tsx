@@ -42,7 +42,6 @@ const DashboardLayout: React.FC = () => {
                     <NavItem to="/dashboard/match-history">Match History</NavItem>
                     <NavItem to="/dashboard/player-hub">Player Hub</NavItem>
                     <NavItem to="/dashboard/strategy-lab">Strategy Lab</NavItem>
-                    <NavItem to="/dashboard/communication-logs">Communication Logs</NavItem>
                     <NavItem to="/dashboard/settings">Settings</NavItem>
                 </div>
 
