@@ -260,10 +260,7 @@ const CommunicationLogs: React.FC = () => {
                 </div>
             </div>
 
-            <div className="mt-12 pt-6 border-t border-white/10 flex justify-between text-xs text-gray-500">
-                <p>© 2024 MetaCoach AI.</p>
-                <p>System Status: <span className="text-primary">Operational</span></p>
-            </div>
+
         </div>
     );
 };

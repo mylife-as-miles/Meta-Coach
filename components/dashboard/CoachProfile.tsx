@@ -401,13 +401,7 @@ const CoachProfile: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="mt-10 pt-6 border-t border-white/5 flex flex-col md:flex-row justify-between items-center text-xs text-gray-600">
-                    <p>MetaCoach AI © 2024. All coaching data is encrypted.</p>
-                    <div className="flex gap-4 mt-2 md:mt-0 font-mono">
-                        <span>Last Sync: <span className="text-gray-400">Just now</span></span>
-                        <span>Server: <span className="text-primary">US-West-1</span></span>
-                    </div>
-                </div>
+
             </div>
         </div>
     );
