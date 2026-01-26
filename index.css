@@ -1,5 +1,39 @@
 @import "tailwindcss";
 
+@theme {
+  --color-primary: #D2F96F;
+  --color-primary-hover: #bce65b;
+  --color-background-light: #F3F4F6;
+  --color-background-dark: #0E100A;
+  --color-surface-light: #FFFFFF;
+  --color-surface-dark: #1F1F1F;
+  --color-surface-darker: #151712;
+  --color-secondary-text: #A2A2A2;
+
+  --font-sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-display: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono: "Courier New", Courier, monospace;
+
+  --animate-spin-slow: spin 12s linear infinite;
+  --animate-pulse-slow: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-scan: scan 4s linear infinite;
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-fade-in-up: fadeIn 0.5s ease-out;
+
+  @keyframes scan {
+    0% { top: 0%; }
+    100% { top: 100%; }
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-20px); }
+  }
+  @keyframes fadeIn {
+    0% { opacity: 0; transform: translateY(10px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+}
+
 @layer utilities {
   .grid-bg {
     background-size: 40px 40px;
@@ -19,7 +53,7 @@
   width: 16px;
   height: 16px;
   border-radius: 9999px;
-  background-color: #D2F96F;
+  background-color: var(--color-primary);
   cursor: pointer;
   border: 2px solid black;
   box-shadow: 0 0 10px rgba(210,249,111,0.6);
@@ -29,7 +63,7 @@
   width: 16px;
   height: 16px;
   border-radius: 9999px;
-  background-color: #D2F96F;
+  background-color: var(--color-primary);
   cursor: pointer;
   border: 2px solid black;
   box-shadow: 0 0 10px rgba(210,249,111,0.6);
@@ -40,14 +74,14 @@
     width: 8px;
 }
 ::-webkit-scrollbar-track {
-    background: #0E100A;
+    background: var(--color-background-dark);
 }
 ::-webkit-scrollbar-thumb {
     background: #333;
     border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-    background: #D2F96F;
+    background: var(--color-primary);
 }
 
 /* Custom Scrollbar variant */
@@ -70,7 +104,7 @@ input:-webkit-autofill,
 input:-webkit-autofill:hover,
 input:-webkit-autofill:focus,
 input:-webkit-autofill:active {
-  -webkit-box-shadow: 0 0 0 30px #1F1F1F inset !important;
+  -webkit-box-shadow: 0 0 0 30px var(--color-surface-dark) inset !important;
   -webkit-text-fill-color: white !important;
   transition: background-color 5000s ease-in-out 0s;
 }
