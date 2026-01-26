@@ -2,9 +2,356 @@ import React from 'react';
 
 const PlayerHub: React.FC = () => {
     return (
-        <div className="p-10 text-white">
-            <h1 className="text-3xl font-bold mb-4">Player Hub</h1>
-            <p className="text-gray-400">Coming soon...</p>
+        <div className="flex flex-col min-h-[calc(100vh-90px)]">
+            <header className="flex justify-between items-end mb-10">
+                <div>
+                    <div className="flex items-center gap-2 mb-1">
+                        <span className="text-primary font-mono text-xs uppercase tracking-wider">Roster Management</span>
+                        <span className="w-1 h-1 rounded-full bg-gray-500"></span>
+                        <span className="text-gray-400 text-xs">Season 14</span>
+                    </div>
+                    <h1 className="text-4xl font-bold text-white tracking-tight">C9 <span className="text-gray-500">Blaber</span></h1>
+                </div>
+                <div className="flex items-center gap-3">
+                    <button className="flex items-center gap-2 px-4 py-2 rounded-lg border border-white/10 bg-surface-dark hover:border-primary/50 hover:text-white text-gray-400 text-sm transition cursor-pointer">
+                        <span className="material-icons-outlined text-sm">compare_arrows</span> Compare
+                    </button>
+                    <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-black font-bold text-sm hover:bg-primary-dark transition shadow-[0_0_5px_rgba(210,249,111,0.3),0_0_15px_rgba(210,249,111,0.1)] cursor-pointer">
+                        <span className="material-icons-outlined text-sm">edit</span> Edit Attributes
+                    </button>
+                </div>
+            </header>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-12">
+                {/* Gemini Potential Card */}
+                <div className="lg:col-span-3 flex flex-col gap-6">
+                    <div className="bg-surface-dark rounded-2xl p-6 border border-white/5 shadow-lg h-full relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 p-3 opacity-20">
+                            <span className="material-symbols-outlined text-4xl text-purple-400">auto_awesome</span>
+                        </div>
+                        <div className="mb-6">
+                            <h3 className="text-white font-bold flex items-center gap-2">
+                                <span className="material-symbols-outlined text-purple-400 text-sm">auto_awesome</span>
+                                Gemini Potential
+                            </h3>
+                            <p className="text-xs text-gray-500 mt-1">AI-Predicted development trajectory</p>
+                        </div>
+                        <div className="h-48 w-full relative mb-4">
+                            <div className="absolute left-0 top-0 bottom-0 flex flex-col justify-between text-[10px] text-gray-600 font-mono">
+                                <span>99</span>
+                                <span>90</span>
+                                <span>80</span>
+                                <span>70</span>
+                            </div>
+                            <div className="ml-6 h-full relative border-l border-white/5 border-b">
+                                <svg className="w-full h-full overflow-visible" preserveAspectRatio="none" viewBox="0 0 100 100">
+                                    <defs>
+                                        <linearGradient id="growthGradient" x1="0" x2="0" y1="0" y2="1">
+                                            <stop offset="0%" stopColor="#A855F7" stopOpacity="0.2"></stop>
+                                            <stop offset="100%" stopColor="#A855F7" stopOpacity="0"></stop>
+                                        </linearGradient>
+                                    </defs>
+                                    <path d="M0,80 Q20,75 40,60 T70,45" fill="none" stroke="#666" strokeDasharray="4 2" strokeWidth="2"></path>
+                                    <path d="M0,80 Q20,75 40,60 T70,45" fill="none" stroke="#D2F96F" strokeWidth="2"></path>
+                                    <path className="animate-pulse" d="M70,45 Q85,35 100,20" fill="none" stroke="#A855F7" strokeDasharray="3 3" strokeWidth="2"></path>
+                                    <circle className="shadow-[0_0_5px_rgba(210,249,111,0.3),0_0_15px_rgba(210,249,111,0.1)]" cx="70" cy="45" fill="#D2F96F" r="3"></circle>
+                                    <circle cx="100" cy="20" fill="#A855F7" r="3"></circle>
+                                </svg>
+                            </div>
+                        </div>
+                        <div className="bg-surface-darker rounded-xl p-4 border border-white/5 mt-auto">
+                            <div className="flex justify-between items-center mb-2">
+                                <span className="text-xs text-gray-400 uppercase tracking-wider">Projected Peak</span>
+                                <span className="text-purple-400 font-bold font-mono text-lg">98 OVR</span>
+                            </div>
+                            <p className="text-[10px] text-gray-500 leading-relaxed">
+                                Based on current scrim performance, Gemini predicts <span className="text-white">Mechanics</span> will cap at 99 by Playoffs.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Center Player Card & Stats */}
+                <div className="lg:col-span-6 flex flex-col md:flex-row gap-8 items-center justify-center bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] bg-surface-darker/50 rounded-3xl p-8 border border-white/5 relative overflow-hidden">
+                    <div className="absolute w-[500px] h-[500px] bg-primary/5 rounded-full blur-[100px] top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
+
+                    {/* Player Card */}
+                    <div className="relative w-[320px] h-[480px] shrink-0 z-10 perspective-1000 group">
+                        <div className="w-full h-full relative transition-transform duration-500 transform group-hover:scale-105">
+                            <div className="absolute inset-0 bg-gradient-to-br from-yellow-100/20 via-primary/10 to-black rounded-t-2xl rounded-b-[4rem] border border-primary/40 shadow-[0_0_10px_rgba(210,249,111,0.5),0_0_30px_rgba(210,249,111,0.2)] backdrop-blur-sm"></div>
+                            <div className="absolute inset-1 bg-gradient-to-b from-[#1F221B] via-[#0E100A] to-[#050604] rounded-t-xl rounded-b-[3.8rem] overflow-hidden flex flex-col">
+                                <div className="absolute inset-0 z-20 pointer-events-none opacity-50" style={{ backgroundImage: 'linear-gradient(180deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0) 40%, rgba(0,0,0,0.2) 100%)' }}></div>
+                                <div className="flex justify-between items-start p-5 z-30">
+                                    <div className="flex flex-col items-center">
+                                        <span className="text-5xl font-black text-white drop-shadow-md">96</span>
+                                        <span className="text-xl font-bold text-primary tracking-widest mt-[-5px]">JG</span>
+                                        <div className="w-8 h-8 rounded-full bg-blue-900/50 flex items-center justify-center border border-blue-400/30 mt-2">
+                                            <span className="text-[10px] font-bold text-blue-400">C9</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-col items-end">
+                                        <img alt="USA" className="w-6 opacity-80 rounded-sm shadow-sm" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAFil26kJ3bUewkiNb-4gib2BeYc4Zx4NZjVRcWkLirY71c86hv4iOL2vPRy1KV0Qt1lVlZMRwMItsRt2oH389wzilXcbIm-i-nmKakxAZGwLtYFbY9VT5Q2KIRH2YcnWLWwVT_17XbL-Ng4f1vO2RbaTseAuUwd8wyB6YQ_w4Try1kkgG3VFzDyObGFq20bI0WhWA2ZKXkQYimaYOxyiAJu-qQzsmjRC4mwpkBWo2uAnVRSil0IyCt9h-EMh2oFSR5WbY3arxgeSc" />
+                                    </div>
+                                </div>
+                                <div className="absolute top-16 left-0 right-0 bottom-32 flex items-center justify-center z-10 pointer-events-none">
+                                    <span className="material-icons-outlined text-gray-800 drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)] opacity-80" style={{ fontSize: '220px' }}>person</span>
+                                </div>
+                                <div className="absolute top-[260px] w-full text-center z-30">
+                                    <h2 className="text-2xl font-black text-white uppercase tracking-widest drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] font-display">Blaber</h2>
+                                    <div className="w-16 h-0.5 bg-primary/50 mx-auto mt-1 shadow-[0_0_5px_rgba(210,249,111,0.3),0_0_15px_rgba(210,249,111,0.1)]"></div>
+                                </div>
+                                <div className="absolute bottom-0 w-full h-[160px] px-6 pb-8 pt-4 flex flex-col justify-end z-30">
+                                    <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+                                        <div className="flex justify-between items-center group/stat cursor-default">
+                                            <span className="font-bold text-white text-lg group-hover/stat:text-primary transition-colors">98</span>
+                                            <span className="font-medium text-gray-400 text-xs tracking-wider">MECH</span>
+                                        </div>
+                                        <div className="flex justify-between items-center group/stat cursor-default">
+                                            <span className="font-bold text-white text-lg group-hover/stat:text-primary transition-colors">94</span>
+                                            <span className="font-medium text-gray-400 text-xs tracking-wider">OBJ</span>
+                                        </div>
+                                        <div className="flex justify-between items-center group/stat cursor-default">
+                                            <span className="font-bold text-white text-lg group-hover/stat:text-primary transition-colors">89</span>
+                                            <span className="font-medium text-gray-400 text-xs tracking-wider">MACR</span>
+                                        </div>
+                                        <div className="flex justify-between items-center group/stat cursor-default">
+                                            <span className="font-bold text-white text-lg group-hover/stat:text-primary transition-colors">91</span>
+                                            <span className="font-medium text-gray-400 text-xs tracking-wider">VIS</span>
+                                        </div>
+                                        <div className="flex justify-between items-center group/stat cursor-default">
+                                            <span className="font-bold text-white text-lg group-hover/stat:text-primary transition-colors">92</span>
+                                            <span className="font-medium text-gray-400 text-xs tracking-wider">TEAM</span>
+                                        </div>
+                                        <div className="flex justify-between items-center group/stat cursor-default">
+                                            <span className="font-bold text-white text-lg group-hover/stat:text-primary transition-colors">85</span>
+                                            <span className="font-medium text-gray-400 text-xs tracking-wider">MENT</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Hex Chart */}
+                    <div className="flex-1 w-full max-w-[300px] h-[300px] relative flex items-center justify-center">
+                        <div className="absolute inset-0 flex items-center justify-center opacity-30">
+                            <svg className="w-full h-full" viewBox="0 0 100 100">
+                                <polygon fill="none" points="50,5 95,27.5 95,72.5 50,95 5,72.5 5,27.5" stroke="#333" strokeWidth="0.5"></polygon>
+                                <polygon fill="none" points="50,20 80,35 80,65 50,80 20,65 20,35" stroke="#333" strokeWidth="0.5"></polygon>
+                                <polygon fill="none" points="50,35 65,42.5 65,57.5 50,65 35,57.5 35,42.5" stroke="#333" strokeWidth="0.5"></polygon>
+                                <line stroke="#333" strokeWidth="0.5" x1="50" x2="50" y1="50" y2="5"></line>
+                                <line stroke="#333" strokeWidth="0.5" x1="50" x2="95" y1="50" y2="27.5"></line>
+                                <line stroke="#333" strokeWidth="0.5" x1="50" x2="95" y1="50" y2="72.5"></line>
+                                <line stroke="#333" strokeWidth="0.5" x1="50" x2="50" y1="50" y2="95"></line>
+                                <line stroke="#333" strokeWidth="0.5" x1="50" x2="5" y1="50" y2="72.5"></line>
+                                <line stroke="#333" strokeWidth="0.5" x1="50" x2="5" y1="50" y2="27.5"></line>
+                            </svg>
+                        </div>
+                        <svg className="w-full h-full relative z-10 drop-shadow-[0_0_10px_rgba(210,249,111,0.4)]" viewBox="0 0 100 100">
+                            <polygon fill="rgba(210, 249, 111, 0.2)" points="50,6 92,30 85,70 52,88 25,68 10,32" stroke="#D2F96F" strokeWidth="1.5"></polygon>
+                            <circle cx="50" cy="6" fill="#fff" r="1.5"></circle>
+                            <circle cx="92" cy="30" fill="#fff" r="1.5"></circle>
+                            <circle cx="85" cy="70" fill="#fff" r="1.5"></circle>
+                            <circle cx="52" cy="88" fill="#fff" r="1.5"></circle>
+                            <circle cx="25" cy="68" fill="#fff" r="1.5"></circle>
+                            <circle cx="10" cy="32" fill="#fff" r="1.5"></circle>
+                        </svg>
+                        <div className="absolute top-0 text-[10px] text-gray-400 font-bold bg-background-dark/80 px-1 rounded">MECH</div>
+                        <div className="absolute top-[25%] right-0 text-[10px] text-gray-400 font-bold bg-background-dark/80 px-1 rounded">OBJ</div>
+                        <div className="absolute bottom-[25%] right-0 text-[10px] text-gray-400 font-bold bg-background-dark/80 px-1 rounded">MACR</div>
+                        <div className="absolute bottom-0 text-[10px] text-gray-400 font-bold bg-background-dark/80 px-1 rounded">VIS</div>
+                        <div className="absolute bottom-[25%] left-0 text-[10px] text-gray-400 font-bold bg-background-dark/80 px-1 rounded">TEAM</div>
+                        <div className="absolute top-[25%] left-0 text-[10px] text-gray-400 font-bold bg-background-dark/80 px-1 rounded">MENT</div>
+                    </div>
+                </div>
+
+                {/* Tactical Synergies */}
+                <div className="lg:col-span-3">
+                    <div className="bg-surface-dark rounded-2xl p-6 border border-white/5 shadow-lg h-full">
+                        <h3 className="text-white font-bold mb-6 flex items-center justify-between">
+                            Tactical Synergies
+                            <span className="material-icons-outlined text-gray-500 text-sm">hub</span>
+                        </h3>
+                        <div className="space-y-6">
+                            <div className="group">
+                                <div className="flex justify-between items-end mb-2">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-full bg-surface-darker border border-white/10 flex items-center justify-center overflow-hidden">
+                                            <span className="material-icons-outlined text-gray-400">person</span>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-gray-400">Mid-Jungle</p>
+                                            <p className="text-sm font-bold text-white">Jojopyun</p>
+                                        </div>
+                                    </div>
+                                    <span className="text-lg font-bold text-primary font-mono shadow-[0_0_5px_rgba(210,249,111,0.3),0_0_15px_rgba(210,249,111,0.1)]">94%</span>
+                                </div>
+                                <div className="w-full h-1.5 bg-surface-darker rounded-full overflow-hidden border border-white/5">
+                                    <div className="h-full bg-gradient-to-r from-primary/50 to-primary w-[94%] shadow-[0_0_5px_rgba(210,249,111,0.3),0_0_15px_rgba(210,249,111,0.1)]"></div>
+                                </div>
+                                <p className="text-[10px] text-gray-500 mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                    Exceptional 2v2 skirmish win rate (68%)
+                                </p>
+                            </div>
+                            <div className="group">
+                                <div className="flex justify-between items-end mb-2">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-full bg-surface-darker border border-white/10 flex items-center justify-center overflow-hidden">
+                                            <span className="material-icons-outlined text-gray-400">person</span>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-gray-400">Top Side</p>
+                                            <p className="text-sm font-bold text-white">Fudge</p>
+                                        </div>
+                                    </div>
+                                    <span className="text-lg font-bold text-yellow-400 font-mono">82%</span>
+                                </div>
+                                <div className="w-full h-1.5 bg-surface-darker rounded-full overflow-hidden border border-white/5">
+                                    <div className="h-full bg-gradient-to-r from-yellow-500/50 to-yellow-400 w-[82%]"></div>
+                                </div>
+                            </div>
+                            <div className="group">
+                                <div className="flex justify-between items-end mb-2">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-full bg-surface-darker border border-white/10 flex items-center justify-center overflow-hidden">
+                                            <span className="material-icons-outlined text-gray-400">person</span>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-gray-400">Support Roam</p>
+                                            <p className="text-sm font-bold text-white">Vulcan</p>
+                                        </div>
+                                    </div>
+                                    <span className="text-lg font-bold text-red-400 font-mono">65%</span>
+                                </div>
+                                <div className="w-full h-1.5 bg-surface-darker rounded-full overflow-hidden border border-white/5">
+                                    <div className="h-full bg-gradient-to-r from-red-500/50 to-red-400 w-[65%]"></div>
+                                </div>
+                                <div className="mt-2 flex items-center gap-1.5 bg-red-500/10 border border-red-500/20 rounded px-2 py-1 w-fit">
+                                    <span className="material-icons-outlined text-[10px] text-red-400">warning</span>
+                                    <span className="text-[10px] text-red-300 font-medium">Vision mismatch</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Active Roster List */}
+            <section>
+                <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-xl font-bold text-white">Active Roster</h3>
+                    <div className="flex gap-2">
+                        <button className="w-8 h-8 rounded-full bg-surface-dark border border-white/10 flex items-center justify-center hover:bg-white/10 transition cursor-pointer">
+                            <span className="material-icons-outlined text-sm">chevron_left</span>
+                        </button>
+                        <button className="w-8 h-8 rounded-full bg-surface-dark border border-white/10 flex items-center justify-center hover:bg-white/10 transition cursor-pointer">
+                            <span className="material-icons-outlined text-sm">chevron_right</span>
+                        </button>
+                    </div>
+                </div>
+                <div className="flex gap-6 overflow-x-auto pb-6 custom-scrollbar snap-x">
+                    {/* Blaber */}
+                    <div className="snap-start shrink-0">
+                        <div className="w-48 h-72 relative rounded-2xl border-2 border-primary overflow-hidden shadow-[0_0_5px_rgba(210,249,111,0.3),0_0_15px_rgba(210,249,111,0.1)] cursor-pointer transform scale-100 hover:scale-105 transition-all">
+                            <div className="absolute inset-0 bg-gradient-to-b from-gray-800 to-black"></div>
+                            <div className="absolute top-2 left-3 z-10">
+                                <div className="text-2xl font-bold text-white">96</div>
+                                <div className="text-xs font-bold text-primary">JG</div>
+                            </div>
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <span className="material-icons-outlined text-6xl text-gray-700">person</span>
+                            </div>
+                            <div className="absolute bottom-0 w-full p-3 bg-black/60 backdrop-blur-sm border-t border-white/10">
+                                <div className="text-center font-bold text-white tracking-widest text-sm">BLABER</div>
+                                <div className="flex justify-between mt-2 text-[10px] text-gray-400 px-2">
+                                    <span>98 MC</span>
+                                    <span>94 OB</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {/* Jojopyun */}
+                    <div className="snap-start shrink-0 opacity-70 hover:opacity-100 transition-opacity">
+                        <div className="w-48 h-72 relative rounded-2xl border border-white/10 overflow-hidden bg-surface-dark cursor-pointer hover:border-white/30 transition-all">
+                            <div className="absolute inset-0 bg-gradient-to-b from-gray-800/50 to-black"></div>
+                            <div className="absolute top-2 left-3 z-10">
+                                <div className="text-2xl font-bold text-gray-300">92</div>
+                                <div className="text-xs font-bold text-gray-500">MID</div>
+                            </div>
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <span className="material-icons-outlined text-6xl text-gray-800">person</span>
+                            </div>
+                            <div className="absolute bottom-0 w-full p-3 bg-black/60 backdrop-blur-sm border-t border-white/10">
+                                <div className="text-center font-bold text-gray-300 tracking-widest text-sm">JOJO</div>
+                                <div className="flex justify-between mt-2 text-[10px] text-gray-500 px-2">
+                                    <span>94 MC</span>
+                                    <span>88 OB</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {/* Fudge */}
+                    <div className="snap-start shrink-0 opacity-70 hover:opacity-100 transition-opacity">
+                        <div className="w-48 h-72 relative rounded-2xl border border-white/10 overflow-hidden bg-surface-dark cursor-pointer hover:border-white/30 transition-all">
+                            <div className="absolute inset-0 bg-gradient-to-b from-gray-800/50 to-black"></div>
+                            <div className="absolute top-2 left-3 z-10">
+                                <div className="text-2xl font-bold text-gray-300">89</div>
+                                <div className="text-xs font-bold text-gray-500">TOP</div>
+                            </div>
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <span className="material-icons-outlined text-6xl text-gray-800">person</span>
+                            </div>
+                            <div className="absolute bottom-0 w-full p-3 bg-black/60 backdrop-blur-sm border-t border-white/10">
+                                <div className="text-center font-bold text-gray-300 tracking-widest text-sm">FUDGE</div>
+                                <div className="flex justify-between mt-2 text-[10px] text-gray-500 px-2">
+                                    <span>85 MC</span>
+                                    <span>90 OB</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {/* Berserker */}
+                    <div className="snap-start shrink-0 opacity-70 hover:opacity-100 transition-opacity">
+                        <div className="w-48 h-72 relative rounded-2xl border border-white/10 overflow-hidden bg-surface-dark cursor-pointer hover:border-white/30 transition-all">
+                            <div className="absolute inset-0 bg-gradient-to-b from-gray-800/50 to-black"></div>
+                            <div className="absolute top-2 left-3 z-10">
+                                <div className="text-2xl font-bold text-gray-300">91</div>
+                                <div className="text-xs font-bold text-gray-500">ADC</div>
+                            </div>
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <span className="material-icons-outlined text-6xl text-gray-800">person</span>
+                            </div>
+                            <div className="absolute bottom-0 w-full p-3 bg-black/60 backdrop-blur-sm border-t border-white/10">
+                                <div className="text-center font-bold text-gray-300 tracking-widest text-sm">BERSERKER</div>
+                                <div className="flex justify-between mt-2 text-[10px] text-gray-500 px-2">
+                                    <span>99 MC</span>
+                                    <span>85 OB</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {/* Vulcan */}
+                    <div className="snap-start shrink-0 opacity-70 hover:opacity-100 transition-opacity">
+                        <div className="w-48 h-72 relative rounded-2xl border border-white/10 overflow-hidden bg-surface-dark cursor-pointer hover:border-white/30 transition-all">
+                            <div className="absolute inset-0 bg-gradient-to-b from-gray-800/50 to-black"></div>
+                            <div className="absolute top-2 left-3 z-10">
+                                <div className="text-2xl font-bold text-gray-300">88</div>
+                                <div className="text-xs font-bold text-gray-500">SUP</div>
+                            </div>
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <span className="material-icons-outlined text-6xl text-gray-800">person</span>
+                            </div>
+                            <div className="absolute bottom-0 w-full p-3 bg-black/60 backdrop-blur-sm border-t border-white/10">
+                                <div className="text-center font-bold text-gray-300 tracking-widest text-sm">VULCAN</div>
+                                <div className="flex justify-between mt-2 text-[10px] text-gray-500 px-2">
+                                    <span>82 MC</span>
+                                    <span>95 OB</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
         </div>
     );
 };
