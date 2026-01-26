@@ -18,11 +18,11 @@ const Hero: React.FC = () => {
   }, []);
 
   return (
-    <section className="flex-grow flex items-center relative z-10 pt-28 sm:pt-32 pb-12 px-4 sm:px-6 lg:px-8 min-h-[90vh] lg:min-h-screen">
-      <div className="max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 xl:gap-24 items-center">
+    <section className="flex-grow flex items-center relative z-10 pt-24 sm:pt-28 lg:pt-0 pb-12 px-4 sm:px-6 lg:px-8 min-h-[100dvh] overflow-hidden">
+      <div className="max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16 xl:gap-24 items-center">
         
         {/* Text Content */}
-        <div className="lg:col-span-7 flex flex-col justify-center space-y-6 sm:space-y-8 order-2 lg:order-1">
+        <div className="lg:col-span-7 flex flex-col justify-center space-y-6 sm:space-y-8 order-1">
           <ScrollReveal animation="fade-in" delay={0.2}>
             <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full border border-white/10 w-fit backdrop-blur-sm bg-white/5 hover:bg-white/10 transition-colors cursor-default">
               <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
@@ -33,25 +33,25 @@ const Hero: React.FC = () => {
           </ScrollReveal>
           
           <ScrollReveal animation="slide-right" delay={0.4}>
-            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-6xl xl:text-7xl font-medium leading-[1.1] tracking-tight text-white">
-              Manage your team <br />
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-6xl xl:text-7xl font-medium leading-[1.1] tracking-tight text-white text-balance">
+              Manage your team <br className="hidden sm:block" />
               with <span className="text-primary italic font-serif">confidence.</span>
             </h1>
           </ScrollReveal>
           
           <ScrollReveal animation="fade-up" delay={0.6}>
-            <p className="text-base sm:text-lg md:text-xl text-gray-400 max-w-xl leading-relaxed font-light">
+            <p className="text-base sm:text-lg md:text-xl text-gray-400 max-w-xl leading-relaxed font-light text-balance">
               Trusted esports flexible solutions and personalized AI support to help you reach your championship goals. From micro-stats to macro-strategy.
             </p>
           </ScrollReveal>
           
           <ScrollReveal animation="fade-up" delay={0.8}>
             <div className="flex flex-col sm:flex-row gap-4 pt-2 sm:pt-4">
-              <button className="group flex items-center justify-center gap-3 bg-transparent border border-white/20 text-white px-8 py-4 rounded-md font-medium hover:border-primary hover:text-primary hover:bg-primary/5 transition-all duration-300 w-full sm:w-auto">
+              <button className="group flex items-center justify-center gap-3 bg-transparent border border-white/20 text-white px-8 py-4 rounded-md font-medium hover:border-primary hover:text-primary hover:bg-primary/5 transition-all duration-300 w-full sm:w-auto cursor-pointer">
                 <Scan className="group-hover:animate-spin" size={20} />
                 Explore Platform
               </button>
-              <button className="w-14 h-14 hidden sm:flex items-center justify-center rounded-full border border-white/20 text-primary hover:bg-primary hover:text-black hover:scale-110 transition-all duration-300 shadow-[0_0_15px_rgba(210,249,111,0.2)]">
+              <button className="w-14 h-14 hidden sm:flex items-center justify-center rounded-full border border-white/20 text-primary hover:bg-primary hover:text-black hover:scale-110 transition-all duration-300 shadow-[0_0_15px_rgba(210,249,111,0.2)] cursor-pointer">
                 <Play size={24} fill="currentColor" />
               </button>
             </div>
@@ -59,7 +59,7 @@ const Hero: React.FC = () => {
         </div>
 
         {/* Abstract Visual with Parallax */}
-        <div className="lg:col-span-5 h-[300px] sm:h-[400px] lg:h-[500px] xl:h-[600px] relative flex items-center justify-center perspective-1000 order-1 lg:order-2">
+        <div className="lg:col-span-5 h-[350px] sm:h-[400px] lg:h-[500px] xl:h-[600px] relative flex items-center justify-center perspective-1000 order-2">
           <ScrollReveal animation="scale-up" delay={0.5} className="w-full h-full flex items-center justify-center">
             <div 
               className="relative w-56 h-56 sm:w-64 sm:h-64 md:w-80 md:h-80 lg:w-72 lg:h-72 xl:w-96 xl:h-96 transition-transform duration-100 ease-out"
