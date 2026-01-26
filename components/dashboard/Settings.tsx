@@ -3,6 +3,7 @@ import AccountSettings from './settings/AccountSettings';
 import TeamSettings from './settings/TeamSettings';
 import DataSourcesSettings from './settings/DataSourcesSettings';
 import NotificationSettings from './settings/NotificationSettings';
+import AICalibrationSettings from './settings/AICalibrationSettings';
 
 type SettingsView = 'account' | 'team' | 'data' | 'notifications' | 'ai';
 
@@ -61,11 +62,14 @@ const Settings: React.FC = () => {
                             </button>
 
                             <button
-                                className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-400 hover:bg-white/5 hover:text-white transition w-full text-left font-medium text-sm group cursor-not-allowed opacity-50"
-                                disabled
+                                onClick={() => setActiveView('ai')}
+                                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition w-full text-left font-medium text-sm group ${activeView === 'ai'
+                                        ? 'bg-primary/10 border border-primary/20 text-white shadow-[0_0_10px_rgba(210,249,111,0.05)]'
+                                        : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                                    }`}
                             >
-                                <span className="material-symbols-outlined text-xl group-hover:text-primary transition">tune</span>
-                                <span>AI Calibration</span>
+                                <span className={`material-symbols-outlined text-xl transition ${activeView === 'ai' ? 'text-primary' : 'group-hover:text-primary'}`}>tune</span>
+                                <span className={activeView === 'ai' ? 'text-primary' : ''}>AI Calibration</span>
                             </button>
                         </nav>
                     </div>
@@ -88,6 +92,7 @@ const Settings: React.FC = () => {
                     {activeView === 'team' && <TeamSettings />}
                     {activeView === 'data' && <DataSourcesSettings />}
                     {activeView === 'notifications' && <NotificationSettings />}
+                    {activeView === 'ai' && <AICalibrationSettings />}
                 </section>
             </div>
         </div>
