@@ -47,9 +47,7 @@ const DashboardLayout: React.FC = () => {
 
                 <div className="flex items-center gap-4">
                     {/* Search button (restored from HTML or just kept as placeholder if previously removed) */}
-                    <button className="w-10 h-10 rounded-full bg-surface-dark border border-white/10 flex items-center justify-center text-gray-400 hover:text-primary hover:border-primary/50 transition relative">
-                        <span className="material-icons-outlined text-sm">search</span>
-                    </button>
+
 
                     {/* Notification Button & Dropdown */}
                     <div className="relative">

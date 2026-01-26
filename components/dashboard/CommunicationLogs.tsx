@@ -22,7 +22,7 @@ const CommunicationLogs: React.FC = () => {
 
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-white tracking-tight mb-2">Communication Logs</h1>
+                    <h1 className="text-3xl font-bold text-white tracking-tight mb-2">Notifications</h1>
                     <p className="text-gray-400 text-sm">Archive of all AI alerts, tactical shifts, and system notifications.</p>
                 </div>
                 <div className="flex items-center gap-2">
