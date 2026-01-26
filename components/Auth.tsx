@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { db } from '../lib/db';
 
 interface AuthProps {
   onNavigateHome: () => void;
@@ -7,6 +9,7 @@ interface AuthProps {
 type AuthMode = 'login' | 'signup' | 'forgot-password';
 
 const Auth: React.FC<AuthProps> = ({ onNavigateHome }) => {
+  const navigate = useNavigate();
   const [mode, setMode] = useState<AuthMode>('login');
   
   // Form State
@@ -31,11 +34,14 @@ const Auth: React.FC<AuthProps> = ({ onNavigateHome }) => {
     username: false
   });
 
+  const [submitError, setSubmitError] = useState('');
+
   // Reset form when switching modes
   useEffect(() => {
     setErrors({ email: '', password: '', username: '' });
     setTouched({ email: false, password: false, username: false });
     setFormData({ email: '', password: '', username: '' });
+    setSubmitError('');
     // Don't reset rememberMe when switching modes
   }, [mode]);
 
@@ -68,6 +74,7 @@ const Auth: React.FC<AuthProps> = ({ onNavigateHome }) => {
     if (errors[name as keyof typeof errors]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
     }
+    if (submitError) setSubmitError('');
   };
 
   const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
@@ -77,8 +84,9 @@ const Auth: React.FC<AuthProps> = ({ onNavigateHome }) => {
     setErrors(prev => ({ ...prev, [name]: error }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitError('');
     
     // Validate all fields
     const emailError = validateField('email', formData.email);
@@ -101,12 +109,43 @@ const Auth: React.FC<AuthProps> = ({ onNavigateHome }) => {
     if (mode === 'forgot-password') {
       if (!emailError) {
         console.log('Forgot Password Submitted:', { email: formData.email });
-        // Here you would typically call your password reset API
+        // Mock password reset
+        alert('Password reset link sent (simulated)');
       }
     } else if (!emailError && !passwordError && (mode === 'login' || !usernameError)) {
-      console.log('Form Submitted:', { ...formData, rememberMe: mode === 'login' ? rememberMe : undefined });
-      // Here you would typically call your API
-      onNavigateHome();
+      try {
+        if (mode === 'signup') {
+            // Check if email exists
+            const existingUser = await db.users.where('email').equals(formData.email).first();
+            if (existingUser) {
+                setSubmitError('User with this email already exists.');
+                return;
+            }
+            const id = await db.users.add({
+                email: formData.email,
+                password: formData.password,
+                username: formData.username,
+                onboardingComplete: false
+            });
+            localStorage.setItem('userId', id.toString());
+            navigate('/onboarding/step-1');
+        } else if (mode === 'login') {
+            const user = await db.users.where('email').equals(formData.email).first();
+            if (user && user.password === formData.password) {
+                localStorage.setItem('userId', user.id.toString());
+                if (user.onboardingComplete) {
+                    navigate('/dashboard');
+                } else {
+                    navigate('/onboarding/step-1');
+                }
+            } else {
+                 setSubmitError('Invalid email or password.');
+            }
+        }
+      } catch (err) {
+        console.error(err);
+        setSubmitError('An error occurred. Please try again.');
+      }
     }
   };
 
@@ -191,6 +230,12 @@ const Auth: React.FC<AuthProps> = ({ onNavigateHome }) => {
                   {mode === 'forgot-password' && 'Enter your email to receive reset instructions.'}
                 </p>
               </div>
+
+              {submitError && (
+                <div className="bg-red-500/10 border border-red-500/50 rounded-lg p-3 text-red-400 text-sm">
+                  {submitError}
+                </div>
+              )}
 
               <form action="#" className="space-y-5" method="POST" onSubmit={handleSubmit} noValidate>
                 <div className="space-y-5">

@@ -12,6 +12,59 @@
   }
 }
 
+/* Range Slider Thumb */
+.range-slider-thumb::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  background-color: #D2F96F;
+  cursor: pointer;
+  border: 2px solid black;
+  box-shadow: 0 0 10px rgba(210,249,111,0.6);
+}
+
+.range-slider-thumb::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  background-color: #D2F96F;
+  cursor: pointer;
+  border: 2px solid black;
+  box-shadow: 0 0 10px rgba(210,249,111,0.6);
+}
+
+/* Global Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+::-webkit-scrollbar-track {
+    background: #0E100A;
+}
+::-webkit-scrollbar-thumb {
+    background: #333;
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #D2F96F;
+}
+
+/* Custom Scrollbar variant */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(210, 249, 111, 0.3);
+    border-radius: 2px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(210, 249, 111, 0.5);
+}
+
 /* Custom Input Autofill styling */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
