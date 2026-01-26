@@ -85,13 +85,7 @@ const CalibrateAI: React.FC = () => {
             <span className="text-xl font-bold tracking-tight">MetaCoach</span>
           </div>
           <div className="flex items-center gap-4">
-            <div className="hidden md:flex flex-col items-end">
-              <span className="text-xs text-gray-500 uppercase tracking-widest">Team Onboarding</span>
-              <span className="text-sm font-bold text-white">Step 3 of 3</span>
-            </div>
-            <div className="w-10 h-10 rounded-full bg-surface-dark border border-white/10 flex items-center justify-center text-xs font-bold text-primary">
-              AI
-            </div>
+            {/* Onboarding info removed */}
           </div>
         </div>
       </nav>

@@ -82,14 +82,7 @@ const SyncRoster: React.FC = () => {
             <span className="text-xl font-bold tracking-tight">MetaCoach</span>
           </div>
           <div className="flex items-center gap-6">
-            <div className="hidden md:flex items-center gap-2 text-xs font-mono text-gray-500">
-              <span className="text-primary">01. TEAM</span>
-              <span className="text-gray-700">/</span>
-              <span className="text-white border-b border-primary">02. ROSTER</span>
-              <span className="text-gray-700">/</span>
-              <span>03. ANALYTICS</span>
-            </div>
-            <div className="h-4 w-px bg-white/10 hidden md:block"></div>
+            {/* Breadcrumbs removed */}
             <a className="text-sm font-bold text-gray-400 hover:text-white transition-colors cursor-pointer" onClick={() => navigate('/')}>Exit Setup</a>
           </div>
         </div>
