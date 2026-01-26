@@ -39,16 +39,16 @@ const SyncRoster: React.FC = () => {
     // Ideally user should fill all, but for prototype we allow empty.
 
     try {
-        const team = await db.teams.where('userId').equals(parseInt(userId)).first();
-        if (team) {
-            await db.teams.update(team.id, { roster });
-            navigate('/onboarding/step-3');
-        } else {
-            // Should not happen if flow is followed, but safe to redirect to step 1
-            navigate('/onboarding/step-1');
-        }
+      const team = await db.teams.where('userId').equals(parseInt(userId)).first();
+      if (team) {
+        await db.teams.update(team.id, { roster });
+        navigate('/onboarding/step-3');
+      } else {
+        // Should not happen if flow is followed, but safe to redirect to step 1
+        navigate('/onboarding/step-1');
+      }
     } catch (error) {
-        console.error("Failed to save roster", error);
+      console.error("Failed to save roster", error);
     }
   };
 
@@ -95,7 +95,41 @@ const SyncRoster: React.FC = () => {
         </div>
       </nav>
 
-      <main className="flex-grow flex items-center relative z-10 min-h-screen px-6 py-20">
+      <main className="flex-grow flex flex-col items-center relative z-10 min-h-screen px-6 pt-24 pb-12">
+        <div className="w-full max-w-4xl mb-12 relative">
+          {/* Progress Lines */}
+          <div className="absolute top-4 left-0 w-full h-0.5 bg-surface-darker border-t border-white/10 -z-10"></div>
+
+          <div className="flex justify-between w-full relative">
+            <div className="flex flex-col items-center gap-3 relative z-10 w-1/3">
+              <div className="w-8 h-8 rounded bg-primary text-black flex items-center justify-center font-bold text-sm shadow-[0_0_15px_rgba(210,249,111,0.5)] ring-4 ring-background-dark">
+                1
+              </div>
+              <span className="text-[10px] uppercase tracking-widest text-primary font-bold bg-background-dark px-2">Choose Game</span>
+            </div>
+
+            {/* Progress Line 1-2 Done */}
+            <div className="absolute top-4 left-[16%] w-[33%] h-0.5 bg-primary -z-0"></div>
+
+            <div className="flex flex-col items-center gap-3 relative z-10 w-1/3">
+              <div className="w-8 h-8 rounded bg-primary text-black flex items-center justify-center font-bold text-sm shadow-[0_0_15px_rgba(210,249,111,0.5)] ring-4 ring-background-dark">
+                2
+              </div>
+              <span className="text-[10px] uppercase tracking-widest text-primary font-bold bg-background-dark px-2">Sync Roster</span>
+            </div>
+
+            {/* Progress Line 2-3 Active */}
+            <div className="absolute top-4 left-[50%] w-[16%] h-0.5 bg-primary -z-0"></div>
+
+            <div className="flex flex-col items-center gap-3 relative z-10 w-1/3 opacity-50">
+              <div className="w-8 h-8 rounded bg-surface-dark border border-white/20 text-gray-500 flex items-center justify-center font-bold text-sm ring-4 ring-background-dark">
+                3
+              </div>
+              <span className="text-[10px] uppercase tracking-widest text-gray-500 font-bold bg-background-dark px-2">Calibrate AI</span>
+            </div>
+          </div>
+        </div>
+
         <div className="max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
           <div className="lg:col-span-5 flex flex-col space-y-8 relative">
             <div className="inline-flex items-center gap-3 px-3 py-1 rounded border border-primary/20 bg-primary/5 w-fit">
@@ -103,11 +137,11 @@ const SyncRoster: React.FC = () => {
               <span className="text-[10px] uppercase tracking-[0.2em] font-bold text-primary">Gemini AI Engine v2.0 Online</span>
             </div>
             <h1 className="text-5xl sm:text-6xl lg:text-7xl font-medium leading-[0.95] tracking-tight">
-                Sync <br/>
-                Your <span className="text-primary">Roster.</span>
+              Sync <br />
+              Your <span className="text-primary">Roster.</span>
             </h1>
             <p className="text-lg text-gray-400 max-w-lg leading-relaxed font-light border-l border-white/20 pl-6">
-                Import your 5-man squad. Our AI will instantly begin scraping public match history to build a comprehensive strategic profile for each player.
+              Import your 5-man squad. Our AI will instantly begin scraping public match history to build a comprehensive strategic profile for each player.
             </p>
             <div className="mt-8 pt-8 border-t border-white/5">
               <div className="flex items-center gap-4 text-xs text-gray-500 font-mono mb-2">
@@ -143,7 +177,7 @@ const SyncRoster: React.FC = () => {
                   <p className="text-xs text-gray-500 mt-1">Manually enter IGNs or <button className="text-primary hover:underline">Import CSV</button></p>
                 </div>
                 <div className="text-[10px] font-mono text-gray-600 bg-surface-dark px-2 py-1 rounded border border-white/5">
-                    REGION: NA-WEST
+                  REGION: NA-WEST
                 </div>
               </div>
 
@@ -171,14 +205,14 @@ const SyncRoster: React.FC = () => {
                           placeholder="Enter Player IGN..."
                         />
                         {isActive && (
-                            <div className="absolute right-3 top-2.5 flex gap-1">
-                                <div className="h-1 w-1 bg-primary rounded-full"></div>
-                                <div className="h-1 w-1 bg-primary rounded-full"></div>
-                                <div className="h-1 w-1 bg-primary rounded-full"></div>
-                            </div>
+                          <div className="absolute right-3 top-2.5 flex gap-1">
+                            <div className="h-1 w-1 bg-primary rounded-full"></div>
+                            <div className="h-1 w-1 bg-primary rounded-full"></div>
+                            <div className="h-1 w-1 bg-primary rounded-full"></div>
+                          </div>
                         )}
                         {index === 1 && isActive && (
-                             <div className="absolute bottom-0 left-0 w-full h-[1px] bg-primary/50 animate-[scan_2s_linear_infinite]"></div>
+                          <div className="absolute bottom-0 left-0 w-full h-[1px] bg-primary/50 animate-[scan_2s_linear_infinite]"></div>
                         )}
                       </div>
                     </div>

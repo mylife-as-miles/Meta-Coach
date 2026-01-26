@@ -35,9 +35,7 @@ const DashboardLayout: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-4">
-                    <button className="w-10 h-10 rounded-full bg-surface-dark border border-white/10 flex items-center justify-center text-gray-400 hover:text-primary hover:border-primary/50 transition">
-                        <span className="material-icons-outlined text-sm">search</span>
-                    </button>
+                    {/* Search button removed */}
                     <button className="w-10 h-10 rounded-full bg-surface-dark border border-white/10 flex items-center justify-center text-gray-400 hover:text-primary hover:border-primary/50 transition relative">
                         <span className="material-icons-outlined text-sm">notifications</span>
                         <span className="absolute top-2 right-2.5 w-1.5 h-1.5 bg-primary rounded-full shadow-neon"></span>

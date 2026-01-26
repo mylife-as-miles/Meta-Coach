@@ -13,38 +13,38 @@ const ChooseGame: React.FC = () => {
     await new Promise(resolve => setTimeout(resolve, 1500));
 
     try {
-        const userId = localStorage.getItem('userId');
-        if (!userId) {
-            navigate('/auth');
-            return;
-        }
+      const userId = localStorage.getItem('userId');
+      if (!userId) {
+        navigate('/auth');
+        return;
+      }
 
-        const existingTeam = await db.teams.where('userId').equals(parseInt(userId)).first();
+      const existingTeam = await db.teams.where('userId').equals(parseInt(userId)).first();
 
-        const defaultStrategy = {
-            aggression: 50,
-            resourcePriority: 50,
-            visionInvestment: 50,
-            earlyGamePathing: false,
-            objectiveControl: false
-        };
+      const defaultStrategy = {
+        aggression: 50,
+        resourcePriority: 50,
+        visionInvestment: 50,
+        earlyGamePathing: false,
+        objectiveControl: false
+      };
 
-        if (existingTeam) {
-            await db.teams.update(existingTeam.id, { gameTitle });
-        } else {
-            await db.teams.add({
-                userId: parseInt(userId),
-                gameTitle,
-                roster: [],
-                strategy: defaultStrategy
-            });
-        }
+      if (existingTeam) {
+        await db.teams.update(existingTeam.id, { gameTitle });
+      } else {
+        await db.teams.add({
+          userId: parseInt(userId),
+          gameTitle,
+          roster: [],
+          strategy: defaultStrategy
+        });
+      }
 
-        navigate('/onboarding/step-2');
+      navigate('/onboarding/step-2');
 
     } catch (error) {
-        console.error("Failed to save game selection", error);
-        setConnecting(null);
+      console.error("Failed to save game selection", error);
+      setConnecting(null);
     }
   };
 
@@ -84,22 +84,28 @@ const ChooseGame: React.FC = () => {
 
       <main className="flex-grow flex flex-col items-center justify-center relative z-10 min-h-screen pt-24 pb-12 px-6">
         <div className="w-full max-w-4xl mb-16 relative">
+          {/* Progress Lines */}
           <div className="absolute top-4 left-0 w-full h-0.5 bg-surface-darker border-t border-white/10 -z-10"></div>
-          <div className="absolute top-4 left-0 w-1/6 h-0.5 bg-primary/50 -z-10"></div>
-          <div className="flex justify-between w-full">
-            <div className="flex flex-col items-center gap-3">
+
+          <div className="flex justify-between w-full relative">
+            <div className="flex flex-col items-center gap-3 relative z-10 w-1/3">
               <div className="w-8 h-8 rounded bg-primary text-black flex items-center justify-center font-bold text-sm shadow-[0_0_15px_rgba(210,249,111,0.5)] ring-4 ring-background-dark">
                 1
               </div>
               <span className="text-[10px] uppercase tracking-widest text-primary font-bold bg-background-dark px-2">Choose Game</span>
             </div>
-            <div className="flex flex-col items-center gap-3 opacity-50">
+
+            {/* Progress Line Part 1 - Active */}
+            <div className="absolute top-4 left-[16%] w-[33%] h-0.5 bg-primary -z-0"></div>
+
+            <div className="flex flex-col items-center gap-3 relative z-10 w-1/3 opacity-50">
               <div className="w-8 h-8 rounded bg-surface-dark border border-white/20 text-gray-500 flex items-center justify-center font-bold text-sm ring-4 ring-background-dark">
                 2
               </div>
               <span className="text-[10px] uppercase tracking-widest text-gray-500 font-bold bg-background-dark px-2">Sync Roster</span>
             </div>
-            <div className="flex flex-col items-center gap-3 opacity-50">
+
+            <div className="flex flex-col items-center gap-3 relative z-10 w-1/3 opacity-50">
               <div className="w-8 h-8 rounded bg-surface-dark border border-white/20 text-gray-500 flex items-center justify-center font-bold text-sm ring-4 ring-background-dark">
                 3
               </div>

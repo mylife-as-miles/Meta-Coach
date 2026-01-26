@@ -7,13 +7,13 @@ const CalibrateAI: React.FC = () => {
   const [strategy, setStrategy] = useState({
     aggression: 85,
     resourcePriority: 30, // 0 = Top, 100 = Bot? HTML says "Bot Lane Focus" for 30? Wait.
-                          // HTML Slider: value="30". Left text: Bot Lane, Right text: Top Lane.
-                          // Usually Left is Min (0), Right is Max (100).
-                          // So 0 = Bot Lane, 100 = Top Lane? Or vice versa?
-                          // HTML: "Bot Lane Focus" text is displayed. Value is 30.
-                          // I'll assume 0 = Bot, 100 = Top based on labels "Bot Lane" (left) "Top Lane" (right).
-                          // But "Bot Lane Focus" implies it is focused on Bot.
-                          // If 0 is Bot, then 30 is heavily Bot.
+    // HTML Slider: value="30". Left text: Bot Lane, Right text: Top Lane.
+    // Usually Left is Min (0), Right is Max (100).
+    // So 0 = Bot Lane, 100 = Top Lane? Or vice versa?
+    // HTML: "Bot Lane Focus" text is displayed. Value is 30.
+    // I'll assume 0 = Bot, 100 = Top based on labels "Bot Lane" (left) "Top Lane" (right).
+    // But "Bot Lane Focus" implies it is focused on Bot.
+    // If 0 is Bot, then 30 is heavily Bot.
     visionInvestment: 50,
     earlyGamePathing: true,
     objectiveControl: true
@@ -33,24 +33,24 @@ const CalibrateAI: React.FC = () => {
     if (!userId) return;
 
     try {
-        const team = await db.teams.where('userId').equals(parseInt(userId)).first();
-        if (team) {
-            await db.teams.update(team.id, { strategy });
-        } else {
-             // Fallback create if missing (unlikely)
-             await db.teams.add({
-                userId: parseInt(userId),
-                gameTitle: 'League of Legends', // Default
-                roster: [],
-                strategy
-             });
-        }
+      const team = await db.teams.where('userId').equals(parseInt(userId)).first();
+      if (team) {
+        await db.teams.update(team.id, { strategy });
+      } else {
+        // Fallback create if missing (unlikely)
+        await db.teams.add({
+          userId: parseInt(userId),
+          gameTitle: 'League of Legends', // Default
+          roster: [],
+          strategy
+        });
+      }
 
-        await db.users.update(parseInt(userId), { onboardingComplete: true });
-        navigate('/dashboard');
+      await db.users.update(parseInt(userId), { onboardingComplete: true });
+      navigate('/dashboard');
 
     } catch (error) {
-        console.error("Failed to save strategy", error);
+      console.error("Failed to save strategy", error);
     }
   };
 
@@ -90,13 +90,46 @@ const CalibrateAI: React.FC = () => {
               <span className="text-sm font-bold text-white">Step 3 of 3</span>
             </div>
             <div className="w-10 h-10 rounded-full bg-surface-dark border border-white/10 flex items-center justify-center text-xs font-bold text-primary">
-                AI
+              AI
             </div>
           </div>
         </div>
       </nav>
 
-      <main className="flex-grow flex flex-col relative z-10 min-h-screen px-6 pt-24 pb-12">
+      <main className="flex-grow flex flex-col items-center relative z-10 min-h-screen px-6 pt-24 pb-12">
+        <div className="w-full max-w-4xl mb-12 relative">
+          {/* Progress Lines */}
+          <div className="absolute top-4 left-0 w-full h-0.5 bg-surface-darker border-t border-white/10 -z-10"></div>
+
+          <div className="flex justify-between w-full relative">
+            <div className="flex flex-col items-center gap-3 relative z-10 w-1/3">
+              <div className="w-8 h-8 rounded bg-primary text-black flex items-center justify-center font-bold text-sm shadow-[0_0_15px_rgba(210,249,111,0.5)] ring-4 ring-background-dark">
+                1
+              </div>
+              <span className="text-[10px] uppercase tracking-widest text-primary font-bold bg-background-dark px-2">Choose Game</span>
+            </div>
+
+            {/* Progress Line 1-2 Done */}
+            <div className="absolute top-4 left-[16%] w-[33%] h-0.5 bg-primary -z-0"></div>
+
+            <div className="flex flex-col items-center gap-3 relative z-10 w-1/3">
+              <div className="w-8 h-8 rounded bg-primary text-black flex items-center justify-center font-bold text-sm shadow-[0_0_15px_rgba(210,249,111,0.5)] ring-4 ring-background-dark">
+                2
+              </div>
+              <span className="text-[10px] uppercase tracking-widest text-primary font-bold bg-background-dark px-2">Sync Roster</span>
+            </div>
+
+            {/* Progress Line 2-3 Done */}
+            <div className="absolute top-4 left-[50%] w-[33%] h-0.5 bg-primary -z-0"></div>
+
+            <div className="flex flex-col items-center gap-3 relative z-10 w-1/3">
+              <div className="w-8 h-8 rounded bg-primary text-black flex items-center justify-center font-bold text-sm shadow-[0_0_15px_rgba(210,249,111,0.5)] ring-4 ring-background-dark">
+                3
+              </div>
+              <span className="text-[10px] uppercase tracking-widest text-primary font-bold bg-background-dark px-2">Calibrate AI</span>
+            </div>
+          </div>
+        </div>
         <div className="max-w-7xl mx-auto w-full flex flex-col gap-8 h-full">
           <div className="space-y-6">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -107,7 +140,7 @@ const CalibrateAI: React.FC = () => {
                 </div>
                 <h1 className="text-3xl md:text-5xl font-bold tracking-tight">Finalizing Strategy Engine</h1>
                 <p className="text-gray-400 mt-2 max-w-2xl text-sm md:text-base font-light">
-                    Configure the Gemini AI parameters to align with your team's playstyle. These settings will dictate real-time analytic suggestions during matches.
+                  Configure the Gemini AI parameters to align with your team's playstyle. These settings will dictate real-time analytic suggestions during matches.
                 </p>
               </div>
             </div>
@@ -188,8 +221,8 @@ const CalibrateAI: React.FC = () => {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div
-                    className={`bg-surface-darker/60 backdrop-blur-md border ${strategy.earlyGamePathing ? 'border-primary/30' : 'border-white/10'} rounded-xl p-5 hover:border-primary/30 transition-colors cursor-pointer`}
-                    onClick={() => handleToggleChange('earlyGamePathing')}
+                  className={`bg-surface-darker/60 backdrop-blur-md border ${strategy.earlyGamePathing ? 'border-primary/30' : 'border-white/10'} rounded-xl p-5 hover:border-primary/30 transition-colors cursor-pointer`}
+                  onClick={() => handleToggleChange('earlyGamePathing')}
                 >
                   <div className="flex justify-between items-start mb-3">
                     <div className="p-2 bg-white/5 rounded text-primary">
@@ -209,8 +242,8 @@ const CalibrateAI: React.FC = () => {
                   <p className="text-xs text-gray-500 leading-relaxed">Prioritize level 1-3 jungler routing analysis.</p>
                 </div>
                 <div
-                    className={`bg-surface-darker/60 backdrop-blur-md border ${strategy.objectiveControl ? 'border-primary/30' : 'border-white/10'} rounded-xl p-5 hover:border-primary/30 transition-colors cursor-pointer`}
-                    onClick={() => handleToggleChange('objectiveControl')}
+                  className={`bg-surface-darker/60 backdrop-blur-md border ${strategy.objectiveControl ? 'border-primary/30' : 'border-white/10'} rounded-xl p-5 hover:border-primary/30 transition-colors cursor-pointer`}
+                  onClick={() => handleToggleChange('objectiveControl')}
                 >
                   <div className="flex justify-between items-start mb-3">
                     <div className="p-2 bg-white/5 rounded text-primary">
@@ -279,8 +312,8 @@ const CalibrateAI: React.FC = () => {
                       <p className="text-primary mb-1">! Recommendation</p>
                       <p className="text-[10px] text-gray-400">
                         {strategy.aggression > 60
-                            ? "Consider banning anti-dive champions (e.g., Janna, Taric) to maximize early game pathing efficiency."
-                            : "Focus on warding defensive choke points to survive early game pressure."}
+                          ? "Consider banning anti-dive champions (e.g., Janna, Taric) to maximize early game pathing efficiency."
+                          : "Focus on warding defensive choke points to survive early game pressure."}
                       </p>
                     </div>
                     <p>&gt; Model confidence: <span className="text-green-400">98.4%</span></p>
