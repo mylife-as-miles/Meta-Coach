@@ -38,7 +38,7 @@ const DashboardLayout: React.FC = () => {
 
                 <div className="hidden md:flex items-center bg-surface-dark rounded-full p-1.5 shadow-sm border border-white/5">
                     <NavItem to="/dashboard" end>Dashboard</NavItem>
-                    <NavItem to="/dashboard/profile">Profile</NavItem>
+
                     <NavItem to="/dashboard/match-history">Match History</NavItem>
                     <NavItem to="/dashboard/player-hub">Player Hub</NavItem>
                     <NavItem to="/dashboard/strategy-lab">Strategy Lab</NavItem>
