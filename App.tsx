@@ -12,6 +12,7 @@ import PlayerHub from './components/dashboard/PlayerHub';
 import StrategyLab from './components/dashboard/StrategyLab';
 import Settings from './components/dashboard/Settings';
 import CommunicationLogs from './components/dashboard/CommunicationLogs';
+import CoachProfile from './components/dashboard/CoachProfile';
 import { Sun, Moon } from './components/Icons';
 
 const App: React.FC = () => {
@@ -46,6 +47,7 @@ const App: React.FC = () => {
           <Route path="player-hub" element={<PlayerHub />} />
           <Route path="strategy-lab" element={<StrategyLab />} />
           <Route path="communication-logs" element={<CommunicationLogs />} />
+          <Route path="profile" element={<CoachProfile />} />
           <Route path="settings" element={<Settings />} />
         </Route>
       </Routes>

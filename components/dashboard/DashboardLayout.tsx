@@ -38,6 +38,7 @@ const DashboardLayout: React.FC = () => {
 
                 <div className="hidden md:flex items-center bg-surface-dark rounded-full p-1.5 shadow-sm border border-white/5">
                     <NavItem to="/dashboard" end>Dashboard</NavItem>
+                    <NavItem to="/dashboard/profile">Profile</NavItem>
                     <NavItem to="/dashboard/match-history">Match History</NavItem>
                     <NavItem to="/dashboard/player-hub">Player Hub</NavItem>
                     <NavItem to="/dashboard/strategy-lab">Strategy Lab</NavItem>
@@ -125,17 +126,17 @@ const DashboardLayout: React.FC = () => {
                         )}
                     </div>
 
-                    <div className="flex items-center gap-3 pl-2 border-l border-white/10 ml-2">
+                    <Link to="/dashboard/profile" className="flex items-center gap-3 pl-2 border-l border-white/10 ml-2 relative z-30 hover:opacity-80 transition cursor-pointer">
                         <img
                             alt="Profile"
                             className="w-9 h-9 rounded-full border-2 border-surface-dark ring-2 ring-primary/20"
-                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuAnZHcSrpkq-4S4qmJXdr6_VhmwSYKTgBwySukjrnGqn8M8DPxDi-_T89gMvPjZJuk5_YnTIKw4EKg0qcJLf5m9Bt-dXlPiBq2kKdwYXHZTaOlCgsFapA1gpGLbBNZ5_-MITHR2kuaqWAzhqxlkrEJ21e6rhziCrRwoZu9BRP_WmTwNzPz1Q9vIcYV5_dAJqKG6SXpWb7DxmTtCkQbEXLcIaXyMBNx34AFE2Hfk8o7S1p-4J0HIXtEmVWCEuRn8PAe7U9GsA4ysQNo"
+                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuAnZHcSrpkq-4S4qmJXdr6_VhmwSYKTgBwySukjrnGqn8M8DPxDi-_T89gMvPjZJuk5_YnTIKw4EKg0qcJLf5m9Bt-dXlPiBq2kKdwYXHZTaOlCgsFapA1gpGLbBNZ5_-MITHR2kuaqWAzhxxlkrEJ21e6rhziCrRwoZu9BRP_WmTwNzPz1Q9vIcYV5_dAJqKG6SXpWb7DxmTtCkQbEXLcIaXyMBNx34AFE2Hfk8o7S1p-4J0HIXtEmVWCEuRn8PAe7U9GsA4ysQNo"
                         />
                         <div className="hidden lg:block text-xs">
                             <p className="text-white font-medium">Alex Chen</p>
                             <p className="text-gray-400">Head Coach</p>
                         </div>
-                    </div>
+                    </Link>
                 </div>
             </nav>
 
