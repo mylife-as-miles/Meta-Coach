@@ -2,16 +2,22 @@
 
 @theme {
   --color-primary: #D2F96F;
+  --color-primary-dark: #BBE550;
   --color-primary-hover: #bce65b;
   --color-background-light: #F3F4F6;
   --color-background-dark: #0E100A;
   --color-surface-light: #FFFFFF;
-  --color-surface-dark: #1F1F1F;
-  --color-surface-darker: #151712;
+  --color-surface-dark: #1A1C14;
+  --color-surface-darker: #141610;
+  --color-text-light: #E0E0E0;
+  --color-border-lime: rgba(210, 249, 111, 0.2);
   --color-secondary-text: #A2A2A2;
 
-  --font-sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
-  --font-display: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --shadow-neon: 0 0 5px rgba(210, 249, 111, 0.2), 0 0 10px rgba(210, 249, 111, 0.1);
+  --shadow-glow: 0 0 15px rgba(210, 249, 111, 0.15);
+
+  --font-sans: "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-display: "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
   --font-mono: "Courier New", Courier, monospace;
 
   --animate-spin-slow: spin 12s linear infinite;
@@ -39,6 +45,16 @@
     background-size: 40px 40px;
     background-image: linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
       linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  }
+
+  .map-bg {
+    background-color: #0E100A;
+    background-image:
+        radial-gradient(at 10% 10%, #1A1C14 0px, transparent 50%),
+        radial-gradient(at 90% 90%, #1A1C14 0px, transparent 50%),
+        linear-gradient(rgba(210, 249, 111, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(210, 249, 111, 0.03) 1px, transparent 1px);
+    background-size: 100% 100%, 100% 100%, 40px 40px, 40px 40px;
   }
 
   .perspective-1000 {

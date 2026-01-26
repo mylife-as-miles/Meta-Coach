@@ -5,7 +5,12 @@ import Auth from './components/Auth';
 import ChooseGame from './components/onboarding/ChooseGame';
 import SyncRoster from './components/onboarding/SyncRoster';
 import CalibrateAI from './components/onboarding/CalibrateAI';
-import Dashboard from './components/Dashboard';
+import DashboardLayout from './components/dashboard/DashboardLayout';
+import DashboardOverview from './components/dashboard/DashboardOverview';
+import MatchHistory from './components/dashboard/MatchHistory';
+import PlayerHub from './components/dashboard/PlayerHub';
+import StrategyLab from './components/dashboard/StrategyLab';
+import Settings from './components/dashboard/Settings';
 import { Sun, Moon } from './components/Icons';
 
 const App: React.FC = () => {
@@ -33,8 +38,14 @@ const App: React.FC = () => {
         <Route path="/onboarding/step-2" element={<SyncRoster />} />
         <Route path="/onboarding/step-3" element={<CalibrateAI />} />
 
-        {/* Dashboard */}
-        <Route path="/dashboard" element={<Dashboard />} />
+        {/* Dashboard Routes */}
+        <Route path="/dashboard" element={<DashboardLayout />}>
+          <Route index element={<DashboardOverview />} />
+          <Route path="match-history" element={<MatchHistory />} />
+          <Route path="player-hub" element={<PlayerHub />} />
+          <Route path="strategy-lab" element={<StrategyLab />} />
+          <Route path="settings" element={<Settings />} />
+        </Route>
       </Routes>
 
       {/* Theme Toggle - Global */}
