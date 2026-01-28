@@ -1,6 +1,36 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { useDashboard } from '../../context/DashboardContext';
+import ComparePlayersModal from './modals/ComparePlayersModal';
+import EditAttributesModal from './modals/EditAttributesModal';
 
 const PlayerHub: React.FC = () => {
+    const [searchParams] = useSearchParams();
+    const {
+        selectedPlayer,
+        selectPlayer,
+        allPlayers,
+        comparePlayersOpen,
+        openComparePlayers,
+        closeComparePlayers,
+        editAttributesOpen,
+        openEditAttributes,
+        closeEditAttributes
+    } = useDashboard();
+
+    // Handle URL params for direct linking
+    useEffect(() => {
+        const playerId = searchParams.get('player');
+        if (playerId && (!selectedPlayer || selectedPlayer.id !== playerId)) {
+            selectPlayer(playerId);
+        } else if (!selectedPlayer && allPlayers.length > 0) {
+            // Default to first player if none selected
+            selectPlayer(allPlayers[0].id);
+        }
+    }, [searchParams, allPlayers, selectPlayer, selectedPlayer]);
+
+    if (!selectedPlayer) return null; // Or a loading state
+
     return (
         <div className="flex flex-col min-h-[calc(100vh-90px)]">
             <header className="flex flex-col md:flex-row justify-between items-start md:items-end mb-10 gap-4">
@@ -10,13 +40,19 @@ const PlayerHub: React.FC = () => {
                         <span className="w-1 h-1 rounded-full bg-gray-500"></span>
                         <span className="text-gray-400 text-xs">Season 14</span>
                     </div>
-                    <h1 className="text-4xl font-bold text-white tracking-tight">C9 <span className="text-gray-500">Blaber</span></h1>
+                    <h1 className="text-4xl font-bold text-white tracking-tight">C9 <span className="text-gray-500">{selectedPlayer.name}</span></h1>
                 </div>
                 <div className="flex items-center gap-3 w-full md:w-auto">
-                    <button className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-white/10 bg-surface-dark hover:border-primary/50 hover:text-white text-gray-400 text-sm transition cursor-pointer">
+                    <button
+                        onClick={openComparePlayers}
+                        className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-white/10 bg-surface-dark hover:border-primary/50 hover:text-white text-gray-400 text-sm transition cursor-pointer"
+                    >
                         <span className="material-icons-outlined text-sm">compare_arrows</span> Compare
                     </button>
-                    <button className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-primary text-black font-bold text-sm hover:bg-primary-dark transition shadow-[0_0_5px_rgba(210,249,111,0.3),0_0_15px_rgba(210,249,111,0.1)] cursor-pointer">
+                    <button
+                        onClick={openEditAttributes}
+                        className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-primary text-black font-bold text-sm hover:bg-primary-dark transition shadow-[0_0_5px_rgba(210,249,111,0.3),0_0_15px_rgba(210,249,111,0.1)] cursor-pointer"
+                    >
                         <span className="material-icons-outlined text-sm">edit</span> Edit Attributes
                     </button>
                 </div>
@@ -83,8 +119,8 @@ const PlayerHub: React.FC = () => {
                                 <div className="absolute inset-0 z-20 pointer-events-none opacity-50" style={{ backgroundImage: 'linear-gradient(180deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0) 40%, rgba(0,0,0,0.2) 100%)' }}></div>
                                 <div className="flex justify-between items-start p-5 z-30">
                                     <div className="flex flex-col items-center">
-                                        <span className="text-5xl font-black text-white drop-shadow-md">96</span>
-                                        <span className="text-xl font-bold text-primary tracking-widest mt-[-5px]">JG</span>
+                                        <span className="text-5xl font-black text-white drop-shadow-md">{selectedPlayer.overall}</span>
+                                        <span className="text-xl font-bold text-primary tracking-widest mt-[-5px]">{selectedPlayer.role}</span>
                                         <div className="w-8 h-8 rounded-full bg-blue-900/50 flex items-center justify-center border border-blue-400/30 mt-2">
                                             <span className="text-[10px] font-bold text-blue-400">C9</span>
                                         </div>
@@ -97,33 +133,33 @@ const PlayerHub: React.FC = () => {
                                     <span className="material-icons-outlined text-gray-800 drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)] opacity-80" style={{ fontSize: '220px' }}>person</span>
                                 </div>
                                 <div className="absolute top-[260px] w-full text-center z-30">
-                                    <h2 className="text-2xl font-black text-white uppercase tracking-widest drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] font-display">Blaber</h2>
+                                    <h2 className="text-2xl font-black text-white uppercase tracking-widest drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] font-display">{selectedPlayer.name}</h2>
                                     <div className="w-16 h-0.5 bg-primary/50 mx-auto mt-1 shadow-[0_0_5px_rgba(210,249,111,0.3),0_0_15px_rgba(210,249,111,0.1)]"></div>
                                 </div>
                                 <div className="absolute bottom-0 w-full h-[160px] px-6 pb-8 pt-4 flex flex-col justify-end z-30">
                                     <div className="grid grid-cols-2 gap-x-6 gap-y-2">
                                         <div className="flex justify-between items-center group/stat cursor-default">
-                                            <span className="font-bold text-white text-lg group-hover/stat:text-primary transition-colors">98</span>
+                                            <span className="font-bold text-white text-lg group-hover/stat:text-primary transition-colors">{selectedPlayer.stats.mechanics}</span>
                                             <span className="font-medium text-gray-400 text-xs tracking-wider">MECH</span>
                                         </div>
                                         <div className="flex justify-between items-center group/stat cursor-default">
-                                            <span className="font-bold text-white text-lg group-hover/stat:text-primary transition-colors">94</span>
+                                            <span className="font-bold text-white text-lg group-hover/stat:text-primary transition-colors">{selectedPlayer.stats.objectives}</span>
                                             <span className="font-medium text-gray-400 text-xs tracking-wider">OBJ</span>
                                         </div>
                                         <div className="flex justify-between items-center group/stat cursor-default">
-                                            <span className="font-bold text-white text-lg group-hover/stat:text-primary transition-colors">89</span>
+                                            <span className="font-bold text-white text-lg group-hover/stat:text-primary transition-colors">{selectedPlayer.stats.macro}</span>
                                             <span className="font-medium text-gray-400 text-xs tracking-wider">MACR</span>
                                         </div>
                                         <div className="flex justify-between items-center group/stat cursor-default">
-                                            <span className="font-bold text-white text-lg group-hover/stat:text-primary transition-colors">91</span>
+                                            <span className="font-bold text-white text-lg group-hover/stat:text-primary transition-colors">{selectedPlayer.stats.vision}</span>
                                             <span className="font-medium text-gray-400 text-xs tracking-wider">VIS</span>
                                         </div>
                                         <div className="flex justify-between items-center group/stat cursor-default">
-                                            <span className="font-bold text-white text-lg group-hover/stat:text-primary transition-colors">92</span>
+                                            <span className="font-bold text-white text-lg group-hover/stat:text-primary transition-colors">{selectedPlayer.stats.teamwork}</span>
                                             <span className="font-medium text-gray-400 text-xs tracking-wider">TEAM</span>
                                         </div>
                                         <div className="flex justify-between items-center group/stat cursor-default">
-                                            <span className="font-bold text-white text-lg group-hover/stat:text-primary transition-colors">85</span>
+                                            <span className="font-bold text-white text-lg group-hover/stat:text-primary transition-colors">{selectedPlayer.stats.mental}</span>
                                             <span className="font-medium text-gray-400 text-xs tracking-wider">MENT</span>
                                         </div>
                                     </div>
@@ -250,108 +286,50 @@ const PlayerHub: React.FC = () => {
                     </div>
                 </div>
                 <div className="flex gap-6 overflow-x-auto pb-6 custom-scrollbar snap-x">
-                    {/* Blaber */}
-                    <div className="snap-start shrink-0">
-                        <div className="w-48 h-72 relative rounded-2xl border-2 border-primary overflow-hidden shadow-[0_0_5px_rgba(210,249,111,0.3),0_0_15px_rgba(210,249,111,0.1)] cursor-pointer transform scale-100 hover:scale-105 transition-all">
-                            <div className="absolute inset-0 bg-gradient-to-b from-gray-800 to-black"></div>
-                            <div className="absolute top-2 left-3 z-10">
-                                <div className="text-2xl font-bold text-white">96</div>
-                                <div className="text-xs font-bold text-primary">JG</div>
-                            </div>
-                            <div className="absolute inset-0 flex items-center justify-center">
-                                <span className="material-icons-outlined text-6xl text-gray-700">person</span>
-                            </div>
-                            <div className="absolute bottom-0 w-full p-3 bg-black/60 backdrop-blur-sm border-t border-white/10">
-                                <div className="text-center font-bold text-white tracking-widest text-sm">BLABER</div>
-                                <div className="flex justify-between mt-2 text-[10px] text-gray-400 px-2">
-                                    <span>98 MC</span>
-                                    <span>94 OB</span>
+                    {allPlayers.map((player) => (
+                        <div
+                            key={player.id}
+                            onClick={() => selectPlayer(player.id)}
+                            className={`snap-start shrink-0 transition-opacity ${selectedPlayer.id === player.id ? 'opacity-100 scale-105' : 'opacity-70 hover:opacity-100'}`}
+                        >
+                            <div className={`w-48 h-72 relative rounded-2xl border overflow-hidden cursor-pointer transition-all ${selectedPlayer.id === player.id
+                                    ? 'border-2 border-primary shadow-[0_0_5px_rgba(210,249,111,0.3),0_0_15px_rgba(210,249,111,0.1)]'
+                                    : 'border-white/10 bg-surface-dark hover:border-white/30'
+                                }`}>
+                                <div className={`absolute inset-0 bg-gradient-to-b ${selectedPlayer.id === player.id ? 'from-gray-800 to-black' : 'from-gray-800/50 to-black'}`}></div>
+                                <div className="absolute top-2 left-3 z-10">
+                                    <div className={`text-2xl font-bold ${selectedPlayer.id === player.id ? 'text-white' : 'text-gray-300'}`}>{player.overall}</div>
+                                    <div className={`text-xs font-bold ${selectedPlayer.id === player.id ? 'text-primary' : 'text-gray-500'}`}>{player.role}</div>
+                                </div>
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                    <span className={`material-icons-outlined text-6xl ${selectedPlayer.id === player.id ? 'text-gray-700' : 'text-gray-800'}`}>person</span>
+                                </div>
+                                {/* In a real app we would use player.avatar here too */}
+                                <div className="absolute bottom-0 w-full p-3 bg-black/60 backdrop-blur-sm border-t border-white/10">
+                                    <div className={`text-center font-bold tracking-widest text-sm ${selectedPlayer.id === player.id ? 'text-white' : 'text-gray-300'}`}>{player.name.toUpperCase()}</div>
+                                    <div className="flex justify-between mt-2 text-[10px] text-gray-500 px-2">
+                                        <span>{player.stats.mechanics} MC</span>
+                                        <span>{player.stats.objectives} OB</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    {/* Jojopyun */}
-                    <div className="snap-start shrink-0 opacity-70 hover:opacity-100 transition-opacity">
-                        <div className="w-48 h-72 relative rounded-2xl border border-white/10 overflow-hidden bg-surface-dark cursor-pointer hover:border-white/30 transition-all">
-                            <div className="absolute inset-0 bg-gradient-to-b from-gray-800/50 to-black"></div>
-                            <div className="absolute top-2 left-3 z-10">
-                                <div className="text-2xl font-bold text-gray-300">92</div>
-                                <div className="text-xs font-bold text-gray-500">MID</div>
-                            </div>
-                            <div className="absolute inset-0 flex items-center justify-center">
-                                <span className="material-icons-outlined text-6xl text-gray-800">person</span>
-                            </div>
-                            <div className="absolute bottom-0 w-full p-3 bg-black/60 backdrop-blur-sm border-t border-white/10">
-                                <div className="text-center font-bold text-gray-300 tracking-widest text-sm">JOJO</div>
-                                <div className="flex justify-between mt-2 text-[10px] text-gray-500 px-2">
-                                    <span>94 MC</span>
-                                    <span>88 OB</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    {/* Fudge */}
-                    <div className="snap-start shrink-0 opacity-70 hover:opacity-100 transition-opacity">
-                        <div className="w-48 h-72 relative rounded-2xl border border-white/10 overflow-hidden bg-surface-dark cursor-pointer hover:border-white/30 transition-all">
-                            <div className="absolute inset-0 bg-gradient-to-b from-gray-800/50 to-black"></div>
-                            <div className="absolute top-2 left-3 z-10">
-                                <div className="text-2xl font-bold text-gray-300">89</div>
-                                <div className="text-xs font-bold text-gray-500">TOP</div>
-                            </div>
-                            <div className="absolute inset-0 flex items-center justify-center">
-                                <span className="material-icons-outlined text-6xl text-gray-800">person</span>
-                            </div>
-                            <div className="absolute bottom-0 w-full p-3 bg-black/60 backdrop-blur-sm border-t border-white/10">
-                                <div className="text-center font-bold text-gray-300 tracking-widest text-sm">FUDGE</div>
-                                <div className="flex justify-between mt-2 text-[10px] text-gray-500 px-2">
-                                    <span>85 MC</span>
-                                    <span>90 OB</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    {/* Berserker */}
-                    <div className="snap-start shrink-0 opacity-70 hover:opacity-100 transition-opacity">
-                        <div className="w-48 h-72 relative rounded-2xl border border-white/10 overflow-hidden bg-surface-dark cursor-pointer hover:border-white/30 transition-all">
-                            <div className="absolute inset-0 bg-gradient-to-b from-gray-800/50 to-black"></div>
-                            <div className="absolute top-2 left-3 z-10">
-                                <div className="text-2xl font-bold text-gray-300">91</div>
-                                <div className="text-xs font-bold text-gray-500">ADC</div>
-                            </div>
-                            <div className="absolute inset-0 flex items-center justify-center">
-                                <span className="material-icons-outlined text-6xl text-gray-800">person</span>
-                            </div>
-                            <div className="absolute bottom-0 w-full p-3 bg-black/60 backdrop-blur-sm border-t border-white/10">
-                                <div className="text-center font-bold text-gray-300 tracking-widest text-sm">BERSERKER</div>
-                                <div className="flex justify-between mt-2 text-[10px] text-gray-500 px-2">
-                                    <span>99 MC</span>
-                                    <span>85 OB</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    {/* Vulcan */}
-                    <div className="snap-start shrink-0 opacity-70 hover:opacity-100 transition-opacity">
-                        <div className="w-48 h-72 relative rounded-2xl border border-white/10 overflow-hidden bg-surface-dark cursor-pointer hover:border-white/30 transition-all">
-                            <div className="absolute inset-0 bg-gradient-to-b from-gray-800/50 to-black"></div>
-                            <div className="absolute top-2 left-3 z-10">
-                                <div className="text-2xl font-bold text-gray-300">88</div>
-                                <div className="text-xs font-bold text-gray-500">SUP</div>
-                            </div>
-                            <div className="absolute inset-0 flex items-center justify-center">
-                                <span className="material-icons-outlined text-6xl text-gray-800">person</span>
-                            </div>
-                            <div className="absolute bottom-0 w-full p-3 bg-black/60 backdrop-blur-sm border-t border-white/10">
-                                <div className="text-center font-bold text-gray-300 tracking-widest text-sm">VULCAN</div>
-                                <div className="flex justify-between mt-2 text-[10px] text-gray-500 px-2">
-                                    <span>82 MC</span>
-                                    <span>95 OB</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    ))}
                 </div>
             </section>
+
+            {/* Modals */}
+            <ComparePlayersModal
+                isOpen={comparePlayersOpen}
+                onClose={closeComparePlayers}
+                basePlayer={selectedPlayer}
+            />
+
+            <EditAttributesModal
+                isOpen={editAttributesOpen}
+                onClose={closeEditAttributes}
+                player={selectedPlayer}
+            />
         </div>
     );
 };

@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useDashboard } from '../../context/DashboardContext';
 import StrategyBriefModal from './modals/StrategyBriefModal';
+import { players } from '../../lib/mockData';
 
 const DashboardOverview: React.FC = () => {
     const navigate = useNavigate();
@@ -249,101 +250,47 @@ const DashboardOverview: React.FC = () => {
                         <div className="flex-1 flex flex-col justify-center items-center relative z-10 space-y-4 mb-4">
                             <div className="absolute top-10 left-0 w-full h-full border-t border-white/5 rounded-full scale-150 pointer-events-none"></div>
 
-                            {/* Thanatos */}
-                            <div className="w-full flex items-center justify-between p-2 rounded-lg bg-surface-darker hover:bg-white/5 transition border border-white/5 hover:border-white/20 group">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded bg-gray-800 relative overflow-hidden ring-1 ring-white/10 group-hover:ring-white/30 transition">
-                                        <img className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCkT4Ks269eAsRO6dfV89vALxgdxfAIVhrSHYZ7tNq8vISykltHagGhfqxQ3jGWrJToNIJpP4nM3PSdgPu8l9HYdhYrWOGXeDoZE0G4AtmJSbDrpnVK9otXSAjl7dyD5dHsK0gI8YorFUR23B9c1S7IZ6YJUPedlRZgYDwSEGbgE1Qn_v8raz85BTG63ZekqtcevpkMwY7youcMNc-tgeCvFlI4XIRqdEm7dh6c-V5ydmisJWLB9DIAPUQA7zzudRIGVrMsPgx45nY" alt="Thanatos" />
+                            {players.map(player => (
+                                <Link
+                                    key={player.id}
+                                    to={`/dashboard/player-hub?player=${player.id}`}
+                                    className={`w-full flex items-center justify-between p-2 rounded-lg transition border group ${player.id === 'player-2' // Highlight Jojo as example
+                                            ? 'bg-surface-darker hover:bg-white/5 border-primary/30 shadow-[0_0_10px_rgba(210,249,111,0.05)] relative'
+                                            : 'bg-surface-darker hover:bg-white/5 border-white/5 hover:border-white/20'
+                                        }`}
+                                >
+                                    {player.id === 'player-2' && (
+                                        <div className="absolute inset-0 bg-primary/5 rounded-lg opacity-20 animate-pulse pointer-events-none"></div>
+                                    )}
+                                    <div className={`flex items-center gap-3 relative z-10`}>
+                                        <div className={`w-8 h-8 rounded bg-gray-800 relative overflow-hidden transition ${player.id === 'player-2' ? 'ring-2 ring-primary shadow-neon' : 'ring-1 ring-white/10 group-hover:ring-white/30'
+                                            }`}>
+                                            <img className="w-full h-full object-cover" src={player.avatar} alt={player.name} />
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className={`text-xs font-bold ${player.id === 'player-2' ? 'text-white' : 'text-gray-200 group-hover:text-white'}`}>{player.name}</span>
+                                            <span className={`text-[9px] uppercase ${player.id === 'player-2' ? 'text-primary' : 'text-gray-500'}`}>{player.role}</span>
+                                        </div>
                                     </div>
-                                    <div className="flex flex-col">
-                                        <span className="text-xs font-bold text-gray-200 group-hover:text-white">Thanatos</span>
-                                        <span className="text-[9px] text-gray-500 uppercase">Top Lane</span>
+                                    <div className={`flex flex-col items-end ${player.id === 'player-2' ? 'relative z-10' : ''}`}>
+                                        <div className="w-16 h-1 bg-gray-800 rounded-full mb-1 overflow-hidden">
+                                            <div
+                                                className={`h-full rounded-full ${player.synergy >= 90 ? 'bg-primary shadow-neon' :
+                                                        player.synergy >= 80 ? 'bg-green-400 shadow-[0_0_5px_rgba(74,222,128,0.5)]' :
+                                                            player.synergy >= 75 ? 'bg-yellow-400 shadow-[0_0_5px_rgba(250,204,21,0.5)]' :
+                                                                'bg-orange-500 shadow-[0_0_5px_rgba(249,115,22,0.5)]'
+                                                    }`}
+                                                style={{ width: `${player.synergy}%` }}
+                                            ></div>
+                                        </div>
+                                        <span className={`text-[9px] font-mono ${player.synergy >= 90 ? 'text-primary font-bold' :
+                                                player.synergy >= 80 ? 'text-green-400' :
+                                                    player.synergy >= 75 ? 'text-yellow-400' :
+                                                        'text-orange-400'
+                                            }`}>Syn: {player.synergy}%</span>
                                     </div>
-                                </div>
-                                <div className="flex flex-col items-end">
-                                    <div className="w-16 h-1 bg-gray-800 rounded-full mb-1 overflow-hidden">
-                                        <div className="w-[90%] bg-green-400 h-full rounded-full shadow-[0_0_5px_rgba(74,222,128,0.5)]"></div>
-                                    </div>
-                                    <span className="text-[9px] text-green-400 font-mono">Syn: 92%</span>
-                                </div>
-                            </div>
-
-                            {/* Blaber */}
-                            <div className="w-full flex items-center justify-between p-2 rounded-lg bg-surface-darker hover:bg-white/5 transition border border-white/5 hover:border-white/20 group">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded bg-gray-800 relative overflow-hidden ring-1 ring-white/10 group-hover:ring-white/30 transition">
-                                        <img className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBlIJwvp8CJbnm_G_ebQy1u5tPqtfiI65vbfXCcoI7mW_DPo3DfI28f9VxDLLJVC-EhH78h7c9-SH__pTSDAIQzMaqrLQKQt6RbmUbCEYlA6Hau1KtjKoBfjqG75OkcbamnBjK4H7P7UOZk7-7kKTKiwRh-gVGy-LG5yzpD7SuqKfU6pqlW7S2V3XCc_-hYQNRBhMV0eAvia9CV4onl0orcsGsRsmvLZmyC8WQ0Li3t5_tyqHZUL6zcknCXfdd_WtvXdZULlmJ2oqI" alt="Blaber" />
-                                    </div>
-                                    <div className="flex flex-col">
-                                        <span className="text-xs font-bold text-gray-200 group-hover:text-white">Blaber</span>
-                                        <span className="text-[9px] text-gray-500 uppercase">Jungle</span>
-                                    </div>
-                                </div>
-                                <div className="flex flex-col items-end">
-                                    <div className="w-16 h-1 bg-gray-800 rounded-full mb-1 overflow-hidden">
-                                        <div className="w-[75%] bg-yellow-400 h-full rounded-full shadow-[0_0_5px_rgba(250,204,21,0.5)]"></div>
-                                    </div>
-                                    <span className="text-[9px] text-yellow-400 font-mono">Syn: 88%</span>
-                                </div>
-                            </div>
-
-                            {/* Jojopyun (Highlighted) */}
-                            <div className="w-full flex items-center justify-between p-2 rounded-lg bg-surface-darker hover:bg-white/5 transition border border-primary/30 shadow-[0_0_10px_rgba(210,249,111,0.05)] group relative">
-                                <div className="absolute inset-0 bg-primary/5 rounded-lg opacity-20 animate-pulse pointer-events-none"></div>
-                                <div className="flex items-center gap-3 relative z-10">
-                                    <div className="w-8 h-8 rounded bg-gray-800 relative overflow-hidden ring-2 ring-primary shadow-neon">
-                                        <img className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBgmk_3Dd5LZ7x8Y6QRyVcvfIY2o6i6ZEow7ULJQ7mDBP9ltpfN96fTLkIsaRT5-MpowpIF-OK3wILuhV1LMKNyFwYaELdGjXM27XdtdTTQ53UZfPgdMZ253PEYcr2KocmNhX69xqIBVXrvyGfbX_f4B0RgX6TfhpLyEyzdI0tBFdPk1NZGSJs2AXWniFBg8o-q5_rUNev6IJ1Ih1TABpuVeL3aPlaDuEgX4ofivzoMsoGDWhrOQPLUbq9XCkzAO2rA9Pe7ZbFsKxk" alt="Jojopyun" />
-                                    </div>
-                                    <div className="flex flex-col">
-                                        <span className="text-xs font-bold text-white">Jojopyun</span>
-                                        <span className="text-[9px] text-primary uppercase">Mid Lane</span>
-                                    </div>
-                                </div>
-                                <div className="flex flex-col items-end relative z-10">
-                                    <div className="w-16 h-1 bg-gray-800 rounded-full mb-1 overflow-hidden">
-                                        <div className="w-[98%] bg-primary h-full rounded-full shadow-neon"></div>
-                                    </div>
-                                    <span className="text-[9px] text-primary font-bold font-mono">Syn: 99%</span>
-                                </div>
-                            </div>
-
-                            {/* Berserker */}
-                            <div className="w-full flex items-center justify-between p-2 rounded-lg bg-surface-darker hover:bg-white/5 transition border border-white/5 hover:border-white/20 group">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded bg-gray-800 relative overflow-hidden ring-1 ring-white/10 group-hover:ring-white/30 transition">
-                                        <img className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCdsGjvfWWP_RQNNnonarIcqn1w4a1C67nqV4onFMGWTacVTtZcmBLfYLg0F_8tnC-0L75xDGVVduwGKczRdEbfwrYroPUf6BjR_tk2ZyXcg5qNWU9xkxeixNdlRIqXeymWpYv2G1J9Q0TPgaXpw1PAPC2ca1uP290RzVvGwU4Sv56ZJnYXnZxha829S_3gVjM5ccAMUtxp4D_0J8qBGHt9N5KOsN97t0X_glvsn1Hx1et9xihm5_9k8eEf1cRjBX4HU7_q7_kNYyc" alt="Berserker" />
-                                    </div>
-                                    <div className="flex flex-col">
-                                        <span className="text-xs font-bold text-gray-200 group-hover:text-white">Berserker</span>
-                                        <span className="text-[9px] text-gray-500 uppercase">ADC</span>
-                                    </div>
-                                </div>
-                                <div className="flex flex-col items-end">
-                                    <div className="w-16 h-1 bg-gray-800 rounded-full mb-1 overflow-hidden">
-                                        <div className="w-[85%] bg-green-400 h-full rounded-full shadow-[0_0_5px_rgba(74,222,128,0.5)]"></div>
-                                    </div>
-                                    <span className="text-[9px] text-green-400 font-mono">Syn: 90%</span>
-                                </div>
-                            </div>
-
-                            {/* Vulcan */}
-                            <div className="w-full flex items-center justify-between p-2 rounded-lg bg-surface-darker hover:bg-white/5 transition border border-white/5 hover:border-white/20 group">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded bg-gray-800 relative overflow-hidden ring-1 ring-white/10 group-hover:ring-white/30 transition">
-                                        <img className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDczUci-uHIWdbJeCdzPrbW8bcQ_I9NN_1njJmho1qTxEAFZ9aXu3gvt0gYxoZ4gnkO5UaGdc_ZOVtuj-jKW6u1gIwQYD7AmyRTU-RfzLUrMNfrcT-EAUPmsmqUMXe7rjEf96uDjYqljkUL--R9J3jWOd14hio3KRju1e4daLpYR6O-Wt3yj_GrNpAHHpb44Un-j7RloKeE0_eqUoGAbPyoa-axldcOQBZ0-g5n4p0wNFIdoWlJ5EAN5vKdKgmwkhJ_H54zPK2JK9Y" alt="Vulcan" />
-                                    </div>
-                                    <div className="flex flex-col">
-                                        <span className="text-xs font-bold text-gray-200 group-hover:text-white">Vulcan</span>
-                                        <span className="text-[9px] text-gray-500 uppercase">Support</span>
-                                    </div>
-                                </div>
-                                <div className="flex flex-col items-end">
-                                    <div className="w-16 h-1 bg-gray-800 rounded-full mb-1 overflow-hidden">
-                                        <div className="w-[60%] bg-orange-500 h-full rounded-full shadow-[0_0_5px_rgba(249,115,22,0.5)]"></div>
-                                    </div>
-                                    <span className="text-[9px] text-orange-400 font-mono">Syn: 75%</span>
-                                </div>
-                            </div>
+                                </Link>
+                            ))}
                         </div>
 
                         {/* Roster Footer Stats */}
