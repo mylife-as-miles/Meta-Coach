@@ -37,7 +37,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             {/* Backdrop */}
             <div
-                className="absolute inset-0 bg-black/80 backdrop-blur-sm animate-fade-in"
+                className="fixed inset-0 bg-black/80 backdrop-blur-sm animate-fade-in"
                 onClick={onClose}
             />
 
