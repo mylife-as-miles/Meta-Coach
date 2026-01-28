@@ -1,6 +1,25 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { useDashboard } from '../../context/DashboardContext';
+import ChampionPickerModal from './modals/ChampionPickerModal';
+import SimulationResultModal from './modals/SimulationResultModal';
+import { Champion } from '../../lib/mockData';
 
 const StrategyLab: React.FC = () => {
+    const {
+        championPickerOpen,
+        openChampionPicker,
+        closeChampionPicker,
+        simulationResultOpen,
+        closeSimulationResult,
+        simulationRunning,
+        simulationResult,
+        runSimulation
+    } = useDashboard();
+
+    const [selectedMid, setSelectedMid] = useState<Champion | null>(null);
+    const [gamePhase, setGamePhase] = useState<'early' | 'mid' | 'late'>('mid');
+    const [agression, setAgression] = useState(65);
+    const [objectivePriority, setObjectivePriority] = useState(80);
     return (
         <div className="flex flex-col h-auto lg:h-[calc(100vh-90px)] min-h-[800px]">
             {/* Custom Styles for Map and Animations */}
@@ -81,15 +100,32 @@ const StrategyLab: React.FC = () => {
                                             <p className="text-[10px] text-gray-500">Jungle</p>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-3 bg-primary/10 p-2 rounded-lg border border-primary/30 relative overflow-hidden">
+                                    <div
+                                        onClick={openChampionPicker}
+                                        className="flex items-center gap-3 bg-primary/10 p-2 rounded-lg border border-primary/30 relative overflow-hidden cursor-pointer hover:bg-primary/20 transition"
+                                    >
                                         <div className="absolute inset-0 bg-primary/5 animate-pulse"></div>
-                                        <div className="w-8 h-8 bg-gray-800 rounded border border-primary/50 flex items-center justify-center relative z-10">
-                                            <span className="material-icons-outlined text-primary text-sm">add</span>
-                                        </div>
-                                        <div className="flex-1 relative z-10">
-                                            <p className="text-sm font-bold text-primary">Select Mid</p>
-                                            <p className="text-[10px] text-primary/70">Recommended: Azir</p>
-                                        </div>
+                                        {selectedMid ? (
+                                            <>
+                                                <div className="w-8 h-8 bg-gray-800 rounded flex items-center justify-center text-xl relative z-10">
+                                                    {selectedMid.icon}
+                                                </div>
+                                                <div className="flex-1 relative z-10">
+                                                    <p className="text-sm font-bold text-white">{selectedMid.name}</p>
+                                                    <p className="text-[10px] text-primary/70">Mid Lane</p>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <div className="w-8 h-8 bg-gray-800 rounded border border-primary/50 flex items-center justify-center relative z-10">
+                                                    <span className="material-icons-outlined text-primary text-sm">add</span>
+                                                </div>
+                                                <div className="flex-1 relative z-10">
+                                                    <p className="text-sm font-bold text-primary">Select Mid</p>
+                                                    <p className="text-[10px] text-primary/70">Recommended: Azir</p>
+                                                </div>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -296,14 +332,45 @@ const StrategyLab: React.FC = () => {
                             </div>
                         </div>
                         <div className="mt-6">
-                            <button className="w-full py-3 rounded-xl bg-primary hover:bg-primary-dark text-black font-bold text-sm transition shadow-neon flex items-center justify-center gap-2 cursor-pointer">
-                                <span className="material-icons-outlined text-lg">play_arrow</span>
-                                Run Simulation
+                            <button
+                                onClick={runSimulation}
+                                disabled={simulationRunning}
+                                className={`w-full py-3 rounded-xl text-black font-bold text-sm transition shadow-neon flex items-center justify-center gap-2 cursor-pointer ${simulationRunning
+                                        ? 'bg-gray-500 cursor-not-allowed opacity-75'
+                                        : 'bg-primary hover:bg-primary-dark'
+                                    }`}
+                            >
+                                {simulationRunning ? (
+                                    <>
+                                        <span className="material-icons-outlined text-lg animate-spin">sync</span>
+                                        Running Simulation...
+                                    </>
+                                ) : (
+                                    <>
+                                        <span className="material-icons-outlined text-lg">play_arrow</span>
+                                        Run Simulation
+                                    </>
+                                )}
                             </button>
                         </div>
                     </div>
                 </aside>
             </div>
+
+            {/* Champion Picker Modal */}
+            <ChampionPickerModal
+                isOpen={championPickerOpen}
+                onClose={closeChampionPicker}
+                role="MID"
+                onSelect={(champion) => setSelectedMid(champion)}
+            />
+
+            {/* Simulation Result Modal */}
+            <SimulationResultModal
+                isOpen={simulationResultOpen}
+                onClose={closeSimulationResult}
+                result={simulationResult}
+            />
         </div>
     );
 };

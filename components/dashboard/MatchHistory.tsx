@@ -1,6 +1,9 @@
 import React from 'react';
+import { useDashboard } from '../../context/DashboardContext';
+import MatchDetailModal from './modals/MatchDetailModal';
 
 const MatchHistory: React.FC = () => {
+    const { matchDetailOpen, selectedMatch, openMatchDetail, closeMatchDetail } = useDashboard();
     return (
         <div className="flex flex-col">
             <header className="flex flex-col lg:flex-row lg:items-end justify-between mb-8 gap-6">
@@ -95,7 +98,10 @@ const MatchHistory: React.FC = () => {
                                 </div>
                             </div>
                             <div className="col-span-12 md:col-span-2 p-4 flex items-center justify-center border-t md:border-t-0 md:border-l border-white/5 bg-surface-darker/50">
-                                <button className="w-full h-full min-h-[40px] flex md:flex-col items-center justify-center gap-2 rounded-xl bg-transparent hover:bg-primary/10 border border-primary/20 hover:border-primary text-primary transition-all group-hover:shadow-neon cursor-pointer">
+                                <button
+                                    onClick={() => openMatchDetail('match-1')}
+                                    className="w-full h-full min-h-[40px] flex md:flex-col items-center justify-center gap-2 rounded-xl bg-transparent hover:bg-primary/10 border border-primary/20 hover:border-primary text-primary transition-all group-hover:shadow-neon cursor-pointer"
+                                >
                                     <span className="material-icons-outlined text-xl">analytics</span>
                                     <span className="text-xs font-bold">Deep Dive</span>
                                 </button>
@@ -342,7 +348,8 @@ const MatchHistory: React.FC = () => {
                 </div>
             </div>
 
-
+            {/* Match Detail Modal */}
+            <MatchDetailModal isOpen={matchDetailOpen} onClose={closeMatchDetail} match={selectedMatch} />
         </div>
     );
 };

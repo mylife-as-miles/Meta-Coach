@@ -1,6 +1,11 @@
 import React from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { useDashboard } from '../../context/DashboardContext';
+import StrategyBriefModal from './modals/StrategyBriefModal';
 
 const DashboardOverview: React.FC = () => {
+    const navigate = useNavigate();
+    const { strategyBriefOpen, openStrategyBrief, closeStrategyBrief } = useDashboard();
     return (
         <>
             <header className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
@@ -56,7 +61,10 @@ const DashboardOverview: React.FC = () => {
                                 <p className="text-white font-medium">Best of 5</p>
                             </div>
                         </div>
-                        <button className="w-full py-3 bg-white/5 hover:bg-white/10 border border-white/5 hover:border-primary/50 text-white rounded-xl text-sm font-semibold transition flex items-center justify-center gap-2 relative z-10 hover:shadow-neon hover:text-primary">
+                        <button
+                            onClick={openStrategyBrief}
+                            className="w-full py-3 bg-white/5 hover:bg-white/10 border border-white/5 hover:border-primary/50 text-white rounded-xl text-sm font-semibold transition flex items-center justify-center gap-2 relative z-10 hover:shadow-neon hover:text-primary cursor-pointer"
+                        >
                             <span className="material-icons-outlined text-sm">library_books</span>
                             View Strategy Brief
                         </button>
@@ -66,7 +74,7 @@ const DashboardOverview: React.FC = () => {
                     <div className="bg-surface-dark rounded-2xl p-5 shadow-lg border border-white/5 flex-1 flex flex-col overflow-hidden h-[300px] lg:h-1/2">
                         <div className="flex justify-between items-center mb-4">
                             <h3 className="font-semibold text-white">Recent Scrims</h3>
-                            <a className="text-xs text-gray-500 hover:text-primary transition" href="#">View All</a>
+                            <Link to="/dashboard/match-history" className="text-xs text-gray-500 hover:text-primary transition">View All</Link>
                         </div>
                         <div className="flex-1 overflow-y-auto pr-1 space-y-3 custom-scrollbar">
                             <div className="bg-surface-darker p-3 rounded-xl border border-white/5 hover:border-primary/20 transition group">
@@ -360,7 +368,10 @@ const DashboardOverview: React.FC = () => {
                                 <span className="text-gray-400">Analysis Status</span>
                                 <span className="text-primary animate-pulse font-mono font-bold">READY</span>
                             </div>
-                            <button className="w-full bg-primary hover:bg-primary-dark text-black font-bold py-3.5 rounded-xl flex items-center justify-between px-4 transition transform hover:scale-[1.02] shadow-neon">
+                            <button
+                                onClick={() => navigate('/dashboard/strategy-lab')}
+                                className="w-full bg-primary hover:bg-primary-dark text-black font-bold py-3.5 rounded-xl flex items-center justify-between px-4 transition transform hover:scale-[1.02] shadow-neon cursor-pointer"
+                            >
                                 <span>Launch Strategy Lab</span>
                                 <span className="material-icons-outlined text-sm bg-black/10 p-1 rounded-full">arrow_forward</span>
                             </button>
@@ -369,7 +380,8 @@ const DashboardOverview: React.FC = () => {
                 </div>
             </div>
 
-
+            {/* Strategy Brief Modal */}
+            <StrategyBriefModal isOpen={strategyBriefOpen} onClose={closeStrategyBrief} />
         </>
     );
 };
