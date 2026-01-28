@@ -1,6 +1,7 @@
 import React from 'react';
-import { Outlet, NavLink, Link } from 'react-router-dom';
+import { Outlet, NavLink, Link, useNavigate } from 'react-router-dom';
 import { DashboardProvider } from '../../context/DashboardContext';
+import supabase from '../../lib/supabase';
 
 const NavItem = ({ to, children, end = false }: { to: string, children: React.ReactNode, end?: boolean }) => (
     <NavLink
@@ -18,6 +19,17 @@ const NavItem = ({ to, children, end = false }: { to: string, children: React.Re
 
 const DashboardLayout: React.FC = () => {
     const [showNotifications, setShowNotifications] = React.useState(false);
+    const [showProfileMenu, setShowProfileMenu] = React.useState(false);
+    const navigate = useNavigate();
+
+    const handleSignOut = async () => {
+        try {
+            await supabase.auth.signOut();
+            navigate('/login'); // Assuming /login is the auth page
+        } catch (error) {
+            console.error('Error signing out:', error);
+        }
+    };
 
     return (
         <DashboardProvider>
@@ -61,6 +73,13 @@ const DashboardLayout: React.FC = () => {
                                     <NavLink to="/dashboard/player-hub" className={({ isActive }) => `px-4 py-3 rounded-lg text-sm font-medium transition ${isActive ? 'bg-primary/10 text-primary' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}>Player Hub</NavLink>
                                     <NavLink to="/dashboard/strategy-lab" className={({ isActive }) => `px-4 py-3 rounded-lg text-sm font-medium transition ${isActive ? 'bg-primary/10 text-primary' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}>Strategy Lab</NavLink>
                                     <NavLink to="/dashboard/settings" className={({ isActive }) => `px-4 py-3 rounded-lg text-sm font-medium transition ${isActive ? 'bg-primary/10 text-primary' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}>Settings</NavLink>
+                                    <div className="h-px bg-white/10 my-1 mx-2"></div>
+                                    <button
+                                        onClick={handleSignOut}
+                                        className="text-left px-4 py-3 rounded-lg text-sm font-medium text-red-400 hover:bg-red-500/10 hover:text-red-300 transition"
+                                    >
+                                        Sign Out
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -140,17 +159,55 @@ const DashboardLayout: React.FC = () => {
                             )}
                         </div>
 
-                        <Link to="/dashboard/profile" className="flex items-center gap-3 pl-2 border-l border-white/10 ml-2 relative z-30 hover:opacity-80 transition cursor-pointer">
-                            <img
-                                alt="Profile"
-                                className="w-9 h-9 rounded-full border-2 border-surface-dark ring-2 ring-primary/20"
-                                src="https://lh3.googleusercontent.com/aida-public/AB6AXuAnZHcSrpkq-4S4qmJXdr6_VhmwSYKTgBwySukjrnGqn8M8DPxDi-_T89gMvPjZJuk5_YnTIKw4EKg0qcJLf5m9Bt-dXlPiBq2kKdwYXHZTaOlCgsFapA1gpGLbBNZ5_-MITHR2kuaqWAzhxxlkrEJ21e6rhziCrRwoZu9BRP_WmTwNzPz1Q9vIcYV5_dAJqKG6SXpWb7DxmTtCkQbEXLcIaXyMBNx34AFE2Hfk8o7S1p-4J0HIXtEmVWCEuRn8PAe7U9GsA4ysQNo"
-                            />
-                            <div className="hidden lg:block text-xs">
-                                <p className="text-white font-medium">Alex Chen</p>
-                                <p className="text-gray-400">Head Coach</p>
-                            </div>
-                        </Link>
+                        <div className="relative z-30 ml-2 pl-2 border-l border-white/10">
+                            <button
+                                onClick={() => setShowProfileMenu(!showProfileMenu)}
+                                className="flex items-center gap-3 hover:opacity-80 transition cursor-pointer"
+                            >
+                                <img
+                                    alt="Profile"
+                                    className="w-9 h-9 rounded-full border-2 border-surface-dark ring-2 ring-primary/20"
+                                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuAnZHcSrpkq-4S4qmJXdr6_VhmwSYKTgBwySukjrnGqn8M8DPxDi-_T89gMvPjZJuk5_YnTIKw4EKg0qcJLf5m9Bt-dXlPiBq2kKdwYXHZTaOlCgsFapA1gpGLbBNZ5_-MITHR2kuaqWAzhxxlkrEJ21e6rhziCrRwoZu9BRP_WmTwNzPz1Q9vIcYV5_dAJqKG6SXpWb7DxmTtCkQbEXLcIaXyMBNx34AFE2Hfk8o7S1p-4J0HIXtEmVWCEuRn8PAe7U9GsA4ysQNo"
+                                />
+                                <div className="hidden lg:block text-xs text-left">
+                                    <p className="text-white font-medium">Alex Chen</p>
+                                    <p className="text-gray-400">Head Coach</p>
+                                </div>
+                                <span className="material-icons-outlined text-gray-500 text-sm hidden lg:block">expand_more</span>
+                            </button>
+
+                            {/* Profile Dropdown */}
+                            {showProfileMenu && (
+                                <div className="absolute bottom-full right-0 mb-2 w-48 bg-[#1A1C14] border border-white/10 rounded-xl shadow-xl overflow-hidden animate-fade-in z-50">
+                                    <div className="p-1">
+                                        <Link
+                                            to="/dashboard/profile"
+                                            onClick={() => setShowProfileMenu(false)}
+                                            className="flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:bg-white/5 hover:text-white rounded-lg transition"
+                                        >
+                                            <span className="material-icons-outlined text-sm">person</span>
+                                            Profile
+                                        </Link>
+                                        <Link
+                                            to="/dashboard/settings"
+                                            onClick={() => setShowProfileMenu(false)}
+                                            className="flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:bg-white/5 hover:text-white rounded-lg transition"
+                                        >
+                                            <span className="material-icons-outlined text-sm">settings</span>
+                                            Settings
+                                        </Link>
+                                        <div className="h-px bg-white/10 my-1"></div>
+                                        <button
+                                            onClick={handleSignOut}
+                                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 rounded-lg transition"
+                                        >
+                                            <span className="material-icons-outlined text-sm">logout</span>
+                                            Sign Out
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </nav>
 
