@@ -3,7 +3,7 @@ import { useDashboard } from '../../context/DashboardContext';
 import MatchDetailModal from './modals/MatchDetailModal';
 
 const MatchHistory: React.FC = () => {
-    const { matchDetailOpen, selectedMatch, openMatchDetail, closeMatchDetail } = useDashboard();
+    const { matchDetailOpen, selectedMatch, openMatchDetail, closeMatchDetail, allMatches } = useDashboard();
     return (
         <div className="flex flex-col">
             <header className="flex flex-col lg:flex-row lg:items-end justify-between mb-8 gap-6">
@@ -11,227 +11,112 @@ const MatchHistory: React.FC = () => {
                     <h1 className="text-3xl font-bold mb-2 text-white">Strategic Archive</h1>
                     <p className="text-gray-400 text-sm">Review past performance, analyze key turning points, and identify patterns.</p>
                 </div>
+                {/* Filters */}
                 <div className="flex flex-col md:flex-row gap-3 w-full lg:w-auto">
                     <div className="flex items-center bg-surface-dark rounded-xl px-3 py-2.5 shadow-sm border border-white/10 hover:border-primary/30 transition flex-1 md:w-64">
                         <span className="material-icons-outlined text-gray-500 mr-2 text-lg">search</span>
                         <input className="bg-transparent border-none focus:ring-0 text-sm w-full text-white placeholder-gray-500 p-0 outline-none" placeholder="Search team, champion..." type="text" />
                     </div>
                     <div className="flex gap-3 overflow-x-auto pb-1 md:pb-0">
-                        <div className="relative group">
-                            <button className="flex items-center gap-2 bg-surface-dark px-4 py-2.5 rounded-xl border border-white/10 text-sm text-gray-300 hover:text-white hover:border-primary/30 transition whitespace-nowrap cursor-pointer">
-                                <span className="material-icons-outlined text-base">videogame_asset</span>
-                                Game Mode
-                                <span className="material-icons-outlined text-base ml-1">expand_more</span>
-                            </button>
-                        </div>
-                        <div className="relative group">
-                            <button className="flex items-center gap-2 bg-surface-dark px-4 py-2.5 rounded-xl border border-white/10 text-sm text-gray-300 hover:text-white hover:border-primary/30 transition whitespace-nowrap cursor-pointer">
-                                <span className="material-icons-outlined text-base">build</span>
-                                Patch 14.3
-                                <span className="material-icons-outlined text-base ml-1">expand_more</span>
-                            </button>
-                        </div>
-                        <div className="relative group">
-                            <button className="flex items-center gap-2 bg-surface-dark px-4 py-2.5 rounded-xl border border-white/10 text-sm text-gray-300 hover:text-white hover:border-primary/30 transition whitespace-nowrap cursor-pointer">
-                                <span className="material-icons-outlined text-base">calendar_today</span>
-                                Last 30 Days
-                                <span className="material-icons-outlined text-base ml-1">expand_more</span>
-                            </button>
-                        </div>
+                        <button className="flex items-center gap-2 bg-surface-dark px-4 py-2.5 rounded-xl border border-white/10 text-sm text-gray-300 hover:text-white hover:border-primary/30 transition whitespace-nowrap cursor-pointer">
+                            <span className="material-icons-outlined text-base">videogame_asset</span>
+                            Game Mode
+                            <span className="material-icons-outlined text-base ml-1">expand_more</span>
+                        </button>
                     </div>
                 </div>
             </header>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                 <div className="lg:col-span-8 flex flex-col gap-4">
-                    {/* Match 1 - WIN */}
-                    <div className="bg-surface-dark rounded-2xl p-0 border border-white/5 hover:border-primary/30 transition duration-300 shadow-lg group overflow-hidden">
-                        <div className="grid grid-cols-12 h-full">
-                            <div className="col-span-12 md:col-span-2 bg-surface-darker p-5 flex flex-row md:flex-col items-center justify-between md:justify-center border-b md:border-b-0 md:border-r border-white/5 relative overflow-hidden">
-                                <div className="absolute inset-0 bg-primary/5 hidden md:block"></div>
-                                <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary shadow-neon"></div>
-                                <div className="flex flex-col items-center gap-1 z-10">
-                                    <span className="text-2xl font-bold text-primary tracking-widest shadow-neon-text drop-shadow-[0_0_8px_rgba(210,249,111,0.5)]">WIN</span>
-                                    <span className="text-[10px] uppercase font-mono text-primary/80 tracking-wide bg-primary/10 px-1.5 rounded">Ranked</span>
-                                </div>
-                                <div className="flex flex-col items-end md:items-center mt-0 md:mt-4 gap-0.5 z-10">
-                                    <span className="text-xs text-gray-300">Oct 24</span>
-                                    <span className="text-[10px] text-gray-500 font-mono">32:40</span>
-                                </div>
-                            </div>
-                            <div className="col-span-12 md:col-span-5 p-5 flex items-center justify-center relative">
-                                <div className="flex items-center gap-6 w-full justify-center">
-                                    <div className="flex flex-col items-center gap-2">
-                                        <div className="w-14 h-14 rounded-full bg-blue-900/20 border border-blue-500/30 flex items-center justify-center p-2 shadow-[0_0_15px_rgba(59,130,246,0.1)]">
-                                            <span className="font-bold text-blue-400 text-lg">C9</span>
-                                        </div>
-                                        <span className="text-xs font-bold text-gray-300">Cloud9</span>
-                                    </div>
-                                    <div className="flex flex-col items-center">
-                                        <div className="text-2xl font-bold text-white font-mono bg-white/5 px-3 py-1 rounded-lg border border-white/10">
-                                            2 - 1
-                                        </div>
-                                        <span className="text-[10px] text-gray-500 mt-1 uppercase tracking-wider">Bo3</span>
-                                    </div>
-                                    <div className="flex flex-col items-center gap-2">
-                                        <div className="w-14 h-14 rounded-full bg-red-900/20 border border-red-500/30 flex items-center justify-center p-2">
-                                            <span className="font-bold text-red-400 text-lg">T1</span>
-                                        </div>
-                                        <span className="text-xs font-bold text-gray-300">T1</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="col-span-12 md:col-span-3 p-5 flex flex-col justify-center border-t md:border-t-0 md:border-l border-white/5 bg-white/[0.01]">
-                                <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-2 font-semibold">AI Performance Summary</p>
-                                <div className="space-y-2">
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-xs text-gray-400">Macro Control</span>
-                                        <span className="text-xs font-mono font-bold text-primary">82%</span>
-                                    </div>
-                                    <div className="w-full h-1 bg-gray-800 rounded-full overflow-hidden">
-                                        <div className="h-full bg-primary w-[82%] shadow-neon"></div>
-                                    </div>
-                                    <div className="flex justify-between items-center mt-1">
-                                        <span className="text-xs text-gray-400">Micro Error Rate</span>
-                                        <span className="text-[10px] font-bold text-green-400 bg-green-400/10 px-1.5 rounded">LOW</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="col-span-12 md:col-span-2 p-4 flex items-center justify-center border-t md:border-t-0 md:border-l border-white/5 bg-surface-darker/50">
-                                <button
-                                    onClick={() => openMatchDetail('match-1')}
-                                    className="w-full h-full min-h-[40px] flex md:flex-col items-center justify-center gap-2 rounded-xl bg-transparent hover:bg-primary/10 border border-primary/20 hover:border-primary text-primary transition-all group-hover:shadow-neon cursor-pointer"
-                                >
-                                    <span className="material-icons-outlined text-xl">analytics</span>
-                                    <span className="text-xs font-bold">Deep Dive</span>
-                                </button>
-                            </div>
+                    {/* Dynamic Match List */}
+                    {allMatches.length === 0 ? (
+                        <div className="bg-surface-dark rounded-2xl p-10 border border-white/5 text-center">
+                            <span className="material-icons-outlined text-4xl text-gray-600 mb-4">sports_esports</span>
+                            <h3 className="text-lg font-bold text-white">No matches found</h3>
+                            <p className="text-gray-400 text-sm mt-2">Play some games to see your history here.</p>
                         </div>
-                    </div>
-
-                    {/* Match 2 - LOSS */}
-                    <div className="bg-surface-dark rounded-2xl p-0 border border-white/5 hover:border-red-500/30 transition duration-300 shadow-lg group overflow-hidden">
-                        <div className="grid grid-cols-12 h-full">
-                            <div className="col-span-12 md:col-span-2 bg-surface-darker p-5 flex flex-row md:flex-col items-center justify-between md:justify-center border-b md:border-b-0 md:border-r border-white/5 relative overflow-hidden">
-                                <div className="absolute inset-0 bg-red-500/5 hidden md:block"></div>
-                                <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.4)]"></div>
-                                <div className="flex flex-col items-center gap-1 z-10">
-                                    <span className="text-2xl font-bold text-red-500 tracking-widest drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]">LOSS</span>
-                                    <span className="text-[10px] uppercase font-mono text-red-400/80 tracking-wide bg-red-500/10 px-1.5 rounded">Scrim</span>
-                                </div>
-                                <div className="flex flex-col items-end md:items-center mt-0 md:mt-4 gap-0.5 z-10">
-                                    <span className="text-xs text-gray-300">Oct 23</span>
-                                    <span className="text-[10px] text-gray-500 font-mono">28:15</span>
-                                </div>
-                            </div>
-                            <div className="col-span-12 md:col-span-5 p-5 flex items-center justify-center relative">
-                                <div className="flex items-center gap-6 w-full justify-center">
-                                    <div className="flex flex-col items-center gap-2">
-                                        <div className="w-14 h-14 rounded-full bg-blue-900/20 border border-blue-500/30 flex items-center justify-center p-2">
-                                            <span className="font-bold text-blue-400 text-lg">C9</span>
+                    ) : (
+                        allMatches.map(match => (
+                            <div key={match.id} className="bg-surface-dark rounded-2xl p-0 border border-white/5 hover:border-primary/30 transition duration-300 shadow-lg group overflow-hidden">
+                                <div className="grid grid-cols-12 h-full">
+                                    <div className="col-span-12 md:col-span-2 bg-surface-darker p-5 flex flex-row md:flex-col items-center justify-between md:justify-center border-b md:border-b-0 md:border-r border-white/5 relative overflow-hidden">
+                                        <div className={`absolute inset-0 hidden md:block ${match.result === 'WIN' ? 'bg-primary/5' : 'bg-red-500/5'}`}></div>
+                                        <div className={`absolute left-0 top-0 bottom-0 w-1 shadow-neon ${match.result === 'WIN' ? 'bg-primary' : 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.4)]'}`}></div>
+                                        <div className="flex flex-col items-center gap-1 z-10">
+                                            <span className={`text-2xl font-bold tracking-widest shadow-neon-text ${match.result === 'WIN' ? 'text-primary drop-shadow-[0_0_8px_rgba(210,249,111,0.5)]' : 'text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]'}`}>
+                                                {match.result}
+                                            </span>
+                                            <span className={`text-[10px] uppercase font-mono tracking-wide px-1.5 rounded ${match.result === 'WIN' ? 'text-primary/80 bg-primary/10' : 'text-red-400/80 bg-red-500/10'}`}>
+                                                {match.type || 'Ranked'}
+                                            </span>
                                         </div>
-                                        <span className="text-xs font-bold text-gray-300">Cloud9</span>
-                                    </div>
-                                    <div className="flex flex-col items-center">
-                                        <div className="text-2xl font-bold text-white font-mono bg-white/5 px-3 py-1 rounded-lg border border-white/10">
-                                            0 - 1
+                                        <div className="flex flex-col items-end md:items-center mt-0 md:mt-4 gap-0.5 z-10">
+                                            <span className="text-xs text-gray-300">{match.date}</span>
+                                            <span className="text-[10px] text-gray-500 font-mono">{match.duration}</span>
                                         </div>
-                                        <span className="text-[10px] text-gray-500 mt-1 uppercase tracking-wider">Bo1</span>
                                     </div>
-                                    <div className="flex flex-col items-center gap-2">
-                                        <div className="w-14 h-14 rounded-full bg-orange-900/20 border border-orange-500/30 flex items-center justify-center p-2">
-                                            <span className="font-bold text-orange-400 text-lg">FNC</span>
+                                    <div className="col-span-12 md:col-span-5 p-5 flex items-center justify-center relative">
+                                        <div className="flex items-center gap-6 w-full justify-center">
+                                            <div className="flex flex-col items-center gap-2">
+                                                <div className="w-14 h-14 rounded-full bg-blue-900/20 border border-blue-500/30 flex items-center justify-center p-2 shadow-[0_0_15px_rgba(59,130,246,0.1)]">
+                                                    <span className="font-bold text-blue-400 text-lg">YOU</span>
+                                                </div>
+                                                <span className="text-xs font-bold text-gray-300">You</span>
+                                            </div>
+                                            <div className="flex flex-col items-center">
+                                                <div className="text-2xl font-bold text-white font-mono bg-white/5 px-3 py-1 rounded-lg border border-white/10">
+                                                    {match.score}
+                                                </div>
+                                                <span className="text-[10px] text-gray-500 mt-1 uppercase tracking-wider">{match.format}</span>
+                                            </div>
+                                            <div className="flex flex-col items-center gap-2">
+                                                <div className={`w-14 h-14 rounded-full border flex items-center justify-center p-2 ${match.opponent.color === 'red' ? 'bg-red-900/20 border-red-500/30' : 'bg-orange-900/20 border-orange-500/30'}`}>
+                                                    <span className={`font-bold text-lg ${match.opponent.color === 'red' ? 'text-red-400' : 'text-orange-400'}`}>{match.opponent.abbreviation}</span>
+                                                </div>
+                                                <span className="text-xs font-bold text-gray-300">{match.opponent.name}</span>
+                                            </div>
                                         </div>
-                                        <span className="text-xs font-bold text-gray-300">FNATIC</span>
                                     </div>
-                                </div>
-                            </div>
-                            <div className="col-span-12 md:col-span-3 p-5 flex flex-col justify-center border-t md:border-t-0 md:border-l border-white/5 bg-white/[0.01]">
-                                <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-2 font-semibold">AI Performance Summary</p>
-                                <div className="space-y-2">
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-xs text-gray-400">Macro Control</span>
-                                        <span className="text-xs font-mono font-bold text-red-400">45%</span>
-                                    </div>
-                                    <div className="w-full h-1 bg-gray-800 rounded-full overflow-hidden">
-                                        <div className="h-full bg-red-500 w-[45%]"></div>
-                                    </div>
-                                    <div className="flex justify-between items-center mt-1">
-                                        <span className="text-xs text-gray-400">Micro Error Rate</span>
-                                        <span className="text-[10px] font-bold text-orange-400 bg-orange-400/10 px-1.5 rounded">HIGH</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="col-span-12 md:col-span-2 p-4 flex items-center justify-center border-t md:border-t-0 md:border-l border-white/5 bg-surface-darker/50">
-                                <button className="w-full h-full min-h-[40px] flex md:flex-col items-center justify-center gap-2 rounded-xl bg-transparent hover:bg-white/5 border border-white/10 hover:border-white/30 text-gray-300 hover:text-white transition-all cursor-pointer">
-                                    <span className="material-icons-outlined text-xl">analytics</span>
-                                    <span className="text-xs font-bold">Analysis</span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Match 3 - WIN */}
-                    <div className="bg-surface-dark rounded-2xl p-0 border border-white/5 hover:border-primary/30 transition duration-300 shadow-lg group overflow-hidden">
-                        <div className="grid grid-cols-12 h-full">
-                            <div className="col-span-12 md:col-span-2 bg-surface-darker p-5 flex flex-row md:flex-col items-center justify-between md:justify-center border-b md:border-b-0 md:border-r border-white/5 relative overflow-hidden">
-                                <div className="absolute inset-0 bg-primary/5 hidden md:block"></div>
-                                <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary shadow-neon"></div>
-                                <div className="flex flex-col items-center gap-1 z-10">
-                                    <span className="text-2xl font-bold text-primary tracking-widest shadow-neon-text drop-shadow-[0_0_8px_rgba(210,249,111,0.5)]">WIN</span>
-                                    <span className="text-[10px] uppercase font-mono text-primary/80 tracking-wide bg-primary/10 px-1.5 rounded">Ranked</span>
-                                </div>
-                                <div className="flex flex-col items-end md:items-center mt-0 md:mt-4 gap-0.5 z-10">
-                                    <span className="text-xs text-gray-300">Oct 21</span>
-                                    <span className="text-[10px] text-gray-500 font-mono">41:05</span>
-                                </div>
-                            </div>
-                            <div className="col-span-12 md:col-span-5 p-5 flex items-center justify-center relative">
-                                <div className="flex items-center gap-6 w-full justify-center">
-                                    <div className="flex flex-col items-center gap-2">
-                                        <div className="w-14 h-14 rounded-full bg-blue-900/20 border border-blue-500/30 flex items-center justify-center p-2">
-                                            <span className="font-bold text-blue-400 text-lg">C9</span>
+                                    <div className="col-span-12 md:col-span-3 p-5 flex flex-col justify-center border-t md:border-t-0 md:border-l border-white/5 bg-white/[0.01]">
+                                        <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-2 font-semibold">AI Performance Summary</p>
+                                        <div className="space-y-2">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-xs text-gray-400">Macro Control</span>
+                                                <span className={`text-xs font-mono font-bold ${match.performance.macroControl >= 70 ? 'text-primary' : match.performance.macroControl >= 50 ? 'text-yellow-400' : 'text-red-400'}`}>
+                                                    {match.performance.macroControl}%
+                                                </span>
+                                            </div>
+                                            <div className="w-full h-1 bg-gray-800 rounded-full overflow-hidden">
+                                                <div
+                                                    className={`h-full w-[${match.performance.macroControl}%] ${match.performance.macroControl >= 70 ? 'bg-primary shadow-neon' : match.performance.macroControl >= 50 ? 'bg-yellow-400' : 'bg-red-500'}`}
+                                                    style={{ width: `${match.performance.macroControl}%` }}
+                                                ></div>
+                                            </div>
+                                            <div className="flex justify-between items-center mt-1">
+                                                <span className="text-xs text-gray-400">Micro Error Rate</span>
+                                                <span className={`text-[10px] font-bold px-1.5 rounded ${match.performance.microErrorRate === 'LOW' ? 'text-green-400 bg-green-400/10' :
+                                                        match.performance.microErrorRate === 'MED' ? 'text-yellow-400 bg-yellow-400/10' :
+                                                            'text-red-400 bg-red-400/10'
+                                                    }`}>
+                                                    {match.performance.microErrorRate}
+                                                </span>
+                                            </div>
                                         </div>
-                                        <span className="text-xs font-bold text-gray-300">Cloud9</span>
                                     </div>
-                                    <div className="flex flex-col items-center">
-                                        <div className="text-2xl font-bold text-white font-mono bg-white/5 px-3 py-1 rounded-lg border border-white/10">
-                                            1 - 0
-                                        </div>
-                                        <span className="text-[10px] text-gray-500 mt-1 uppercase tracking-wider">Bo1</span>
-                                    </div>
-                                    <div className="flex flex-col items-center gap-2">
-                                        <div className="w-14 h-14 rounded-full bg-yellow-900/20 border border-yellow-500/30 flex items-center justify-center p-2">
-                                            <span className="font-bold text-yellow-400 text-lg">GEN</span>
-                                        </div>
-                                        <span className="text-xs font-bold text-gray-300">Gen.G</span>
+                                    <div className="col-span-12 md:col-span-2 p-4 flex items-center justify-center border-t md:border-t-0 md:border-l border-white/5 bg-surface-darker/50">
+                                        <button
+                                            onClick={() => openMatchDetail(match.id)}
+                                            className="w-full h-full min-h-[40px] flex md:flex-col items-center justify-center gap-2 rounded-xl bg-transparent hover:bg-primary/10 border border-primary/20 hover:border-primary text-primary transition-all group-hover:shadow-neon cursor-pointer"
+                                        >
+                                            <span className="material-icons-outlined text-xl">analytics</span>
+                                            <span className="text-xs font-bold">Analysis</span>
+                                        </button>
                                     </div>
                                 </div>
                             </div>
-                            <div className="col-span-12 md:col-span-3 p-5 flex flex-col justify-center border-t md:border-t-0 md:border-l border-white/5 bg-white/[0.01]">
-                                <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-2 font-semibold">AI Performance Summary</p>
-                                <div className="space-y-2">
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-xs text-gray-400">Macro Control</span>
-                                        <span className="text-xs font-mono font-bold text-primary">76%</span>
-                                    </div>
-                                    <div className="w-full h-1 bg-gray-800 rounded-full overflow-hidden">
-                                        <div className="h-full bg-primary w-[76%] shadow-neon"></div>
-                                    </div>
-                                    <div className="flex justify-between items-center mt-1">
-                                        <span className="text-xs text-gray-400">Micro Error Rate</span>
-                                        <span className="text-[10px] font-bold text-yellow-400 bg-yellow-400/10 px-1.5 rounded">MED</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="col-span-12 md:col-span-2 p-4 flex items-center justify-center border-t md:border-t-0 md:border-l border-white/5 bg-surface-darker/50">
-                                <button className="w-full h-full min-h-[40px] flex md:flex-col items-center justify-center gap-2 rounded-xl bg-transparent hover:bg-white/5 border border-white/10 hover:border-white/30 text-gray-300 hover:text-white transition-all cursor-pointer">
-                                    <span className="material-icons-outlined text-xl">analytics</span>
-                                    <span className="text-xs font-bold">Analysis</span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+                        ))
+                    )}
 
                     <div className="flex justify-center mt-4">
                         <button className="px-6 py-2 rounded-full border border-white/10 text-xs font-semibold text-gray-400 hover:text-white hover:border-primary/30 hover:bg-surface-dark transition cursor-pointer">Load More Matches</button>
