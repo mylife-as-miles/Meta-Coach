@@ -164,21 +164,19 @@ const DashboardLayout: React.FC = () => {
                                 onClick={() => setShowProfileMenu(!showProfileMenu)}
                                 className="flex items-center gap-3 hover:opacity-80 transition cursor-pointer"
                             >
-                                <img
-                                    alt="Profile"
-                                    className="w-9 h-9 rounded-full border-2 border-surface-dark ring-2 ring-primary/20"
-                                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuAnZHcSrpkq-4S4qmJXdr6_VhmwSYKTgBwySukjrnGqn8M8DPxDi-_T89gMvPjZJuk5_YnTIKw4EKg0qcJLf5m9Bt-dXlPiBq2kKdwYXHZTaOlCgsFapA1gpGLbBNZ5_-MITHR2kuaqWAzhxxlkrEJ21e6rhziCrRwoZu9BRP_WmTwNzPz1Q9vIcYV5_dAJqKG6SXpWb7DxmTtCkQbEXLcIaXyMBNx34AFE2Hfk8o7S1p-4J0HIXtEmVWCEuRn8PAe7U9GsA4ysQNo"
-                                />
+                                <div className="w-9 h-9 rounded-full border-2 border-surface-dark ring-2 ring-primary/20 bg-primary flex items-center justify-center overflow-hidden">
+                                    <span className="font-bold text-black text-xs">AC</span>
+                                </div>
                                 <div className="hidden lg:block text-xs text-left">
                                     <p className="text-white font-medium">Alex Chen</p>
                                     <p className="text-gray-400">Head Coach</p>
                                 </div>
-                                <span className="material-icons-outlined text-gray-500 text-sm hidden lg:block">expand_more</span>
+                                <span className={`material-icons-outlined text-gray-500 text-sm hidden lg:block transition-transform duration-200 ${showProfileMenu ? 'rotate-180' : ''}`}>expand_more</span>
                             </button>
 
                             {/* Profile Dropdown */}
                             {showProfileMenu && (
-                                <div className="absolute bottom-full right-0 mb-2 w-48 bg-[#1A1C14] border border-white/10 rounded-xl shadow-xl overflow-hidden animate-fade-in z-50">
+                                <div className="absolute top-full right-0 mt-2 w-48 bg-[#1A1C14] border border-white/10 rounded-xl shadow-xl overflow-hidden animate-fade-in z-50">
                                     <div className="p-1">
                                         <Link
                                             to="/dashboard/profile"

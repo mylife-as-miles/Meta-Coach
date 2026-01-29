@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import Landing from './components/Landing';
 import Auth from './components/Auth';
+import AuthGuard from './components/AuthGuard';
 import ChooseGame from './components/onboarding/ChooseGame';
 import SyncRoster from './components/onboarding/SyncRoster';
 import CalibrateAI from './components/onboarding/CalibrateAI';
@@ -16,16 +17,27 @@ import CommunicationLogs from './components/dashboard/CommunicationLogs';
 import CoachProfile from './components/dashboard/CoachProfile';
 import { Sun, Moon } from './components/Icons';
 
-// Wrapper component for onboarding routes
+// Wrapper component for onboarding routes (protected)
 const OnboardingRoutes: React.FC = () => {
   return (
-    <OnboardingProvider>
-      <Routes>
-        <Route path="step-1" element={<ChooseGame />} />
-        <Route path="step-2" element={<SyncRoster />} />
-        <Route path="step-3" element={<CalibrateAI />} />
-      </Routes>
-    </OnboardingProvider>
+    <AuthGuard>
+      <OnboardingProvider>
+        <Routes>
+          <Route path="step-1" element={<ChooseGame />} />
+          <Route path="step-2" element={<SyncRoster />} />
+          <Route path="step-3" element={<CalibrateAI />} />
+        </Routes>
+      </OnboardingProvider>
+    </AuthGuard>
+  );
+};
+
+// Wrapper component for dashboard routes (protected + requires onboarding)
+const DashboardRoutes: React.FC = () => {
+  return (
+    <AuthGuard requireOnboarding>
+      <DashboardLayout />
+    </AuthGuard>
   );
 };
 
@@ -46,14 +58,15 @@ const App: React.FC = () => {
     <div className={`min-h-screen flex flex-col relative transition-colors duration-300 ${isDark ? 'bg-[#0E100A] text-white' : 'bg-gray-50 text-gray-900'}`}>
 
       <Routes>
+        {/* Public Routes */}
         <Route path="/" element={<Landing />} />
         <Route path="/auth" element={<Auth onNavigateHome={() => navigate('/')} />} />
 
-        {/* Onboarding Routes - wrapped with OnboardingProvider */}
+        {/* Protected: Onboarding Routes */}
         <Route path="/onboarding/*" element={<OnboardingRoutes />} />
 
-        {/* Dashboard Routes */}
-        <Route path="/dashboard" element={<DashboardLayout />}>
+        {/* Protected: Dashboard Routes (requires completed onboarding) */}
+        <Route path="/dashboard" element={<DashboardRoutes />}>
           <Route index element={<DashboardOverview />} />
           <Route path="match-history" element={<MatchHistory />} />
           <Route path="player-hub" element={<PlayerHub />} />
