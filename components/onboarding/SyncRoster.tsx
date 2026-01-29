@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useOnboarding } from '../../context/OnboardingContext';
 import OnboardingLayout from './OnboardingLayout';
 
-const ROLES = [
+const LOL_ROLES = [
   { name: 'Top', icon: 'shield', description: 'Frontline & Split Push' },
   { name: 'Jungle', icon: 'forest', description: 'Map Control & Objectives' },
   { name: 'Mid', icon: 'bolt', description: 'Playmaking & Roaming' },
@@ -11,9 +11,33 @@ const ROLES = [
   { name: 'Support', icon: 'favorite', description: 'Vision & Utility' },
 ];
 
+const VALORANT_ROLES = [
+  { name: 'Duelist', icon: 'swords', description: 'Entry & Aggression' },
+  { name: 'Sentinel', icon: 'security', description: 'Defense & Flank Watch' },
+  { name: 'Controller', icon: 'smoke_free', description: 'Vision Blocking & Control' },
+  { name: 'Initiator', icon: 'radar', description: 'Info Gathering & Setups' },
+  { name: 'Flex', icon: 'change_history', description: 'Adaptable Role' },
+];
+
 const SyncRoster: React.FC = () => {
   const navigate = useNavigate();
-  const { roster, updateRosterPlayer, teamName, gameTitle } = useOnboarding();
+  const { roster, updateRosterPlayer, teamName, gameTitle, gridTitleId, setRoster } = useOnboarding();
+  const [activeRoles, setActiveRoles] = useState(LOL_ROLES);
+
+  // Set active roles based on Title ID
+  useEffect(() => {
+    if (gridTitleId === '6') { // Valorant
+      setActiveRoles(VALORANT_ROLES);
+      if (roster[0].role === 'Top') { // Reset if still showing LoL defaults
+        setRoster(VALORANT_ROLES.map(r => ({ role: r.name, ign: '' })));
+      }
+    } else { // Default to LoL (ID 3)
+      setActiveRoles(LOL_ROLES);
+      if (roster[0].role === 'Duelist') { // Reset if showing Val defaults
+        setRoster(LOL_ROLES.map(r => ({ role: r.name, ign: '' })));
+      }
+    }
+  }, [gridTitleId]);
 
   const handleInputChange = (index: number, value: string) => {
     updateRosterPlayer(index, value);
@@ -50,19 +74,19 @@ const SyncRoster: React.FC = () => {
       <div className="w-full max-w-2xl">
         {/* Roster Input Cards */}
         <div className="space-y-4 mb-8">
-          {ROLES.map((role, index) => (
+          {activeRoles.map((role, index) => (
             <div
               key={role.name}
               className={`group relative bg-surface-darker/80 backdrop-blur-sm border rounded-xl p-5 transition-all duration-300 ${roster[index]?.ign
-                  ? 'border-primary/30 shadow-[0_0_15px_rgba(210,249,111,0.05)]'
-                  : 'border-white/10 hover:border-white/20'
+                ? 'border-primary/30 shadow-[0_0_15px_rgba(210,249,111,0.05)]'
+                : 'border-white/10 hover:border-white/20'
                 }`}
             >
               <div className="flex items-center gap-4">
                 {/* Role Icon */}
                 <div className={`w-12 h-12 rounded-lg flex items-center justify-center transition-all ${roster[index]?.ign
-                    ? 'bg-primary/20 text-primary'
-                    : 'bg-surface-dark text-gray-500 group-hover:text-white'
+                  ? 'bg-primary/20 text-primary'
+                  : 'bg-surface-dark text-gray-500 group-hover:text-white'
                   }`}>
                   <span className="material-symbols-outlined">{role.icon}</span>
                 </div>
@@ -84,8 +108,8 @@ const SyncRoster: React.FC = () => {
 
                 {/* Status Indicator */}
                 <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${roster[index]?.ign
-                    ? 'border-primary bg-primary'
-                    : 'border-white/20'
+                  ? 'border-primary bg-primary'
+                  : 'border-white/20'
                   }`}>
                   {roster[index]?.ign && (
                     <span className="material-icons text-black text-sm">check</span>

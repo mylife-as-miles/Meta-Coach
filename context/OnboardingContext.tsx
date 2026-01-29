@@ -121,6 +121,8 @@ export const OnboardingProvider: React.FC<{ children: ReactNode }> = ({ children
             }
 
             // 1. Create workspace
+            console.log("Saving Workspace with state:", state);
+
             const { data: workspace, error: workspaceError } = await supabase
                 .from('workspaces')
                 .insert({
@@ -137,6 +139,8 @@ export const OnboardingProvider: React.FC<{ children: ReactNode }> = ({ children
                 console.error('Error creating workspace:', workspaceError);
                 return false;
             }
+
+            console.log("Workspace created:", workspace);
 
             // 2. Create roster entries
             const rosterEntries = state.roster
