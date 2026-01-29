@@ -43,6 +43,7 @@ const SyncRoster: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [gridPlayers, setGridPlayers] = useState<GridPlayer[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   // 1. Determine Roles based on Title
   useEffect(() => {
@@ -126,11 +127,13 @@ const SyncRoster: React.FC = () => {
   };
 
   const handleNext = () => {
-    // If on last slide, ask for confirmation before proceeding
-    if (window.confirm("Are you sure this is your final official roster?")) {
-      handleContinue();
+    // If on last slide, show custom confirmation modal
+    if (activeIndex === activeRoles.length - 1) {
+      setShowConfirmModal(true);
+    } else {
+      setActiveIndex(prev => prev + 1);
     }
-  }
+  };
 
 
   const handlePrev = () => {
@@ -336,6 +339,51 @@ const SyncRoster: React.FC = () => {
               </div>
             </div>
 
+          </div>
+        )}
+
+        {/* CUSTOM CONFIRMATION POPUP */}
+        {showConfirmModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <div
+              className="absolute inset-0 bg-black/80 backdrop-blur-sm animate-fade-in"
+              onClick={() => setShowConfirmModal(false)}
+            ></div>
+
+            {/* Modal Content */}
+            <div className="relative bg-[#0E100A] border border-primary/20 rounded-2xl p-8 max-w-md w-full shadow-[0_0_50px_rgba(210,249,111,0.1)] outline outline-1 outline-white/5 animate-fade-in-up">
+              <div className="flex flex-col items-center text-center">
+
+                {/* Icon */}
+                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-6">
+                  <span className="material-icons text-primary text-3xl">verified_user</span>
+                </div>
+
+                <h3 className="text-2xl font-bold text-white mb-2">Confirm Roster</h3>
+                <p className="text-gray-400 text-sm mb-8 leading-relaxed">
+                  You are about to lock in <span className="text-white font-bold">{filledCount} active players</span> for the upcoming season.
+                  This will generate your specialized AI models.
+                </p>
+
+                <div className="flex gap-4 w-full">
+                  <button
+                    onClick={() => setShowConfirmModal(false)}
+                    className="flex-1 py-3.5 rounded-lg border border-white/10 text-gray-400 hover:text-white hover:bg-white/5 transition font-medium"
+                  >
+                    Back to Edit
+                  </button>
+                  <button
+                    onClick={handleContinue}
+                    className="flex-1 py-3.5 rounded-lg bg-primary text-black font-bold hover:bg-primary-dark transition shadow-neon flex items-center justify-center gap-2"
+                  >
+                    <span>Proceed</span>
+                    <span className="material-icons text-sm">arrow_forward</span>
+                  </button>
+                </div>
+
+              </div>
+            </div>
           </div>
         )}
 
