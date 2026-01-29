@@ -1,5 +1,5 @@
 // supabase/functions/grid-teams/index.ts
-// Fetch teams by title from GRID via Tournament -> Series lookup (Hackathon compatible)
+// Fetch teams by title from GRID via Series lookup (correct first-onboarding flow)
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { corsHeaders } from '../_shared/cors.ts'
@@ -37,58 +37,11 @@ serve(async (req) => {
       )
     }
 
-    // STEP 1: Get Tournaments for the Title
-    const tournamentsQuery = `
-      query Tournaments($titleId: ID!) {
-        tournaments(filter: { title: { id: { equals: $titleId } } }) {
-          edges {
-            node {
-              id
-            }
-          }
-        }
-      }
-    `
-
-    const tourneyRes = await fetch(GRID_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': gridApiKey,
-      },
-      body: JSON.stringify({
-        query: tournamentsQuery,
-        variables: { titleId }
-      }),
-    })
-
-    if (!tourneyRes.ok) {
-      throw new Error(`GRID API (Tournaments) error: ${tourneyRes.status}`)
-    }
-
-    const tourneyData = await tourneyRes.json()
-    const tournamentIds = tourneyData.data?.tournaments?.edges?.map((e: any) => e.node.id) || []
-
-    if (tournamentIds.length === 0) {
-      return new Response(
-        JSON.stringify({ teams: [] }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-      )
-    }
-
-    // STEP 2: Get Teams via Series in those Tournaments
-    // GRID data is series-centric. We fetch recent series to find active teams.
+    // Fetch recent series for the title, then extract teams
+    // This is the correct approach per GRID's event-centric data model
     const seriesQuery = `
-      query SeriesTeams($tournamentIds: [ID!]) {
-        allSeries(
-          filter: {
-            tournament: {
-              id: { in: $tournamentIds }
-              includeChildren: { equals: true }
-            }
-          }
-          first: 50
-        ) {
+      query GetSeries($titleId: ID!) {
+        allSeries(first: 50, filter: { title: { id: { equals: $titleId } } }) {
           edges {
             node {
               id
@@ -113,18 +66,18 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         query: seriesQuery,
-        variables: { tournamentIds }
+        variables: { titleId }
       }),
     })
 
     if (!seriesRes.ok) {
-      throw new Error(`GRID API (Series) error: ${seriesRes.status}`)
+      throw new Error(`GRID API error: ${seriesRes.status}`)
     }
 
     const seriesData = await seriesRes.json()
     const seriesEdges = seriesData.data?.allSeries?.edges || []
 
-    // Extract unique teams
+    // Extract unique teams from all series
     const uniqueTeamsMap = new Map()
 
     seriesEdges.forEach((edge: any) => {
@@ -136,7 +89,7 @@ serve(async (req) => {
             uniqueTeamsMap.set(baseInfo.id, {
               id: baseInfo.id,
               name: baseInfo.name,
-              logoUrl: baseInfo.logoUrl
+              logoUrl: baseInfo.logoUrl || null
             })
           }
         }
@@ -146,27 +99,7 @@ serve(async (req) => {
     const teams = Array.from(uniqueTeamsMap.values())
       .sort((a, b) => a.name.localeCompare(b.name)) // Sort alphabetically
 
-    if (teams.length === 0) {
-      // Fallback for empty results (common in hackathon environments with limited scope)
-      if (titleId === '3') { // League of Legends
-        teams.push(
-          { id: '1', name: 'T1' },
-          { id: '2', name: 'G2 Esports' },
-          { id: '3', name: 'Cloud9' },
-          { id: '4', name: 'Fnatic' },
-          { id: '5', name: 'Gen.G' }
-        )
-      } else if (titleId === '29') { // Valorant
-        teams.push(
-          { id: '101', name: 'Sentinels' },
-          { id: '102', name: 'LOUD' },
-          { id: '103', name: 'Fnatic' },
-          { id: '104', name: 'Paper Rex' },
-          { id: '105', name: 'DRX' }
-        )
-      }
-    }
-
+    // No fallback - if empty, return empty. UI will handle "No teams found."
     return new Response(
       JSON.stringify({ teams }),
       {
