@@ -18,7 +18,7 @@ const GAMES = [
   },
   {
     id: 'valorant',
-    titleId: '29', // GRID Title ID for Valorant
+    titleId: '6', // GRID Title ID for Valorant
     name: 'VALORANT',
     description: 'Round-by-round economy tracking, agent utility optimization, and aim analysis.',
     gradient: 'from-[#1F2326] to-[#363B40]',
