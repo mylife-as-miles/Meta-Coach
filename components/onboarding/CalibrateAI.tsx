@@ -305,7 +305,7 @@ const CalibrateAI: React.FC = () => {
             </div>
 
             <div className="px-4 py-2 bg-[#141610] border-t border-white/5 text-[10px] text-gray-600 flex justify-between">
-              <span>GEMINI-1.5-PRO</span>
+              <span>GEMINI-3-PRO</span>
               <span>LATENCY: 12ms</span>
             </div>
           </div>
