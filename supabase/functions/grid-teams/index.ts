@@ -1,34 +1,10 @@
 // supabase/functions/grid-teams/index.ts
-// Fetch teams by title from GRID with curated fallback
+// Fetch all teams from GRID (no title filter)
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { corsHeaders } from '../_shared/cors.ts'
 
 const GRID_API_URL = 'https://api-op.grid.gg/central-data/graphql'
-
-// Curated fallback teams for known titles (used when GRID has no ingested matches yet)
-const CURATED_TEAMS: Record<string, Array<{ id: string; name: string; logoUrl: string | null }>> = {
-  '3': [ // League of Legends
-    { id: 'lol-1', name: 'T1', logoUrl: null },
-    { id: 'lol-2', name: 'G2 Esports', logoUrl: null },
-    { id: 'lol-3', name: 'Cloud9', logoUrl: null },
-    { id: 'lol-4', name: 'Fnatic', logoUrl: null },
-    { id: 'lol-5', name: 'Gen.G', logoUrl: null },
-    { id: 'lol-6', name: 'Team Liquid', logoUrl: null },
-    { id: 'lol-7', name: 'DRX', logoUrl: null },
-    { id: 'lol-8', name: 'JD Gaming', logoUrl: null },
-  ],
-  '29': [ // Valorant
-    { id: 'val-1', name: 'Sentinels', logoUrl: null },
-    { id: 'val-2', name: 'LOUD', logoUrl: null },
-    { id: 'val-3', name: 'Fnatic', logoUrl: null },
-    { id: 'val-4', name: 'Paper Rex', logoUrl: null },
-    { id: 'val-5', name: 'DRX', logoUrl: null },
-    { id: 'val-6', name: 'NRG', logoUrl: null },
-    { id: 'val-7', name: 'Evil Geniuses', logoUrl: null },
-    { id: 'val-8', name: 'Team Liquid', logoUrl: null },
-  ],
-}
 
 serve(async (req) => {
   // Handle CORS preflight
@@ -42,34 +18,17 @@ serve(async (req) => {
       throw new Error('GRID_API_KEY not configured')
     }
 
-    // Get titleId from query params or body
-    const url = new URL(req.url)
-    let titleId = url.searchParams.get('titleId')
-
-    if (!titleId && req.method === 'POST') {
-      const body = await req.json()
-      titleId = body.titleId
-    }
-
-    if (!titleId) {
-      return new Response(
-        JSON.stringify({ error: 'titleId is required' }),
-        {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400,
-        }
-      )
-    }
-
-    // Query teams filtered by titleId
+    // Query all teams (no title filter) - GRID has 3793+ teams
     const teamsQuery = `
-      query GetTeams($titleId: ID!) {
-        teams(first: 50, filter: { title: { id: { equals: $titleId } } }) {
+      query GetTeams {
+        teams(first: 100) {
           edges {
             node {
               id
               name
               logoUrl
+              colorPrimary
+              colorSecondary
             }
           }
         }
@@ -82,10 +41,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
         'x-api-key': gridApiKey,
       },
-      body: JSON.stringify({
-        query: teamsQuery,
-        variables: { titleId }
-      }),
+      body: JSON.stringify({ query: teamsQuery }),
     })
 
     if (!teamsRes.ok) {
@@ -95,22 +51,19 @@ serve(async (req) => {
     const teamsData = await teamsRes.json()
     const teamsEdges = teamsData.data?.teams?.edges || []
 
-    let teams = teamsEdges.map((edge: any) => ({
+    const teams = teamsEdges.map((edge: any) => ({
       id: edge.node.id,
       name: edge.node.name,
-      logoUrl: edge.node.logoUrl || null
+      logoUrl: edge.node.logoUrl || null,
+      colorPrimary: edge.node.colorPrimary || null,
+      colorSecondary: edge.node.colorSecondary || null,
     }))
-
-    // If empty, use curated fallback for this title
-    if (teams.length === 0 && CURATED_TEAMS[titleId]) {
-      teams = CURATED_TEAMS[titleId]
-    }
 
     // Sort alphabetically
     teams.sort((a: any, b: any) => a.name.localeCompare(b.name))
 
     return new Response(
-      JSON.stringify({ teams, isCurated: teamsEdges.length === 0 && teams.length > 0 }),
+      JSON.stringify({ teams }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
