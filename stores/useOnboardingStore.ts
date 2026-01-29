@@ -15,6 +15,15 @@ interface AIConfig {
     visionInvestment: number;
     earlyGamePathing: boolean;
     objectiveControl: boolean;
+
+    // v2 Calibration Data
+    matchupDelta?: any;
+    derivationFactors?: any;
+    opponentName?: string;
+    meta?: any;
+    generatedReasoning?: string;
+    coachingBias?: string;
+    confidenceScore?: number;
 }
 
 interface OnboardingState {
@@ -192,8 +201,17 @@ export const useOnboardingStore = create<OnboardingState & OnboardingActions>((s
                     vision_investment: state.aiConfig.visionInvestment,
                     early_game_pathing: state.aiConfig.earlyGamePathing,
                     objective_control: state.aiConfig.objectiveControl,
-                    // If these are not present in state, we might overwrite existing AI analysis? 
-                    // Ideally we should preserve them if check_function not run, but for onboarding we overwrite.
+
+                    // New Fields (v2)
+                    matchup_delta: state.aiConfig.matchupDelta,
+                    derivation_factors: state.aiConfig.derivationFactors,
+                    opponent_name: state.aiConfig.opponentName,
+                    meta: state.aiConfig.meta,
+
+                    // AI Generated Legacy (Should be dynamic, but for now defaults or preserved)
+                    generated_reasoning: state.aiConfig.generatedReasoning,
+                    coaching_bias: state.aiConfig.coachingBias,
+                    active_confidence_score: state.aiConfig.confidenceScore
                 }, { onConflict: 'workspace_id' });
 
             if (calibrationError) {
@@ -201,7 +219,7 @@ export const useOnboardingStore = create<OnboardingState & OnboardingActions>((s
             }
 
             // 4. Mark onboarding complete
-            await supabase
+            const { error: profileError } = await supabase
                 .from('profiles')
                 .upsert({
                     id: user.id,
@@ -209,8 +227,12 @@ export const useOnboardingStore = create<OnboardingState & OnboardingActions>((s
                     updated_at: new Date().toISOString(),
                     username: user.user_metadata?.username || user.email?.split('@')[0],
                     role: state.role || 'Coach',
-                })
-                .select();
+                });
+
+            if (profileError) {
+                console.error('Error updating profile completion:', profileError);
+                return false;
+            }
 
             // 5. Navigate to dashboard
             navigate('/dashboard');

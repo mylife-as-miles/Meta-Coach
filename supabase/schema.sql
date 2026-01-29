@@ -136,7 +136,14 @@ create table if not exists ai_calibration (
   coaching_bias text,
   confidence_score numeric(4,1) default 98.4,
   early_pressure_score integer default 50,
+  early_pressure_score integer default 50,
   scaling_potential_score integer default 50,
+  
+  -- New fields (v2)
+  matchup_delta jsonb,
+  derivation_factors jsonb,
+  opponent_name text,
+  meta jsonb,
   
   calibrated_at timestamp with time zone default now()
 );

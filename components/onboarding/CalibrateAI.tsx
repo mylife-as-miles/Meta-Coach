@@ -93,7 +93,15 @@ const CalibrateAI: React.FC = () => {
         resourcePriority: data.resourcePriority,
         visionInvestment: data.visionInvestment,
         earlyGamePathing: data.earlyGamePathing,
-        objectiveControl: data.objectiveControl
+        objectiveControl: data.objectiveControl,
+        // v2 Persistence
+        matchupDelta: data.matchupDelta,
+        derivationFactors: data.derivationFactors,
+        opponentName: data.opponentName,
+        meta: data.meta,
+        generatedReasoning: data.generatedReasoning,
+        coachingBias: data.coachingBias,
+        confidenceScore: data.confidenceScore
       });
 
     } catch (err) {
