@@ -171,11 +171,17 @@ export const OnboardingProvider: React.FC<{ children: ReactNode }> = ({ children
                 console.error('Error creating AI calibration:', calibrationError);
             }
 
-            // 4. Mark onboarding complete
+            // 4. Mark onboarding complete (Upsert to handle missing profile rows)
             await supabase
                 .from('profiles')
-                .update({ onboarding_complete: true })
-                .eq('id', user.id);
+                .upsert({
+                    id: user.id,
+                    onboarding_complete: true,
+                    updated_at: new Date().toISOString(),
+                    // Include basic fields if creating new row
+                    username: user.user_metadata?.username || user.email?.split('@')[0],
+                })
+                .select();
 
             // 5. Navigate to dashboard
             navigate('/dashboard');
