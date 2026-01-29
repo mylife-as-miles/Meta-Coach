@@ -211,7 +211,7 @@ export const useOnboardingStore = create<OnboardingState & OnboardingActions>((s
                     // AI Generated Legacy (Should be dynamic, but for now defaults or preserved)
                     generated_reasoning: state.aiConfig.generatedReasoning,
                     coaching_bias: state.aiConfig.coachingBias,
-                    active_confidence_score: state.aiConfig.confidenceScore
+                    confidence_score: state.aiConfig.confidenceScore
                 }, { onConflict: 'workspace_id' });
 
             if (calibrationError) {
