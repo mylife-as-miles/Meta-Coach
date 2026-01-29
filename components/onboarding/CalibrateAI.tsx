@@ -118,18 +118,12 @@ const CalibrateAI: React.FC = () => {
 
 
   const handleConfirm = async () => {
-    // Save to DB (completeOnboarding handles the basic config save)
-    // We might need to update the store to handle the new fields if completeOnboarding saves them
-    // For now, we assume completeOnboarding saves what is in aiConfig. 
-    // Ideally we'd validte or save the extra AI fields too, but per prompt "update the database scheme based on these data", 
-    // we updated schema, but useOnboardingStore might strictly save the store fields. 
-    // We will assume the store saves the updated slider values. To save the text, we might need a direct call here.
-
-    // Quick Direct Save of Extra Metadata if needed, or rely on future updates. 
-    // Given the prompt constraints, we'll proceed with standard completion.
-
+    // Force rebuild: v1.1
     const success = await completeOnboarding(navigate);
-    if (!success) console.error('Failed to complete onboarding');
+    if (!success) {
+      console.error('Failed to complete onboarding - check console for details');
+      alert('Failed to save configuration. Please check the specific error in the console.');
+    }
   };
 
   const handleBack = () => {
@@ -426,12 +420,12 @@ const CalibrateAI: React.FC = () => {
           </div>
 
           {/* CHECKPOINT BOX */}
-          <div className="mt-6 border border-primary/20 bg-primary/5 rounded-xl p-4 flex items-center justify-between">
-            <div>
+          <div className="mt-6 border border-primary/20 bg-primary/5 rounded-xl p-4 flex items-center justify-between gap-4">
+            <div className="flex-1 min-w-0">
               <h4 className="text-white font-bold text-sm mb-1">MetaCoach is ready</h4>
-              <div className="flex gap-3 text-[10px] text-gray-400 uppercase tracking-wider">
-                <span>Identity: <span className="text-gray-300">{aiAnalysis?.meta?.teamIdentity || teamName}</span></span>
-                <span>Source: <span className="text-gray-300">{aiAnalysis?.meta?.source || 'GRID + Stats Feed'}</span></span>
+              <div className="flex flex-col gap-1 text-[10px] text-gray-400 uppercase tracking-wider">
+                <div className="truncate">Identity: <span className="text-gray-300">{aiAnalysis?.meta?.teamIdentity || teamName}</span></div>
+                <div className="truncate">Source: <span className="text-gray-300">{aiAnalysis?.meta?.source || 'GRID + Stats Feed'}</span></div>
               </div>
             </div>
             <button

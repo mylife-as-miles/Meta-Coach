@@ -166,7 +166,11 @@ export const useOnboardingStore = create<OnboardingState & OnboardingActions>((s
 
                 if (rosterError) {
                     console.error('Error creating roster:', rosterError);
+                    // Fail hard so we don't end up with broken state
+                    return false;
                 }
+            } else {
+                console.warn("No roster entries to save (empty filter?)");
             }
 
             // 3. Create AI calibration

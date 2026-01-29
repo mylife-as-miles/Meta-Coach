@@ -105,10 +105,14 @@ create table if not exists roster (
 
 alter table roster enable row level security;
 
+-- RLS Policies for Roster
 drop policy if exists "Users can manage roster in own workspaces" on roster;
 create policy "Users can manage roster in own workspaces"
   on roster for all
   using (
+    workspace_id in (select id from workspaces where user_id = (select auth.uid()))
+  )
+  with check (
     workspace_id in (select id from workspaces where user_id = (select auth.uid()))
   );
 
