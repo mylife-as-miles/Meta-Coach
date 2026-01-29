@@ -5,6 +5,8 @@ import supabase from '../lib/supabase';
 interface RosterPlayer {
     role: string;
     ign: string;
+    imageUrl?: string | null;
+    gridId?: string;
 }
 
 interface AIConfig {
@@ -39,7 +41,7 @@ interface OnboardingActions {
 
     // Step 2 actions
     setRoster: (roster: RosterPlayer[]) => void;
-    updateRosterPlayer: (index: number, ign: string) => void;
+    updateRosterPlayer: (index: number, updates: Partial<RosterPlayer> | string) => void;
 
     // Step 3 actions
     setAIConfig: (config: Partial<AIConfig>) => void;
@@ -94,9 +96,13 @@ export const useOnboardingStore = create<OnboardingState & OnboardingActions>((s
         set({ roster });
     },
 
-    updateRosterPlayer: (index, ign) => {
+    updateRosterPlayer: (index, updates) => {
         const roster = [...get().roster];
-        roster[index] = { ...roster[index], ign };
+        if (typeof updates === 'string') {
+            roster[index] = { ...roster[index], ign: updates };
+        } else {
+            roster[index] = { ...roster[index], ...updates };
+        }
         set({ roster });
     },
 
@@ -147,6 +153,10 @@ export const useOnboardingStore = create<OnboardingState & OnboardingActions>((s
                     workspace_id: workspace.id,
                     role: p.role,
                     ign: p.ign,
+                    metadata: {
+                        imageUrl: p.imageUrl,
+                        gridId: p.gridId
+                    }
                 }));
 
             if (rosterEntries.length > 0) {

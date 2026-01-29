@@ -80,6 +80,8 @@ const SyncRoster: React.FC = () => {
             // Only auto-fill if the slot is currently empty to avoid overwriting user input on re-render
             if (i < newRoster.length && !newRoster[i].ign) {
               newRoster[i].ign = p.nickname;
+              newRoster[i].imageUrl = p.imageUrl;
+              newRoster[i].gridId = p.id;
             }
           });
           setRoster(newRoster);
@@ -151,9 +153,11 @@ const SyncRoster: React.FC = () => {
                   {/* Background Image (If Available) */}
                   {playerMeta?.imageUrl && (
                     <div
-                      className="absolute inset-0 bg-cover bg-center opacity-20 group-hover:opacity-30 transition-opacity grayscale group-hover:grayscale-0 pointer-events-none"
+                      className="absolute right-0 top-0 h-full w-full md:w-3/4 bg-contain bg-right bg-no-repeat opacity-40 group-hover:opacity-80 transition-all duration-500 grayscale group-hover:grayscale-0 pointer-events-none mix-blend-luminosity group-hover:mix-blend-normal"
                       style={{ backgroundImage: `url(${playerMeta.imageUrl})` }}
-                    ></div>
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-surface-darker via-surface-darker/60 to-transparent"></div>
+                    </div>
                   )}
 
                   {/* Gradient Overlay for Text Readability */}
