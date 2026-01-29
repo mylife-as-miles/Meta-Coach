@@ -99,8 +99,6 @@ serve(async (req) => {
             node {
               id
               nickname
-              firstName
-              lastName
               externalLinks {
                 dataProvider { name }
                 externalEntity { id }
@@ -142,8 +140,6 @@ serve(async (req) => {
         let players = playerEdges.map((edge: any) => ({
             id: edge.node.id,
             nickname: edge.node.nickname,
-            firstName: edge.node.firstName,
-            lastName: edge.node.lastName,
             externalLinks: edge.node.externalLinks,
             imageUrl: null // Default null
         }))
