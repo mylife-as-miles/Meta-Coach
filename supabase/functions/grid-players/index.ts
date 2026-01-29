@@ -47,11 +47,17 @@ serve(async (req) => {
 
     try {
         const gridApiKey = Deno.env.get('GRID_API_KEY')
+
+        // Debug: Log if API key exists (don't log the actual key!)
+        console.log('GRID_API_KEY exists:', !!gridApiKey)
+        console.log('GRID_API_KEY length:', gridApiKey?.length || 0)
+
         if (!gridApiKey) {
-            throw new Error('GRID_API_KEY not configured')
+            throw new Error('GRID_API_KEY not configured in Supabase Edge Function secrets')
         }
 
         const { teamId, titleId } = await req.json()
+        console.log('Request params:', { teamId, titleId })
 
         if (!teamId) {
             return new Response(
@@ -86,6 +92,8 @@ serve(async (req) => {
       }
     `
 
+        console.log('Calling GRID API with teamId:', teamId)
+
         const playersRes = await fetch(GRID_API_URL, {
             method: 'POST',
             headers: {
@@ -98,12 +106,19 @@ serve(async (req) => {
             }),
         })
 
+        console.log('GRID API response status:', playersRes.status)
+
         if (!playersRes.ok) {
-            throw new Error(`GRID API error: ${playersRes.status}`)
+            const errorText = await playersRes.text()
+            console.error('GRID API error body:', errorText)
+            throw new Error(`GRID API error: ${playersRes.status} - ${errorText}`)
         }
 
         const playersData = await playersRes.json()
+        console.log('GRID API response data:', JSON.stringify(playersData, null, 2))
+
         const playerEdges = playersData.data?.players?.edges || []
+        console.log('Player edges count:', playerEdges.length)
 
         let players = playerEdges.map((edge: any) => ({
             id: edge.node.id,
