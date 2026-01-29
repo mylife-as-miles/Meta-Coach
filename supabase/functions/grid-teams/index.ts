@@ -37,6 +37,12 @@ serve(async (req) => {
       )
     }
 
+    // Map Valorant ID if necessary (from app's 29/6 to correct one if mixed up, but user said use "6")
+    // User explicitly asked to use "6" for Valorant
+    if (titleId === '29') {
+      titleId = '6'; // Correct mappings based on user feedback
+    }
+
     // Query teams using simplified titleId filter
     const teamsQuery = `
       query GetTeamsForTitle($titleId: ID!) {
