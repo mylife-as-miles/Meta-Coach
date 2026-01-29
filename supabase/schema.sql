@@ -100,6 +100,12 @@ create table if not exists roster (
   ign text,
   grid_player_id text,
   metadata jsonb,
+  
+  -- Hybrid Data Fields
+  readiness_score integer default 90 check (readiness_score >= 0 and readiness_score <= 100),
+  synergy_score integer default 85 check (synergy_score >= 0 and synergy_score <= 100),
+  is_active boolean default true,
+  
   created_at timestamp with time zone default now()
 );
 

@@ -14,6 +14,8 @@ export interface Player {
         mental: number;
     };
     synergy: number;
+    readiness?: number; // Hybrid Data
+    isActive?: boolean; // Hybrid Data
     avatar?: string;
 }
 

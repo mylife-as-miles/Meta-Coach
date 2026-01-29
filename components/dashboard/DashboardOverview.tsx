@@ -136,9 +136,9 @@ const DashboardOverview: React.FC = () => {
                         <div className="absolute top-4 left-4 z-10 bg-black/60 backdrop-blur-md border border-white/10 p-2 rounded-lg">
                             <div className="flex items-center gap-2">
                                 <span className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-neon"></span>
-                                <span className="text-xs font-bold text-white uppercase tracking-wider">Live Telemetry</span>
+                                <span className="text-xs font-bold text-white uppercase tracking-wider">Strategic Projection</span>
                             </div>
-                            <p className="text-[10px] text-gray-400 mt-1">Summoner's Rift • 14.3 Patch</p>
+                            <p className="text-[10px] text-gray-400 mt-1">Summoner's Rift • 14.3 Patch • Simulation Mode</p>
                         </div>
                         <div className="absolute top-4 right-4 z-10 flex gap-2">
                             <span className="px-3 py-1 bg-blue-900/60 backdrop-blur-md rounded-md text-[10px] font-bold text-blue-200 border border-blue-500/30 shadow-[0_0_10px_rgba(59,130,246,0.2)]">Baron: 65%</span>
@@ -151,11 +151,11 @@ const DashboardOverview: React.FC = () => {
                             <circle className="animate-pulse" cx="200" cy="150" fill="#D2F96F" r="4"></circle>
                             <circle className="animate-pulse" cx="600" cy="250" fill="#D2F96F" r="4"></circle>
                             <rect fill="rgba(14, 16, 10, 0.9)" height="24" rx="4" stroke="rgba(210, 249, 111, 0.3)" width="80" x="580" y="220"></rect>
-                            <text fill="#E0E0E0" fontFamily="sans-serif" fontSize="10" fontWeight="bold" x="593" y="236">Mid Rotate</text>
+                            <text fill="#E0E0E0" fontFamily="sans-serif" fontSize="10" fontWeight="bold" x="593" y="236">Expected Rotate</text>
                         </svg>
                         <div className="absolute bottom-4 left-4 right-4 bg-black/80 backdrop-blur-md border border-white/10 rounded-xl p-3 flex justify-between items-center z-20">
                             <div className="flex flex-col gap-1 w-1/3">
-                                <span className="text-[10px] text-gray-400 uppercase">Gold Advantage</span>
+                                <span className="text-[10px] text-gray-400 uppercase">Projected Gold Lead</span>
                                 <div className="h-1.5 w-full bg-gray-800 rounded-full overflow-hidden flex border border-white/5">
                                     <div className="w-[55%] bg-primary h-full shadow-neon"></div>
                                     <div className="w-[45%] bg-red-500 h-full opacity-60"></div>
@@ -176,7 +176,7 @@ const DashboardOverview: React.FC = () => {
                     {/* AI Analysis List */}
                     <div className="bg-surface-dark rounded-2xl p-5 shadow-lg border border-white/5 flex-1 overflow-hidden h-[300px] lg:h-[40%]">
                         <div className="flex justify-between items-center mb-4">
-                            <h3 className="font-semibold text-white">AI Analysis: High-Impact Plays</h3>
+                            <h3 className="font-semibold text-white">AI Strategic Insights: High-Impact Plays</h3>
                             <div className="flex gap-4 text-xs text-gray-500 font-mono">
                                 <span>Time</span>
                                 <span>Play</span>

@@ -209,10 +209,12 @@ export const useDashboardStore = create<DashboardState & DashboardActions>((set,
                         id: p.id,
                         name: p.ign || `Player ${index + 1}`,
                         role: p.role as any,
-                        overall: mockTemplate.overall, // Keep mock stats for now
-                        stats: mockTemplate.stats,
-                        synergy: Math.floor(Math.random() * 15) + 85, // High synergy for onboarded team
-                        avatar: p.metadata?.imageUrl || null // Use real avatar
+                        overall: Math.floor((p.readiness_score + p.synergy_score) / 2) || mockTemplate.overall,
+                        stats: mockTemplate.stats, // Keep mock gameplay stats for now
+                        synergy: p.synergy_score ?? 85, // Use DB value or default
+                        readiness: p.readiness_score ?? 90, // Use DB value or default
+                        avatar: p.metadata?.imageUrl || null,
+                        isActive: p.is_active ?? true
                     };
                 });
                 set({ allPlayers: mappedPlayers });
