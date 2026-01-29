@@ -164,7 +164,7 @@ const ChooseGame: React.FC = () => {
         {/* Team Selection Panel */}
         {selectedGame && (
           <div className="bg-surface-darker/80 backdrop-blur-sm border border-white/10 rounded-xl p-6 mb-8 animate-fade-in">
-            <h3 className="text-lg font-bold text-white mb-2">Select Your Team <span className="text-gray-500 font-normal text-sm ml-2">(from recent competitions)</span></h3>
+            <h3 className="text-lg font-bold text-white mb-2">Select Your Team <span className="text-gray-500 font-normal text-sm ml-2">(from GRID Global Database)</span></h3>
             <p className="text-xs text-gray-500 mb-6">This scopes all match history and analytics to your selected team.</p>
 
             {isLoadingTeams ? (
@@ -186,28 +186,63 @@ const ChooseGame: React.FC = () => {
             ) : teams.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <span className="material-icons text-gray-600 text-3xl mb-2">groups_off</span>
-                <p className="text-gray-500 text-sm">No teams found for this title.</p>
+                <p className="text-gray-500 text-sm">No teams found in GRID database.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {teams.map((team) => (
-                  <button
-                    key={team.id}
-                    onClick={() => handleTeamSelect(team)}
-                    className={`p-4 rounded-lg border transition-all text-left ${selectedTeam?.id === team.id
-                      ? 'border-primary bg-primary/10 text-white'
-                      : 'border-white/10 bg-surface-dark hover:border-white/30 text-gray-300 hover:text-white'
-                      }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${selectedTeam?.id === team.id ? 'bg-primary text-black' : 'bg-white/10 text-white'
-                        }`}>
-                        {team.name.substring(0, 2).toUpperCase()}
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                {teams.map((team: any) => {
+                  const isSelected = selectedTeam?.id === team.id;
+                  const primaryColor = team.colorPrimary || '#D2F96F'; // Default to neon green
+
+                  return (
+                    <button
+                      key={team.id}
+                      onClick={() => handleTeamSelect(team)}
+                      className={`p-4 rounded-lg border transition-all text-left flex flex-col items-center gap-3 relative overflow-hidden group ${isSelected
+                        ? 'bg-white/5'
+                        : 'bg-surface-dark border-white/10 hover:border-white/30 hover:bg-surface-darker'
+                        }`}
+                      style={{
+                        borderColor: isSelected ? primaryColor : undefined,
+                        boxShadow: isSelected ? `0 0 20px ${primaryColor}20` : undefined
+                      }}
+                    >
+                      {/* Selection Indicator */}
+                      {isSelected && (
+                        <div className="absolute top-2 right-2 w-2 h-2 rounded-full" style={{ backgroundColor: primaryColor }} />
+                      )}
+
+                      {/* Logo or Placeholder */}
+                      <div className="w-12 h-12 relative flex items-center justify-center">
+                        {team.logoUrl ? (
+                          <img
+                            src={team.logoUrl}
+                            alt={team.name}
+                            className="w-full h-full object-contain drop-shadow-lg transition-transform group-hover:scale-110"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none';
+                              (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                            }}
+                          />
+                        ) : null}
+
+                        {/* Fallback Initial (shown if no logo or on error) */}
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold border border-white/10 ${!team.logoUrl ? '' : 'hidden'}`}
+                          style={{ backgroundColor: `${primaryColor}20`, color: primaryColor }}>
+                          {team.name.substring(0, 2).toUpperCase()}
+                        </div>
                       </div>
-                      <span className="font-medium">{team.name}</span>
-                    </div>
-                  </button>
-                ))}
+
+                      <div className="text-center w-full">
+                        <span className={`font-bold block truncate text-sm ${isSelected ? 'text-white' : 'text-gray-300 group-hover:text-white'}`}>
+                          {team.name}
+                        </span>
+                        {/* Decorative Team Color Bar */}
+                        <div className="h-0.5 w-8 mx-auto mt-2 rounded-full opacity-50" style={{ backgroundColor: primaryColor }} />
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
