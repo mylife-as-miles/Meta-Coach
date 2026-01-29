@@ -56,7 +56,26 @@ serve(async (req) => {
             throw new Error('GRID_API_KEY not configured in Supabase Edge Function secrets')
         }
 
-        const { teamId, titleId } = await req.json()
+        // Parse inputs from Body (POST) or Query Params (GET)
+        let teamId: string | null = null
+        let titleId: string | null = null
+
+        // 1. Try Query Params first
+        const url = new URL(req.url)
+        teamId = url.searchParams.get('teamId')
+        titleId = url.searchParams.get('titleId')
+
+        // 2. If not found and POST, try JSON body
+        if ((!teamId || !titleId) && req.method === 'POST') {
+            try {
+                const body = await req.json()
+                if (!teamId) teamId = body.teamId
+                if (!titleId) titleId = body.titleId
+            } catch (e) {
+                console.warn('Failed to parse JSON body:', e)
+            }
+        }
+
         console.log('Request params:', { teamId, titleId })
 
         if (!teamId) {
