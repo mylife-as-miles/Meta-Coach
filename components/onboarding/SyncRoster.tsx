@@ -75,14 +75,39 @@ const SyncRoster: React.FC = () => {
         // Auto-fill roster if empty
         if (data.players && data.players.length > 0) {
           const newRoster = [...roster];
-          data.players.slice(0, 5).forEach((p: GridPlayer, i: number) => {
-            if (i < newRoster.length && !newRoster[i].ign) {
+
+          data.players.forEach((p: GridPlayer, i: number) => {
+            // If we have more players than slots, expand the roster
+            if (i >= newRoster.length) {
+              newRoster.push({
+                role: 'Substitute',
+                ign: p.nickname,
+                imageUrl: p.imageUrl,
+                gridId: p.id
+              });
+            } else if (!newRoster[i].ign) {
+              // Fill existing empty slots
               newRoster[i].ign = p.nickname;
               newRoster[i].imageUrl = p.imageUrl;
               newRoster[i].gridId = p.id;
             }
           });
+
           setRoster(newRoster);
+
+          // Also update active roles for UI mapping
+          if (data.players.length > activeRoles.length) {
+            const extraCount = data.players.length - activeRoles.length;
+            const newRoles = [...activeRoles];
+            for (let k = 0; k < extraCount; k++) {
+              newRoles.push({
+                name: 'Substitute',
+                icon: 'group',
+                description: 'Reserve Player'
+              });
+            }
+            setActiveRoles(newRoles);
+          }
         }
 
       } catch (err) {
