@@ -5,6 +5,7 @@ import Auth from './components/Auth';
 import ChooseGame from './components/onboarding/ChooseGame';
 import SyncRoster from './components/onboarding/SyncRoster';
 import CalibrateAI from './components/onboarding/CalibrateAI';
+import { OnboardingProvider } from './context/OnboardingContext';
 import DashboardLayout from './components/dashboard/DashboardLayout';
 import DashboardOverview from './components/dashboard/DashboardOverview';
 import MatchHistory from './components/dashboard/MatchHistory';
@@ -14,6 +15,19 @@ import Settings from './components/dashboard/Settings';
 import CommunicationLogs from './components/dashboard/CommunicationLogs';
 import CoachProfile from './components/dashboard/CoachProfile';
 import { Sun, Moon } from './components/Icons';
+
+// Wrapper component for onboarding routes
+const OnboardingRoutes: React.FC = () => {
+  return (
+    <OnboardingProvider>
+      <Routes>
+        <Route path="step-1" element={<ChooseGame />} />
+        <Route path="step-2" element={<SyncRoster />} />
+        <Route path="step-3" element={<CalibrateAI />} />
+      </Routes>
+    </OnboardingProvider>
+  );
+};
 
 const App: React.FC = () => {
   // Default to true (dark mode) as per the design requirements
@@ -35,10 +49,8 @@ const App: React.FC = () => {
         <Route path="/" element={<Landing />} />
         <Route path="/auth" element={<Auth onNavigateHome={() => navigate('/')} />} />
 
-        {/* Onboarding Routes */}
-        <Route path="/onboarding/step-1" element={<ChooseGame />} />
-        <Route path="/onboarding/step-2" element={<SyncRoster />} />
-        <Route path="/onboarding/step-3" element={<CalibrateAI />} />
+        {/* Onboarding Routes - wrapped with OnboardingProvider */}
+        <Route path="/onboarding/*" element={<OnboardingRoutes />} />
 
         {/* Dashboard Routes */}
         <Route path="/dashboard" element={<DashboardLayout />}>
