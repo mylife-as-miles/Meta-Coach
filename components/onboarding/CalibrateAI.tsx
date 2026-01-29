@@ -25,6 +25,11 @@ interface AIAnalysis {
     earlyGamePathing: string[];
   };
   opponentName?: string;
+  meta?: {
+    source: string;
+    matchCount: number;
+    teamIdentity: string;
+  };
 }
 
 const CalibrateAI: React.FC = () => {
@@ -65,7 +70,11 @@ const CalibrateAI: React.FC = () => {
     try {
       const { data, error } = await supabase.functions.invoke('ai-match-prep', {
         body: {
-          teamName,
+          team: {
+            name: teamName,
+            region: 'Global', // Placeholder until real team metadata is available
+            id: 'stub-id'
+          },
           gameTitle,
           roster: roster.map(p => ({ role: p.role, ign: p.ign })),
           opponentName: customOpponent || opponentName
@@ -300,11 +309,11 @@ const CalibrateAI: React.FC = () => {
                 <span className="material-symbols-outlined text-purple-400 text-xs">auto_awesome</span>
                 <span className="text-gray-300 font-bold text-xs tracking-widest uppercase">Gemini Preview</span>
               </div>
-              <div className="flex gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-full bg-red-500/20 border border-red-500/50"></div>
-                <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/20 border border-yellow-500/50"></div>
-                <div className="w-2.5 h-2.5 rounded-full bg-green-500/20 border border-green-500/50"></div>
-              </div>
+              {aiAnalysis?.opponentName && (
+                <div className="text-[10px] bg-red-900/20 text-red-400 px-2 py-0.5 rounded border border-red-500/20 uppercase tracking-wider">
+                  VS {aiAnalysis.opponentName}
+                </div>
+              )}
             </div>
 
             {/* Terminal Body */}
@@ -324,6 +333,56 @@ const CalibrateAI: React.FC = () => {
                       "{aiAnalysis.generatedReasoning}"
                     </p>
                   </div>
+
+                  {/* MATCHUP DELTA VISUALIZATION */}
+                  {aiAnalysis.matchupDelta && (
+                    <div className="bg-white/5 rounded p-3 border border-white/5">
+                      <h4 className="text-gray-500 uppercase text-[10px] tracking-widest mb-2 flex justify-between">
+                        <span>Matchup Delta</span>
+                        <span className="text-gray-600">You vs {aiAnalysis.opponentName || 'Enemy'}</span>
+                      </h4>
+                      <div className="space-y-3">
+                        {/* Early Game Delta */}
+                        <div className="flex items-center gap-3 text-xs">
+                          <span className="w-20 text-gray-400">Early Game</span>
+                          <div className="flex-1 h-1.5 bg-gray-800 rounded-full relative overflow-visible">
+                            {/* Center Marker */}
+                            <div className="absolute left-1/2 top-[-2px] bottom-[-2px] w-0.5 bg-gray-600"></div>
+                            {/* Bar */}
+                            <div
+                              className={`absolute h-full rounded-full ${aiAnalysis.matchupDelta.earlyGame > 0 ? 'bg-green-400 left-1/2' : 'bg-red-400 right-1/2'}`}
+                              style={{
+                                width: `${Math.abs(aiAnalysis.matchupDelta.earlyGame) * 5}%`,
+                                left: aiAnalysis.matchupDelta.earlyGame > 0 ? '50%' : undefined,
+                                right: aiAnalysis.matchupDelta.earlyGame < 0 ? '50%' : undefined
+                              }}
+                            ></div>
+                          </div>
+                          <span className={`w-8 text-right font-bold ${aiAnalysis.matchupDelta.earlyGame > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                            {aiAnalysis.matchupDelta.earlyGame > 0 ? '+' : ''}{aiAnalysis.matchupDelta.earlyGame}%
+                          </span>
+                        </div>
+                        {/* Late Game Delta */}
+                        <div className="flex items-center gap-3 text-xs">
+                          <span className="w-20 text-gray-400">Scaling</span>
+                          <div className="flex-1 h-1.5 bg-gray-800 rounded-full relative overflow-visible">
+                            <div className="absolute left-1/2 top-[-2px] bottom-[-2px] w-0.5 bg-gray-600"></div>
+                            <div
+                              className={`absolute h-full rounded-full ${aiAnalysis.matchupDelta.lateGame > 0 ? 'bg-green-400 left-1/2' : 'bg-red-400 right-1/2'}`}
+                              style={{
+                                width: `${Math.abs(aiAnalysis.matchupDelta.lateGame) * 5}%`,
+                                left: aiAnalysis.matchupDelta.lateGame > 0 ? '50%' : undefined,
+                                right: aiAnalysis.matchupDelta.lateGame < 0 ? '50%' : undefined
+                              }}
+                            ></div>
+                          </div>
+                          <span className={`w-8 text-right font-bold ${aiAnalysis.matchupDelta.lateGame > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                            {aiAnalysis.matchupDelta.lateGame > 0 ? '+' : ''}{aiAnalysis.matchupDelta.lateGame}%
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-2 gap-8">
                     <div>
@@ -371,9 +430,8 @@ const CalibrateAI: React.FC = () => {
             <div>
               <h4 className="text-white font-bold text-sm mb-1">MetaCoach is ready</h4>
               <div className="flex gap-3 text-[10px] text-gray-400 uppercase tracking-wider">
-                <span>Team: <span className="text-gray-300">{teamName}</span></span>
-                <span>Mode: <span className="text-gray-300">Live Match Coaching</span></span>
-                <span>Sources: <span className="text-gray-300">GRID + Stats Feed</span></span>
+                <span>Identity: <span className="text-gray-300">{aiAnalysis?.meta?.teamIdentity || teamName}</span></span>
+                <span>Source: <span className="text-gray-300">{aiAnalysis?.meta?.source || 'GRID + Stats Feed'}</span></span>
               </div>
             </div>
             <button
