@@ -12,6 +12,7 @@ create table if not exists profiles (
   avatar_url text,
   website text,
   onboarding_complete boolean default false,
+  role text default 'Coach',
 
   constraint username_length check (char_length(username) >= 3)
 );

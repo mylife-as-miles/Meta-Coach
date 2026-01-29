@@ -22,6 +22,7 @@ interface OnboardingState {
     gridTeamId: string | null;
     teamName: string | null;
     gameTitle: string | null;
+    role: string;
 
     // Step 2: Roster
     roster: RosterPlayer[];
@@ -74,6 +75,7 @@ export const OnboardingProvider: React.FC<{ children: ReactNode }> = ({ children
         gridTeamId: null,
         teamName: null,
         gameTitle: null,
+        role: 'Coach',
         roster: defaultRoster,
         aiConfig: defaultAIConfig,
         isSaving: false,
@@ -180,6 +182,7 @@ export const OnboardingProvider: React.FC<{ children: ReactNode }> = ({ children
                     updated_at: new Date().toISOString(),
                     // Include basic fields if creating new row
                     username: user.user_metadata?.username || user.email?.split('@')[0],
+                    role: state.role || 'Coach',
                 })
                 .select();
 
