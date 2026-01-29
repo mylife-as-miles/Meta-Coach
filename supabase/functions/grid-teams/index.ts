@@ -1,10 +1,34 @@
 // supabase/functions/grid-teams/index.ts
-// Fetch teams by title from GRID via Series lookup (correct first-onboarding flow)
+// Fetch teams by title from GRID with curated fallback
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { corsHeaders } from '../_shared/cors.ts'
 
 const GRID_API_URL = 'https://api-op.grid.gg/central-data/graphql'
+
+// Curated fallback teams for known titles (used when GRID has no ingested matches yet)
+const CURATED_TEAMS: Record<string, Array<{ id: string; name: string; logoUrl: string | null }>> = {
+  '3': [ // League of Legends
+    { id: 'lol-1', name: 'T1', logoUrl: null },
+    { id: 'lol-2', name: 'G2 Esports', logoUrl: null },
+    { id: 'lol-3', name: 'Cloud9', logoUrl: null },
+    { id: 'lol-4', name: 'Fnatic', logoUrl: null },
+    { id: 'lol-5', name: 'Gen.G', logoUrl: null },
+    { id: 'lol-6', name: 'Team Liquid', logoUrl: null },
+    { id: 'lol-7', name: 'DRX', logoUrl: null },
+    { id: 'lol-8', name: 'JD Gaming', logoUrl: null },
+  ],
+  '29': [ // Valorant
+    { id: 'val-1', name: 'Sentinels', logoUrl: null },
+    { id: 'val-2', name: 'LOUD', logoUrl: null },
+    { id: 'val-3', name: 'Fnatic', logoUrl: null },
+    { id: 'val-4', name: 'Paper Rex', logoUrl: null },
+    { id: 'val-5', name: 'DRX', logoUrl: null },
+    { id: 'val-6', name: 'NRG', logoUrl: null },
+    { id: 'val-7', name: 'Evil Geniuses', logoUrl: null },
+    { id: 'val-8', name: 'Team Liquid', logoUrl: null },
+  ],
+}
 
 serve(async (req) => {
   // Handle CORS preflight
@@ -37,71 +61,56 @@ serve(async (req) => {
       )
     }
 
-    // Fetch recent series for the title, then extract teams
-    // This is the correct approach per GRID's event-centric data model
-    const seriesQuery = `
-      query GetSeries($titleId: ID!) {
-        allSeries(first: 50, filter: { title: { id: { equals: $titleId } } }) {
+    // Query teams filtered by titleId
+    const teamsQuery = `
+      query GetTeams($titleId: ID!) {
+        teams(first: 50, filter: { title: { id: { equals: $titleId } } }) {
           edges {
             node {
               id
-              teams {
-                baseInfo {
-                  id
-                  name
-                  logoUrl
-                }
-              }
+              name
+              logoUrl
             }
           }
         }
       }
     `
 
-    const seriesRes = await fetch(GRID_API_URL, {
+    const teamsRes = await fetch(GRID_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': gridApiKey,
       },
       body: JSON.stringify({
-        query: seriesQuery,
+        query: teamsQuery,
         variables: { titleId }
       }),
     })
 
-    if (!seriesRes.ok) {
-      throw new Error(`GRID API error: ${seriesRes.status}`)
+    if (!teamsRes.ok) {
+      throw new Error(`GRID API error: ${teamsRes.status}`)
     }
 
-    const seriesData = await seriesRes.json()
-    const seriesEdges = seriesData.data?.allSeries?.edges || []
+    const teamsData = await teamsRes.json()
+    const teamsEdges = teamsData.data?.teams?.edges || []
 
-    // Extract unique teams from all series
-    const uniqueTeamsMap = new Map()
+    let teams = teamsEdges.map((edge: any) => ({
+      id: edge.node.id,
+      name: edge.node.name,
+      logoUrl: edge.node.logoUrl || null
+    }))
 
-    seriesEdges.forEach((edge: any) => {
-      const teams = edge.node.teams || []
-      teams.forEach((teamObj: any) => {
-        const baseInfo = teamObj.baseInfo
-        if (baseInfo && baseInfo.id && baseInfo.name) {
-          if (!uniqueTeamsMap.has(baseInfo.id)) {
-            uniqueTeamsMap.set(baseInfo.id, {
-              id: baseInfo.id,
-              name: baseInfo.name,
-              logoUrl: baseInfo.logoUrl || null
-            })
-          }
-        }
-      })
-    })
+    // If empty, use curated fallback for this title
+    if (teams.length === 0 && CURATED_TEAMS[titleId]) {
+      teams = CURATED_TEAMS[titleId]
+    }
 
-    const teams = Array.from(uniqueTeamsMap.values())
-      .sort((a, b) => a.name.localeCompare(b.name)) // Sort alphabetically
+    // Sort alphabetically
+    teams.sort((a: any, b: any) => a.name.localeCompare(b.name))
 
-    // No fallback - if empty, return empty. UI will handle "No teams found."
     return new Response(
-      JSON.stringify({ teams }),
+      JSON.stringify({ teams, isCurated: teamsEdges.length === 0 && teams.length > 0 }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
