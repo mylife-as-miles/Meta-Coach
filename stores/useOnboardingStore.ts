@@ -234,7 +234,16 @@ export const useOnboardingStore = create<OnboardingState & OnboardingActions>((s
                 return false;
             }
 
-            // 5. Navigate to dashboard
+            // 5. Sync Auth Metadata (so JWT/Session reflects the change immediately)
+            const { error: authError } = await supabase.auth.updateUser({
+                data: { onboarding_complete: true }
+            });
+
+            if (authError) {
+                console.warn('Failed to sync auth metadata (non-critical):', authError);
+            }
+
+            // 6. Navigate to dashboard
             navigate('/dashboard');
             return true;
 

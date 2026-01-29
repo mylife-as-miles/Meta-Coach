@@ -102,6 +102,17 @@ const StrategyBriefModal: React.FC<StrategyBriefModalProps> = ({ isOpen, onClose
                             </div>
                         </div>
 
+                        {/* AI General Strategy (From Onboarding) */}
+                        {teamProfile?.generated_reasoning && (
+                            <div className="bg-primary/5 rounded-xl p-4 border border-primary/20">
+                                <h3 className="text-sm font-bold text-white mb-2 flex items-center gap-2">
+                                    <span className="material-icons-outlined text-primary text-base">psychology</span>
+                                    Core Strategic Identity
+                                </h3>
+                                <p className="text-sm text-gray-300 italic">"{teamProfile.generated_reasoning}"</p>
+                            </div>
+                        )}
+
                         {/* Head-to-Head Stats */}
                         {displayData.headToHead && (
                             <div className="bg-surface-darker rounded-xl p-4 border border-white/5">

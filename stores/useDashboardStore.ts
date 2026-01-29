@@ -166,7 +166,24 @@ export const useDashboardStore = create<DashboardState & DashboardActions>((set,
                 return;
             }
 
-            // 3. Get Roster from DB
+            // 3. Get AI Calibration
+            const { data: aiData } = await supabase
+                .from('ai_calibration')
+                .select('*')
+                .eq('workspace_id', workspace.id)
+                .single();
+
+            // Set Team Profile from Workspace + AI Data
+            set({
+                teamProfile: {
+                    teamName: workspace.team_name,
+                    region: 'Global', // Placeholder as region isn't in workspace table yet
+                    game: workspace.game_title,
+                    ...aiData // Spread AI data for access
+                }
+            });
+
+            // 4. Get Roster from DB
             const { data: roster, error: rosterError } = await supabase
                 .from('roster')
                 .select('*')
@@ -174,58 +191,56 @@ export const useDashboardStore = create<DashboardState & DashboardActions>((set,
 
             if (!rosterError && roster && roster.length > 0) {
                 const mappedPlayers: Player[] = roster.map((p, index) => {
-                    const mockTemplate = mockPlayers.find(mp => mp.role === p.role) || mockPlayers[index % mockPlayers.length];
+                    // Try to find a mock template for stats based on role
+                    const mockTemplate = mockPlayers.find(mp => mp.role.toLowerCase() === p.role.toLowerCase()) || mockPlayers[index % mockPlayers.length];
+
                     return {
                         id: p.id,
                         name: p.ign || `Player ${index + 1}`,
                         role: p.role as any,
-                        overall: mockTemplate.overall,
+                        overall: mockTemplate.overall, // Keep mock stats for now
                         stats: mockTemplate.stats,
-                        synergy: Math.floor(Math.random() * 20) + 80,
-                        avatar: mockTemplate.avatar
+                        synergy: Math.floor(Math.random() * 15) + 85, // High synergy for onboarded team
+                        avatar: p.metadata?.imageUrl || null // Use real avatar
                     };
                 });
                 set({ allPlayers: mappedPlayers });
             }
 
-            // 4. Get Matches from Edge Function
+            // 5. Get Matches (Optional - keep existing logic or mock if function fails)
             if (workspace.grid_team_id) {
-                const { data: matchesData, error: matchError } = await supabase.functions.invoke('team-matches', {
-                    body: { teamId: workspace.grid_team_id }
-                });
+                // If we have a Grid Team ID, we could fetch real matches. 
+                // For now, let's keep the store's existing match logic or just leave it. 
+                // The main request is to populate dashboard with data from database (User's team).
+                // We'll leave the Function call as it was, assuming it works or fails gracefully.
+                try {
+                    const { data: matchesData, error: matchError } = await supabase.functions.invoke('team-matches', {
+                        body: { teamId: workspace.grid_team_id }
+                    });
 
-                if (!matchError && matchesData && matchesData.matches) {
-                    const mappedMatches: Match[] = matchesData.matches.slice(0, 5).map((m: any) => ({
-                        id: m.id,
-                        date: new Date(m.startTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-                        duration: '35:00',
-                        result: m.winner?.id === workspace.grid_team_id ? 'WIN' : 'LOSS',
-                        score: `${m.games?.filter((g: any) => g.winnerId === workspace.grid_team_id).length} - ${m.games?.filter((g: any) => g.winnerId !== workspace.grid_team_id).length}`,
-                        format: m.format || 'Bo1',
-                        type: 'Ranked',
-                        opponent: {
-                            name: m.teams?.find((t: any) => t.id !== workspace.grid_team_id)?.name || 'Unknown',
-                            abbreviation: (m.teams?.find((t: any) => t.id !== workspace.grid_team_id)?.name || 'UNK').substring(0, 3).toUpperCase(),
-                            color: 'red'
-                        },
-                        performance: { macroControl: 50, microErrorRate: 'MED' }
-                    }));
-                    if (mappedMatches.length > 0) {
-                        set({ allMatches: mappedMatches });
+                    if (!matchError && matchesData && matchesData.matches) {
+                        const mappedMatches: Match[] = matchesData.matches.slice(0, 5).map((m: any) => ({
+                            id: m.id,
+                            date: new Date(m.startTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                            duration: '35:00',
+                            result: m.winner?.id === workspace.grid_team_id ? 'WIN' : 'LOSS',
+                            score: `${m.games?.filter((g: any) => g.winnerId === workspace.grid_team_id).length} - ${m.games?.filter((g: any) => g.winnerId !== workspace.grid_team_id).length}`,
+                            format: m.format || 'Bo1',
+                            type: 'Ranked',
+                            opponent: {
+                                name: m.teams?.find((t: any) => t.id !== workspace.grid_team_id)?.name || 'Unknown',
+                                abbreviation: (m.teams?.find((t: any) => t.id !== workspace.grid_team_id)?.name || 'UNK').substring(0, 3).toUpperCase(),
+                                color: 'red'
+                            },
+                            performance: { macroControl: 50, microErrorRate: 'MED' }
+                        }));
+                        if (mappedMatches.length > 0) {
+                            set({ allMatches: mappedMatches });
+                        }
                     }
-                } else {
-                    console.error("Error fetching matches:", matchError);
+                } catch (e) {
+                    console.warn("Failed to fetch matches", e);
                 }
-            }
-
-            // 5. Fetch Team Profile from Edge Function
-            try {
-                const { data: profileData, error: profileError } = await supabase.functions.invoke('team-profile');
-                if (!profileError && profileData) {
-                    set({ teamProfile: profileData });
-                }
-            } catch (profileErr) {
-                console.error("Error fetching team profile:", profileErr);
             }
 
             set({ isLoading: false });
