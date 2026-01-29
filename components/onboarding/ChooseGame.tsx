@@ -164,7 +164,7 @@ const ChooseGame: React.FC = () => {
         {/* Team Selection Panel */}
         {selectedGame && (
           <div className="bg-surface-darker/80 backdrop-blur-sm border border-white/10 rounded-xl p-6 mb-8 animate-fade-in">
-            <h3 className="text-lg font-bold text-white mb-2">Select Your Team</h3>
+            <h3 className="text-lg font-bold text-white mb-2">Select Your Team <span className="text-gray-500 font-normal text-sm ml-2">(from recent competitions)</span></h3>
             <p className="text-xs text-gray-500 mb-6">This scopes all match history and analytics to your selected team.</p>
 
             {isLoadingTeams ? (

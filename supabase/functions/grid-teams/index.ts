@@ -1,5 +1,5 @@
 // supabase/functions/grid-teams/index.ts
-// Fetch teams by title from GRID
+// Fetch teams by title from GRID via Tournament -> Series lookup (Hackathon compatible)
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { corsHeaders } from '../_shared/cors.ts'
@@ -37,42 +37,114 @@ serve(async (req) => {
             )
         }
 
-        const query = `
-      query Teams($titleId: ID!) {
-        teams(filter: { title: { id: { equals: $titleId } } }, first: 100) {
+        // STEP 1: Get Tournaments for the Title
+        const tournamentsQuery = `
+      query Tournaments($titleId: ID!) {
+        tournaments(filter: { title: { id: { equals: $titleId } } }) {
           edges {
             node {
               id
-              name
             }
           }
         }
       }
     `
 
-        const response = await fetch(GRID_API_URL, {
+        const tourneyRes = await fetch(GRID_API_URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'x-api-key': gridApiKey,
             },
             body: JSON.stringify({
-                query,
+                query: tournamentsQuery,
                 variables: { titleId }
             }),
         })
 
-        if (!response.ok) {
-            throw new Error(`GRID API error: ${response.status}`)
+        if (!tourneyRes.ok) {
+            throw new Error(`GRID API (Tournaments) error: ${tourneyRes.status}`)
         }
 
-        const data = await response.json()
+        const tourneyData = await tourneyRes.json()
+        const tournamentIds = tourneyData.data?.tournaments?.edges?.map((e: any) => e.node.id) || []
 
-        // Sanitize and shape the response
-        const teams = data.data?.teams?.edges?.map((e: any) => ({
-            id: e.node.id,
-            name: e.node.name,
-        })) || []
+        if (tournamentIds.length === 0) {
+            return new Response(
+                JSON.stringify({ teams: [] }),
+                { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+            )
+        }
+
+        // STEP 2: Get Teams via Series in those Tournaments
+        // GRID data is series-centric. We fetch recent series to find active teams.
+        const seriesQuery = `
+      query SeriesTeams($tournamentIds: [ID!]) {
+        allSeries(
+          filter: {
+            tournament: {
+              id: { in: $tournamentIds }
+              includeChildren: { equals: true }
+            }
+          }
+          first: 50
+        ) {
+          edges {
+            node {
+              id
+              teams {
+                baseInfo {
+                  id
+                  name
+                  logoUrl
+                }
+              }
+            }
+          }
+        }
+      }
+    `
+
+        const seriesRes = await fetch(GRID_API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': gridApiKey,
+            },
+            body: JSON.stringify({
+                query: seriesQuery,
+                variables: { tournamentIds }
+            }),
+        })
+
+        if (!seriesRes.ok) {
+            throw new Error(`GRID API (Series) error: ${seriesRes.status}`)
+        }
+
+        const seriesData = await seriesRes.json()
+        const seriesEdges = seriesData.data?.allSeries?.edges || []
+
+        // Extract unique teams
+        const uniqueTeamsMap = new Map()
+
+        seriesEdges.forEach((edge: any) => {
+            const teams = edge.node.teams || []
+            teams.forEach((teamObj: any) => {
+                const baseInfo = teamObj.baseInfo
+                if (baseInfo && baseInfo.id && baseInfo.name) {
+                    if (!uniqueTeamsMap.has(baseInfo.id)) {
+                        uniqueTeamsMap.set(baseInfo.id, {
+                            id: baseInfo.id,
+                            name: baseInfo.name,
+                            logoUrl: baseInfo.logoUrl
+                        })
+                    }
+                }
+            })
+        })
+
+        const teams = Array.from(uniqueTeamsMap.values())
+            .sort((a, b) => a.name.localeCompare(b.name)) // Sort alphabetically
 
         return new Response(
             JSON.stringify({ teams }),
