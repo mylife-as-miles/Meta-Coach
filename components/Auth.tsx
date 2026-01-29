@@ -108,7 +108,7 @@ const Auth: React.FC<AuthProps> = ({ onNavigateHome }) => {
 
     try {
       if (mode === 'signup') {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email: formData.email,
           password: formData.password,
           options: {
@@ -121,9 +121,19 @@ const Auth: React.FC<AuthProps> = ({ onNavigateHome }) => {
 
         if (error) throw error;
 
-        // Auto sign in happens if email confirmation is disabled, otherwise prompt user
-        setSubmitMessage({ type: 'success', text: 'Account created! Redirecting...' });
-        setTimeout(() => navigate('/onboarding/step-1'), 1500);
+        // Auto sign in happens if email confirmation is disabled.
+        // If email confirmation is ENABLED, data.session will be null.
+        if (data.session) {
+          setSubmitMessage({ type: 'success', text: 'Account created! Redirecting...' });
+          setTimeout(() => navigate('/onboarding/step-1'), 1500);
+        } else {
+          // Email confirmation required
+          setSubmitMessage({
+            type: 'success',
+            text: 'Account created! Please check your email to verify.'
+          });
+          // Do not redirect, let them check email
+        }
 
       } else if (mode === 'login') {
         const { data, error } = await supabase.auth.signInWithPassword({
