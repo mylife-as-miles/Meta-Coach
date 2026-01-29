@@ -35,7 +35,7 @@ const GuestGuard: React.FC<GuestGuardProps> = ({ children }) => {
                             .from('profiles')
                             .select('onboarding_complete')
                             .eq('id', session.user.id)
-                            .single();
+                            .maybeSingle();
 
                         setOnboardingComplete(profile?.onboarding_complete ?? false);
                     }

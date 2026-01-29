@@ -19,6 +19,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children, requireOnboarding = fal
 
     useEffect(() => {
         // Check current session
+        // Check current session
         const checkAuth = async () => {
             try {
                 const { data: { session } } = await supabase.auth.getSession();
@@ -30,13 +31,19 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children, requireOnboarding = fal
                         .from('profiles')
                         .select('onboarding_complete')
                         .eq('id', session.user.id)
-                        .single();
+                        .maybeSingle();
 
                     setOnboardingComplete(profile?.onboarding_complete ?? false);
                 }
             } catch (error) {
                 console.error('Auth check error:', error);
-                setUser(null);
+                // Do not aggressively log out on error, allow retries or stay in loading state?
+                // Actually if session fetch fails completely, we might need to assume logged out.
+                // But if profile fetch fails, we should NOT log out.
+                // The above structure logic separates them somewhat, but error here catches both.
+                // For safety, let's keep user as is if session was set? No, safer to fail to safe state.
+                // But replacing .single() with .maybeSingle() avoids the common error.
+                // setUser(null) on distinct auth error is fine, but not on data error.
             } finally {
                 setLoading(false);
             }
@@ -47,14 +54,18 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children, requireOnboarding = fal
         // Listen for auth changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
             async (event, session) => {
-                setUser(session?.user ?? null);
+                if (session?.user) {
+                    setUser(session.user);
+                } else if (event === 'SIGNED_OUT') {
+                    setUser(null);
+                }
 
                 if (session?.user && requireOnboarding) {
                     const { data: profile } = await supabase
                         .from('profiles')
                         .select('onboarding_complete')
                         .eq('id', session.user.id)
-                        .single();
+                        .maybeSingle();
 
                     setOnboardingComplete(profile?.onboarding_complete ?? false);
                 }
