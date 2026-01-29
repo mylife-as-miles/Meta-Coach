@@ -6,7 +6,7 @@ import { players } from '../../lib/mockData';
 
 const DashboardOverview: React.FC = () => {
     const navigate = useNavigate();
-    const { strategyBriefOpen, openStrategyBrief, closeStrategyBrief, allPlayers, allMatches, isLoading } = useDashboard();
+    const { strategyBriefOpen, openStrategyBrief, closeStrategyBrief, allPlayers, allMatches, isLoading, teamProfile } = useDashboard();
 
     if (isLoading) {
         return (
@@ -48,9 +48,9 @@ const DashboardOverview: React.FC = () => {
                         <div className="flex items-center justify-between mb-6 relative z-10">
                             <div className="text-center group-hover:scale-105 transition-transform duration-300">
                                 <div className="w-12 h-12 bg-blue-900/20 border border-blue-500/30 rounded-full flex items-center justify-center mb-2 mx-auto">
-                                    <span className="font-bold text-blue-400">YOU</span>
+                                    <span className="font-bold text-blue-400">{teamProfile?.teamName?.substring(0, 2).toUpperCase() || 'YOU'}</span>
                                 </div>
-                                <span className="text-lg font-bold text-white">You</span>
+                                <span className="text-lg font-bold text-white">{teamProfile?.teamName || 'Your Team'}</span>
                             </div>
                             <div className="flex flex-col items-center">
                                 <span className="text-2xl text-gray-600 font-light">VS</span>
@@ -65,7 +65,7 @@ const DashboardOverview: React.FC = () => {
                         <div className="grid grid-cols-2 gap-4 text-xs text-gray-400 mb-6 relative z-10">
                             <div>
                                 <p className="uppercase tracking-wide opacity-50 text-gray-500">Region</p>
-                                <p className="text-white font-medium">LCS</p>
+                                <p className="text-white font-medium">{teamProfile?.region || 'Unknown'}</p>
                             </div>
                             <div className="text-right">
                                 <p className="uppercase tracking-wide opacity-50 text-gray-500">Format</p>

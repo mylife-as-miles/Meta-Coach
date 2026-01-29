@@ -1,27 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useOnboarding } from '../../context/OnboardingContext';
 import OnboardingLayout from './OnboardingLayout';
-
-// Mock teams data (will be replaced with GRID API)
-const MOCK_TEAMS: Record<string, { id: string; name: string }[]> = {
-  'lol': [
-    { id: 'team-c9', name: 'Cloud9' },
-    { id: 'team-tl', name: 'Team Liquid' },
-    { id: 'team-fnc', name: 'Fnatic' },
-    { id: 'team-g2', name: 'G2 Esports' },
-    { id: 'team-t1', name: 'T1' },
-    { id: 'team-geng', name: 'Gen.G' },
-  ],
-  'valorant': [
-    { id: 'team-sen', name: 'Sentinels' },
-    { id: 'team-100t', name: '100 Thieves' },
-    { id: 'team-loud', name: 'LOUD' },
-    { id: 'team-fnc-val', name: 'Fnatic' },
-    { id: 'team-prx', name: 'Paper Rex' },
-    { id: 'team-drx', name: 'DRX' },
-  ],
-};
+import { supabase } from '../../lib/supabase';
 
 const GAMES = [
   {
@@ -50,11 +31,54 @@ const GAMES = [
 
 const ChooseGame: React.FC = () => {
   const navigate = useNavigate();
-  const { setGameAndTeam, gridTitleId } = useOnboarding();
+  const { setGameAndTeam } = useOnboarding();
 
   const [selectedGame, setSelectedGame] = useState<string | null>(null);
   const [selectedTeam, setSelectedTeam] = useState<{ id: string; name: string } | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [teams, setTeams] = useState<{ id: string; name: string }[]>([]);
+  const [isLoadingTeams, setIsLoadingTeams] = useState(false);
+  const [teamsError, setTeamsError] = useState<string | null>(null);
+
+  // Fetch teams when a game is selected
+  useEffect(() => {
+    if (!selectedGame) {
+      setTeams([]);
+      return;
+    }
+
+    const fetchTeams = async () => {
+      setIsLoadingTeams(true);
+      setTeamsError(null);
+      setTeams([]);
+
+      const game = GAMES.find(g => g.id === selectedGame);
+      if (!game) return;
+
+      try {
+        const { data, error } = await supabase.functions.invoke('grid-teams', {
+          body: { titleId: game.titleId }
+        });
+
+        if (error) {
+          throw new Error(error.message || 'Failed to fetch teams');
+        }
+
+        if (data?.teams && Array.isArray(data.teams)) {
+          setTeams(data.teams);
+        } else {
+          setTeams([]);
+        }
+      } catch (err: any) {
+        console.error('Error fetching teams:', err);
+        setTeamsError(err.message || 'Could not load teams. Please try again.');
+      } finally {
+        setIsLoadingTeams(false);
+      }
+    };
+
+    fetchTeams();
+  }, [selectedGame]);
 
   const handleGameSelect = (gameId: string) => {
     setSelectedGame(gameId);
@@ -81,8 +105,6 @@ const ChooseGame: React.FC = () => {
     navigate('/onboarding/step-2');
   };
 
-  const teams = selectedGame ? MOCK_TEAMS[selectedGame] : [];
-
   return (
     <OnboardingLayout currentStep={1}>
       <div className="text-center mb-12 space-y-4">
@@ -102,8 +124,8 @@ const ChooseGame: React.FC = () => {
               key={game.id}
               onClick={() => handleGameSelect(game.id)}
               className={`group relative bg-surface-darker/80 backdrop-blur-sm border rounded-xl overflow-hidden transition-all duration-300 cursor-pointer ${selectedGame === game.id
-                  ? 'border-primary shadow-[0_0_30px_rgba(210,249,111,0.15)]'
-                  : `border-white/10 ${game.hoverBorder} ${game.hoverShadow}`
+                ? 'border-primary shadow-[0_0_30px_rgba(210,249,111,0.15)]'
+                : `border-white/10 ${game.hoverBorder} ${game.hoverShadow}`
                 }`}
             >
               <div className="absolute inset-0 bg-gradient-to-b from-transparent to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
@@ -122,8 +144,8 @@ const ChooseGame: React.FC = () => {
                 </div>
 
                 <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${selectedGame === game.id
-                    ? 'border-primary bg-primary'
-                    : 'border-white/20'
+                  ? 'border-primary bg-primary'
+                  : 'border-white/20'
                   }`}>
                   {selectedGame === game.id && (
                     <span className="material-icons text-black text-sm">check</span>
@@ -145,26 +167,49 @@ const ChooseGame: React.FC = () => {
             <h3 className="text-lg font-bold text-white mb-2">Select Your Team</h3>
             <p className="text-xs text-gray-500 mb-6">This scopes all match history and analytics to your selected team.</p>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {teams.map((team) => (
+            {isLoadingTeams ? (
+              <div className="flex items-center justify-center py-12">
+                <span className="material-icons animate-spin text-primary text-3xl">hourglass_top</span>
+                <span className="ml-3 text-gray-400">Loading teams from GRID...</span>
+              </div>
+            ) : teamsError ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <span className="material-icons text-red-400 text-3xl mb-2">error_outline</span>
+                <p className="text-red-400 text-sm">{teamsError}</p>
                 <button
-                  key={team.id}
-                  onClick={() => handleTeamSelect(team)}
-                  className={`p-4 rounded-lg border transition-all text-left ${selectedTeam?.id === team.id
+                  onClick={() => handleGameSelect(selectedGame)}
+                  className="mt-4 px-4 py-2 text-xs border border-white/20 rounded-lg text-gray-300 hover:text-white hover:border-primary transition"
+                >
+                  Retry
+                </button>
+              </div>
+            ) : teams.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <span className="material-icons text-gray-600 text-3xl mb-2">groups_off</span>
+                <p className="text-gray-500 text-sm">No teams found for this title.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {teams.map((team) => (
+                  <button
+                    key={team.id}
+                    onClick={() => handleTeamSelect(team)}
+                    className={`p-4 rounded-lg border transition-all text-left ${selectedTeam?.id === team.id
                       ? 'border-primary bg-primary/10 text-white'
                       : 'border-white/10 bg-surface-dark hover:border-white/30 text-gray-300 hover:text-white'
-                    }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${selectedTeam?.id === team.id ? 'bg-primary text-black' : 'bg-white/10 text-white'
-                      }`}>
-                      {team.name.substring(0, 2).toUpperCase()}
+                      }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${selectedTeam?.id === team.id ? 'bg-primary text-black' : 'bg-white/10 text-white'
+                        }`}>
+                        {team.name.substring(0, 2).toUpperCase()}
+                      </div>
+                      <span className="font-medium">{team.name}</span>
                     </div>
-                    <span className="font-medium">{team.name}</span>
-                  </div>
-                </button>
-              ))}
-            </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -174,8 +219,8 @@ const ChooseGame: React.FC = () => {
             onClick={handleContinue}
             disabled={!selectedGame || !selectedTeam || isConnecting}
             className={`px-8 py-4 rounded-lg font-bold transition-all flex items-center gap-3 ${selectedGame && selectedTeam && !isConnecting
-                ? 'bg-primary text-black hover:bg-primary-dark shadow-[0_0_20px_rgba(210,249,111,0.3)]'
-                : 'bg-surface-dark text-gray-500 cursor-not-allowed border border-white/10'
+              ? 'bg-primary text-black hover:bg-primary-dark shadow-[0_0_20px_rgba(210,249,111,0.3)]'
+              : 'bg-surface-dark text-gray-500 cursor-not-allowed border border-white/10'
               }`}
           >
             {isConnecting ? (

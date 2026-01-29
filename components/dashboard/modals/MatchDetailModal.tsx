@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Modal from '../../ui/Modal';
 import { Match } from '../../../lib/mockData';
+import { supabase } from '../../../lib/supabase';
+import { useDashboard } from '../../../context/DashboardContext';
 
 interface MatchDetailModalProps {
     isOpen: boolean;
@@ -8,10 +10,79 @@ interface MatchDetailModalProps {
     match: Match | null;
 }
 
+interface PlayerStats {
+    id: string;
+    name: string;
+    kills: number;
+    deaths: number;
+    assists: number;
+    cs: number;
+    wards: number;
+    gold: number;
+    level: number;
+}
+
+interface GameData {
+    gameNumber: number;
+    finished: boolean;
+    duration: number;
+    teams: {
+        id: string;
+        name: string;
+        won: boolean;
+        side: string;
+        players: PlayerStats[];
+    }[];
+}
+
 const MatchDetailModal: React.FC<MatchDetailModalProps> = ({ isOpen, onClose, match }) => {
+    const { teamProfile } = useDashboard();
+    const [isLoading, setIsLoading] = useState(false);
+    const [seriesData, setSeriesData] = useState<any>(null);
+    const [error, setError] = useState<string | null>(null);
+
+    // Fetch series state when modal opens
+    useEffect(() => {
+        if (isOpen && match?.id) {
+            const fetchSeriesState = async () => {
+                setIsLoading(true);
+                setError(null);
+                try {
+                    const { data, error: fetchError } = await supabase.functions.invoke('series-state', {
+                        body: { seriesId: match.id }
+                    });
+
+                    if (fetchError) throw new Error(fetchError.message);
+                    setSeriesData(data);
+                } catch (err: any) {
+                    console.error('Error fetching series state:', err);
+                    setError(err.message);
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+            fetchSeriesState();
+        } else {
+            setSeriesData(null);
+        }
+    }, [isOpen, match?.id]);
+
     if (!match) return null;
 
     const isWin = match.result === 'WIN';
+    const teamName = teamProfile?.teamName || 'Your Team';
+    const teamAbbr = teamName.substring(0, 2).toUpperCase();
+
+    // Get first game player stats for display
+    const gameData: GameData | null = seriesData?.games?.[0] || null;
+    const ourTeamStats = gameData?.teams?.find(t => t.name === teamName || t.won === isWin);
+    const opponentTeamStats = gameData?.teams?.find(t => t !== ourTeamStats);
+
+    const formatDuration = (seconds: number) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    };
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="Match Analysis" size="xl">
@@ -22,9 +93,9 @@ const MatchDetailModal: React.FC<MatchDetailModalProps> = ({ isOpen, onClose, ma
                     <div className="flex items-center gap-6">
                         <div className="text-center">
                             <div className="w-14 h-14 rounded-full bg-blue-900/20 border border-blue-500/30 flex items-center justify-center mb-2">
-                                <span className="font-bold text-blue-400 text-lg">C9</span>
+                                <span className="font-bold text-blue-400 text-lg">{teamAbbr}</span>
                             </div>
-                            <span className="text-xs text-gray-400">Cloud9</span>
+                            <span className="text-xs text-gray-400">{teamName}</span>
                         </div>
                         <div className="text-center">
                             <div className="text-3xl font-bold text-white font-mono">{match.score}</div>
@@ -34,12 +105,12 @@ const MatchDetailModal: React.FC<MatchDetailModalProps> = ({ isOpen, onClose, ma
                         </div>
                         <div className="text-center">
                             <div className={`w-14 h-14 rounded-full border flex items-center justify-center mb-2 ${match.opponent.color === 'red' ? 'bg-red-900/20 border-red-500/30' :
-                                    match.opponent.color === 'orange' ? 'bg-orange-900/20 border-orange-500/30' :
-                                        'bg-yellow-900/20 border-yellow-500/30'
+                                match.opponent.color === 'orange' ? 'bg-orange-900/20 border-orange-500/30' :
+                                    'bg-yellow-900/20 border-yellow-500/30'
                                 }`}>
                                 <span className={`font-bold text-lg ${match.opponent.color === 'red' ? 'text-red-400' :
-                                        match.opponent.color === 'orange' ? 'text-orange-400' :
-                                            'text-yellow-400'
+                                    match.opponent.color === 'orange' ? 'text-orange-400' :
+                                        'text-yellow-400'
                                     }`}>{match.opponent.abbreviation}</span>
                             </div>
                             <span className="text-xs text-gray-400">{match.opponent.name}</span>
@@ -47,42 +118,99 @@ const MatchDetailModal: React.FC<MatchDetailModalProps> = ({ isOpen, onClose, ma
                     </div>
                     <div className="text-right">
                         <p className="text-white font-medium">{match.date}</p>
-                        <p className="text-xs text-gray-400">{match.format} • {match.duration}</p>
+                        <p className="text-xs text-gray-400">{match.format} • {gameData ? formatDuration(gameData.duration) : match.duration}</p>
                         <span className={`text-xs font-mono px-2 py-0.5 rounded mt-2 inline-block ${match.type === 'Ranked' ? 'bg-primary/10 text-primary' : 'bg-blue-500/10 text-blue-400'
                             }`}>{match.type}</span>
                     </div>
                 </div>
 
-                {/* Performance Metrics */}
-                <div className="grid grid-cols-2 gap-4">
+                {/* Loading State */}
+                {isLoading && (
+                    <div className="flex items-center justify-center py-8">
+                        <span className="material-icons animate-spin text-primary text-3xl">hourglass_top</span>
+                        <span className="ml-3 text-gray-400">Loading match details...</span>
+                    </div>
+                )}
+
+                {/* Error State */}
+                {error && !isLoading && (
+                    <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 text-center">
+                        <span className="material-icons text-red-400 text-2xl mb-2">warning</span>
+                        <p className="text-red-400 text-sm">Could not load detailed stats: {error}</p>
+                        <p className="text-gray-500 text-xs mt-1">Showing available data below.</p>
+                    </div>
+                )}
+
+                {/* Player Stats Table (from series-state) */}
+                {ourTeamStats && ourTeamStats.players && ourTeamStats.players.length > 0 && (
                     <div className="bg-surface-darker rounded-xl p-5 border border-white/5">
-                        <h3 className="text-xs text-gray-400 uppercase tracking-wider mb-3">Macro Control</h3>
-                        <div className="flex items-end gap-3">
-                            <span className={`text-3xl font-bold font-mono ${match.performance.macroControl >= 70 ? 'text-primary' :
+                        <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+                            <span className="material-icons-outlined text-primary text-base">group</span>
+                            Team Performance
+                        </h3>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead>
+                                    <tr className="text-gray-500 text-xs uppercase border-b border-white/5">
+                                        <th className="text-left py-2 px-2">Player</th>
+                                        <th className="text-center py-2 px-2">K</th>
+                                        <th className="text-center py-2 px-2">D</th>
+                                        <th className="text-center py-2 px-2">A</th>
+                                        <th className="text-center py-2 px-2">CS</th>
+                                        <th className="text-center py-2 px-2">Gold</th>
+                                        <th className="text-center py-2 px-2">Wards</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {ourTeamStats.players.map((player, idx) => (
+                                        <tr key={player.id || idx} className="border-b border-white/5 hover:bg-white/5">
+                                            <td className="py-2 px-2 font-medium text-white">{player.name}</td>
+                                            <td className="py-2 px-2 text-center text-green-400">{player.kills}</td>
+                                            <td className="py-2 px-2 text-center text-red-400">{player.deaths}</td>
+                                            <td className="py-2 px-2 text-center text-blue-400">{player.assists}</td>
+                                            <td className="py-2 px-2 text-center text-gray-300">{player.cs}</td>
+                                            <td className="py-2 px-2 text-center text-yellow-400">{(player.gold / 1000).toFixed(1)}k</td>
+                                            <td className="py-2 px-2 text-center text-purple-400">{player.wards}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
+
+                {/* Performance Metrics (fallback if no detailed data) */}
+                {!ourTeamStats && !isLoading && (
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="bg-surface-darker rounded-xl p-5 border border-white/5">
+                            <h3 className="text-xs text-gray-400 uppercase tracking-wider mb-3">Macro Control</h3>
+                            <div className="flex items-end gap-3">
+                                <span className={`text-3xl font-bold font-mono ${match.performance.macroControl >= 70 ? 'text-primary' :
                                     match.performance.macroControl >= 50 ? 'text-yellow-400' : 'text-red-400'
-                                }`}>{match.performance.macroControl}%</span>
-                        </div>
-                        <div className="w-full h-2 bg-gray-800 rounded-full mt-3 overflow-hidden">
-                            <div
-                                className={`h-full rounded-full ${match.performance.macroControl >= 70 ? 'bg-primary shadow-neon' :
+                                    }`}>{match.performance.macroControl}%</span>
+                            </div>
+                            <div className="w-full h-2 bg-gray-800 rounded-full mt-3 overflow-hidden">
+                                <div
+                                    className={`h-full rounded-full ${match.performance.macroControl >= 70 ? 'bg-primary shadow-neon' :
                                         match.performance.macroControl >= 50 ? 'bg-yellow-400' : 'bg-red-500'
-                                    }`}
-                                style={{ width: `${match.performance.macroControl}%` }}
-                            />
+                                        }`}
+                                    style={{ width: `${match.performance.macroControl}%` }}
+                                />
+                            </div>
+                        </div>
+                        <div className="bg-surface-darker rounded-xl p-5 border border-white/5">
+                            <h3 className="text-xs text-gray-400 uppercase tracking-wider mb-3">Micro Error Rate</h3>
+                            <span className={`text-2xl font-bold ${match.performance.microErrorRate === 'LOW' ? 'text-green-400' :
+                                match.performance.microErrorRate === 'MED' ? 'text-yellow-400' : 'text-red-400'
+                                }`}>{match.performance.microErrorRate}</span>
+                            <p className="text-xs text-gray-500 mt-2">
+                                {match.performance.microErrorRate === 'LOW' ? 'Minimal mechanical errors detected' :
+                                    match.performance.microErrorRate === 'MED' ? 'Some room for improvement' :
+                                        'Significant errors impacted gameplay'}
+                            </p>
                         </div>
                     </div>
-                    <div className="bg-surface-darker rounded-xl p-5 border border-white/5">
-                        <h3 className="text-xs text-gray-400 uppercase tracking-wider mb-3">Micro Error Rate</h3>
-                        <span className={`text-2xl font-bold ${match.performance.microErrorRate === 'LOW' ? 'text-green-400' :
-                                match.performance.microErrorRate === 'MED' ? 'text-yellow-400' : 'text-red-400'
-                            }`}>{match.performance.microErrorRate}</span>
-                        <p className="text-xs text-gray-500 mt-2">
-                            {match.performance.microErrorRate === 'LOW' ? 'Minimal mechanical errors detected' :
-                                match.performance.microErrorRate === 'MED' ? 'Some room for improvement' :
-                                    'Significant errors impacted gameplay'}
-                        </p>
-                    </div>
-                </div>
+                )}
 
                 {/* AI Insights */}
                 <div className="bg-gradient-to-br from-surface-darker to-surface-dark rounded-xl p-5 border border-white/5">

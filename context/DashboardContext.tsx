@@ -159,6 +159,16 @@ export const DashboardProvider: React.FC<{ children: ReactNode }> = ({ children 
                     }
                 }
 
+                // 5. Fetch Team Profile from Edge Function
+                try {
+                    const { data: profileData, error: profileError } = await supabase.functions.invoke('team-profile');
+                    if (!profileError && profileData) {
+                        setState(prev => ({ ...prev, teamProfile: profileData }));
+                    }
+                } catch (profileErr) {
+                    console.error("Error fetching team profile:", profileErr);
+                }
+
                 setState(prev => ({ ...prev, isLoading: false }));
 
             } catch (err: any) {
