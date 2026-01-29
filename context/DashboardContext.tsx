@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { Player, Match, players, matches } from '../lib/mockData';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { supabase } from '../lib/supabase';
+import { Player, Match, players as mockPlayers, matches as mockMatches } from '../lib/mockData';
 
 interface DashboardState {
     // Selected items
@@ -17,6 +18,11 @@ interface DashboardState {
     // Simulation state
     simulationRunning: boolean;
     simulationResult: { winProbability: number; insights: string[] } | null;
+
+    // Real Data State
+    isLoading: boolean;
+    error: string | null;
+    teamProfile: any | null; // Store full team profile
 }
 
 interface DashboardContextType extends DashboardState {
@@ -63,11 +69,110 @@ export const DashboardProvider: React.FC<{ children: ReactNode }> = ({ children 
         championPickerOpen: false,
         simulationResultOpen: false,
         simulationRunning: false,
-        simulationResult: null
+        simulationResult: null,
+        isLoading: true,
+        error: null,
+        teamProfile: null
     });
 
+    const [allPlayers, setAllPlayers] = useState<Player[]>(mockPlayers);
+    const [allMatches, setAllMatches] = useState<Match[]>(mockMatches);
+
+    // Initial Data Fetch
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                setState(prev => ({ ...prev, isLoading: true, error: null }));
+
+                // 1. Get User
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) throw new Error("No user found");
+
+                // 2. Get Workspace
+                const { data: workspace, error: wsError } = await supabase
+                    .from('workspaces')
+                    .select('*')
+                    .eq('user_id', user.id)
+                    .single();
+
+                if (wsError || !workspace) {
+                    console.log("No workspace found, using mock data");
+                    setState(prev => ({ ...prev, isLoading: false }));
+                    return;
+                }
+
+                // 3. Get Roster from DB
+                const { data: roster, error: rosterError } = await supabase
+                    .from('roster')
+                    .select('*')
+                    .eq('workspace_id', workspace.id);
+
+                if (!rosterError && roster && roster.length > 0) {
+                    // Map DB roster to UI Player objects
+                    // Note: In a real app we'd fetch stats for each player. 
+                    // Here we'll merge DB data with mock stats for visual completeness.
+                    const mappedPlayers: Player[] = roster.map((p, index) => {
+                        // Find a mock player to steal stats/avatar from based on role/index to keep UI pretty
+                        const mockTemplate = mockPlayers.find(mp => mp.role === p.role) || mockPlayers[index % mockPlayers.length];
+                        return {
+                            id: p.id,
+                            name: p.ign || `Player ${index + 1}`,
+                            role: p.role as any,
+                            overall: mockTemplate.overall, // Placeholder stat
+                            stats: mockTemplate.stats,
+                            synergy: Math.floor(Math.random() * 20) + 80, // Random 80-100
+                            avatar: mockTemplate.avatar // Use mock avatars for now
+                        };
+                    });
+                    setAllPlayers(mappedPlayers);
+                }
+
+                // 4. Get Matches from Edge Function
+                if (workspace.grid_team_id) {
+                    const { data: matchesData, error: matchError } = await supabase.functions.invoke('team-matches', {
+                        body: { teamId: workspace.grid_team_id }
+                    });
+
+                    if (!matchError && matchesData && matchesData.matches) {
+                        const mappedMatches: Match[] = matchesData.matches.slice(0, 5).map((m: any) => ({
+                            id: m.id,
+                            date: new Date(m.startTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                            // Calculate approximate duration or default
+                            duration: '35:00',
+                            result: m.winner?.id === workspace.grid_team_id ? 'WIN' : 'LOSS',
+                            score: `${m.games?.filter((g: any) => g.winnerId === workspace.grid_team_id).length} - ${m.games?.filter((g: any) => g.winnerId !== workspace.grid_team_id).length}`,
+                            // Format is usually Bo1, Bo3 etc. in series.
+                            format: m.format || 'Bo1',
+                            type: 'Ranked', // Default to Ranked for API matches
+                            opponent: {
+                                name: m.teams?.find((t: any) => t.id !== workspace.grid_team_id)?.name || 'Unknown',
+                                abbreviation: (m.teams?.find((t: any) => t.id !== workspace.grid_team_id)?.name || 'UNK').substring(0, 3).toUpperCase(),
+                                color: 'red'
+                            },
+                            performance: { macroControl: 50, microErrorRate: 'MED' }
+                        }));
+                        if (mappedMatches.length > 0) {
+                            setAllMatches(mappedMatches);
+                        }
+                    } else {
+                        console.error("Error fetching matches:", matchError);
+                    }
+                }
+
+                setState(prev => ({ ...prev, isLoading: false }));
+
+            } catch (err: any) {
+                console.error("Dashboard fetch error:", err);
+                // Fallback to mock data is already set via initial state
+                setState(prev => ({ ...prev, isLoading: false, error: err.message }));
+            }
+        };
+
+        fetchData();
+    }, []);
+
     const selectPlayer = (playerId: string) => {
-        const player = players.find(p => p.id === playerId);
+        const player = allPlayers.find(p => p.id === playerId);
         if (player) {
             setState(prev => ({ ...prev, selectedPlayer: player }));
         }
@@ -78,7 +183,7 @@ export const DashboardProvider: React.FC<{ children: ReactNode }> = ({ children 
     };
 
     const selectMatch = (matchId: string) => {
-        const match = matches.find(m => m.id === matchId);
+        const match = allMatches.find(m => m.id === matchId);
         if (match) {
             setState(prev => ({ ...prev, selectedMatch: match }));
         }
@@ -149,8 +254,8 @@ export const DashboardProvider: React.FC<{ children: ReactNode }> = ({ children 
         openSimulationResult,
         closeSimulationResult,
         runSimulation,
-        allPlayers: players,
-        allMatches: matches
+        allPlayers,
+        allMatches
     };
 
     return (
