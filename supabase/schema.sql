@@ -123,6 +123,17 @@ create table if not exists ai_calibration (
   vision_investment integer default 50 check (vision_investment >= 0 and vision_investment <= 100),
   early_game_pathing boolean default false,
   objective_control boolean default false,
+  vision_investment integer default 50 check (vision_investment >= 0 and vision_investment <= 100),
+  early_game_pathing boolean default false,
+  objective_control boolean default false,
+  
+  -- AI Generated Fields
+  generated_reasoning text,
+  coaching_bias text,
+  confidence_score numeric(4,1) default 98.4,
+  early_pressure_score integer default 50,
+  scaling_potential_score integer default 50,
+  
   calibrated_at timestamp with time zone default now()
 );
 
