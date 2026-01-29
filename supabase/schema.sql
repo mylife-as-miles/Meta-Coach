@@ -99,6 +99,7 @@ create table if not exists roster (
   role text not null,
   ign text,
   grid_player_id text,
+  metadata jsonb,
   created_at timestamp with time zone default now()
 );
 
