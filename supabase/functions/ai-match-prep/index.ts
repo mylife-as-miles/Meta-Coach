@@ -9,6 +9,7 @@ interface RequestBody {
     teamName: string;
     gameTitle: string;
     roster: { role: string; ign: string }[];
+    opponentName?: string;
 }
 
 interface AIAnalysisResponse {
@@ -22,6 +23,16 @@ interface AIAnalysisResponse {
     earlyPressureScore: number;
     scalingPotentialScore: number;
     confidenceScore: number;
+    matchupDelta: {
+        earlyGame: number;
+        lateGame: number;
+    };
+    derivationFactors: {
+        aggression: string[];
+        resourcePriority: string[];
+        earlyGamePathing: string[];
+    };
+    opponentName: string;
 }
 
 serve(async (req) => {
@@ -31,9 +42,9 @@ serve(async (req) => {
     }
 
     try {
-        const { teamName, gameTitle, roster } = (await req.json()) as RequestBody;
+        const { teamName, gameTitle, roster, opponentName } = (await req.json()) as RequestBody;
 
-        console.log(`Generating Matchday Brain for ${teamName} in ${gameTitle}`);
+        console.log(`Generating Matchday Brain for ${teamName} in ${gameTitle} vs ${opponentName || 'League Average'}`);
 
         if (!GEMINI_API_KEY) {
             console.warn("GEMINI_API_KEY not set. Returning mock data.");
@@ -45,7 +56,7 @@ serve(async (req) => {
         // Construct Prompt
         const prompt = `
       You are MetaCoach, an elite esports analyst AI. 
-      Analyze this team for a match in the game "${gameTitle}".
+      Analyze this team for a match in the game "${gameTitle}" against "${opponentName || 'League Average'}".
       
       Team Name: ${teamName}
       Roster:
@@ -60,11 +71,21 @@ serve(async (req) => {
         "visionInvestment": number (0-100),
         "earlyGamePathing": boolean,
         "objectiveControl": boolean,
-        "generatedReasoning": "string (max 2 sentences, sophisticated analytic tone)",
+        "generatedReasoning": "string (max 2 sentences, sophisticated analytic tone referencing specific player tendencies)",
         "coachingBias": "string (short phrase, e.g., 'Dive Heavy', 'Scaling Control')",
         "earlyPressureScore": number (0-100),
         "scalingPotentialScore": number (0-100),
-        "confidenceScore": number (95.0-99.9)
+        "confidenceScore": number (95.0-99.9),
+        "matchupDelta": {
+           "earlyGame": number (positive for advantage, negative for disadvantage, e.g. +4 or -5),
+           "lateGame": number
+        },
+        "derivationFactors": {
+           "aggression": ["string", "string"], // e.g. "High First Blood Rate (Top)", "Aggressive Jungle Pathing"
+           "resourcePriority": ["string", "string"],
+           "earlyGamePathing": ["string"]
+        },
+        "opponentName": "${opponentName || 'League Average'}"
       }
     `;
 
@@ -124,5 +145,15 @@ function getMockData(teamName: string): AIAnalysisResponse {
         earlyPressureScore: 92,
         scalingPotentialScore: 45,
         confidenceScore: 98.4,
+        matchupDelta: {
+            earlyGame: 4,
+            lateGame: -2
+        },
+        derivationFactors: {
+            aggression: ["High First Blood Rate", "Support Roam Timings"],
+            resourcePriority: ["Bot Lane Gold Share > 28%", "Jungle Proximity Bot"],
+            earlyGamePathing: ["Level 2 Gank Frequency"]
+        },
+        opponentName: teamName === "Unknown" ? "League Average" : "Simulated Opponent"
     };
 }

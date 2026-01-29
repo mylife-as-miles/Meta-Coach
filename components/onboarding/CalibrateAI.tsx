@@ -15,6 +15,16 @@ interface AIAnalysis {
   earlyPressureScore: number;
   scalingPotentialScore: number;
   confidenceScore: number;
+  matchupDelta?: {
+    earlyGame: number;
+    lateGame: number;
+  };
+  derivationFactors?: {
+    aggression: string[];
+    resourcePriority: string[];
+    earlyGamePathing: string[];
+  };
+  opponentName?: string;
 }
 
 const CalibrateAI: React.FC = () => {
@@ -28,63 +38,74 @@ const CalibrateAI: React.FC = () => {
   const roster = useOnboardingStore((state) => state.roster);
 
   const [aiAnalysis, setAiAnalysis] = useState<AIAnalysis | null>(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(true);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
+
+  // Opponent Context
+  const [opponentName, setOpponentName] = useState('');
+  const [hasRunInitial, setHasRunInitial] = useState(false);
 
   // Simulate terminal logs
   const addLog = (msg: string) => {
     setLogs(prev => [...prev, `> ${msg}`]);
   };
 
+  const runAnalysis = async (customOpponent?: string) => {
+    setIsAnalyzing(true);
+    setLogs([]);
+    addLog("Initializing simulation sequence...");
+    await new Promise(r => setTimeout(r, 600));
+
+    const oppLabel = customOpponent || opponentName || 'League Average';
+    addLog(`Reading inputs: Team=${teamName || 'Unknown'} vs ${oppLabel}`);
+    await new Promise(r => setTimeout(r, 800));
+
+    addLog("Querying GRID historical match database...");
+
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-match-prep', {
+        body: {
+          teamName,
+          gameTitle,
+          roster: roster.map(p => ({ role: p.role, ign: p.ign })),
+          opponentName: customOpponent || opponentName
+        }
+      });
+
+      if (error) throw error;
+
+      addLog("Analysis complete. Generating strategic profile...");
+      await new Promise(r => setTimeout(r, 500));
+
+      setAiAnalysis(data);
+      // Sync AI result with store config
+      setAIConfig({
+        aggression: data.aggression,
+        resourcePriority: data.resourcePriority,
+        visionInvestment: data.visionInvestment,
+        earlyGamePathing: data.earlyGamePathing,
+        objectiveControl: data.objectiveControl
+      });
+
+    } catch (err) {
+      console.error("AI Analysis failed:", err);
+      addLog("Connection to Neural Engine failed. Using local fallback.");
+      // Fallback or handle error
+    } finally {
+      setIsAnalyzing(false);
+      setHasRunInitial(true);
+    }
+  };
+
   useEffect(() => {
-    const runAnalysis = async () => {
-      setIsAnalyzing(true);
-      setLogs([]);
-      addLog("Initializing simulation sequence...");
-      await new Promise(r => setTimeout(r, 600));
-
-      addLog(`Reading inputs: Team=${teamName || 'Unknown'} | Roster=${roster.length} Players`);
-      await new Promise(r => setTimeout(r, 800));
-
-      addLog("Querying GRID historical match database...");
-
-      try {
-        const { data, error } = await supabase.functions.invoke('ai-match-prep', {
-          body: {
-            teamName,
-            gameTitle,
-            roster: roster.map(p => ({ role: p.role, ign: p.ign }))
-          }
-        });
-
-        if (error) throw error;
-
-        addLog("Analysis complete. Generating strategic profile...");
-        await new Promise(r => setTimeout(r, 500));
-
-        setAiAnalysis(data);
-        // Sync AI result with store config
-        setAIConfig({
-          aggression: data.aggression,
-          resourcePriority: data.resourcePriority,
-          visionInvestment: data.visionInvestment,
-          earlyGamePathing: data.earlyGamePathing,
-          objectiveControl: data.objectiveControl
-        });
-
-      } catch (err) {
-        console.error("AI Analysis failed:", err);
-        addLog("Connection to Neural Engine failed. Using local fallback.");
-        // Fallback or handle error
-      } finally {
-        setIsAnalyzing(false);
-      }
-    };
-
-    if (teamName) {
+    if (teamName && !hasRunInitial) {
       runAnalysis();
     }
   }, [teamName]);
+
+  const handleReCalibrate = () => {
+    runAnalysis();
+  };
 
 
   const handleConfirm = async () => {
@@ -152,14 +173,37 @@ const CalibrateAI: React.FC = () => {
           </div>
 
           <div className="bg-surface-darker/50 border border-white/5 rounded-2xl p-6 backdrop-blur-sm">
-            <div className="flex items-center gap-2 mb-6">
-              <span className="material-icons text-primary/80">tune</span>
-              <h3 className="text-lg font-bold text-white">Playstyle Parameters</h3>
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-2">
+                <span className="material-icons text-primary/80">tune</span>
+                <h3 className="text-lg font-bold text-white">Playstyle Parameters</h3>
+              </div>
+              {/* Simulated Opponent Input */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-500 uppercase tracking-wider">VS</span>
+                <div className="relative group">
+                  <input
+                    type="text"
+                    placeholder="League Average"
+                    className="bg-black/30 border border-white/10 rounded px-2 py-1 text-xs text-white placeholder-gray-600 focus:border-primary/50 focus:outline-none w-32 text-right"
+                    value={opponentName}
+                    onChange={(e) => setOpponentName(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleReCalibrate()}
+                  />
+                  <button
+                    onClick={handleReCalibrate}
+                    className={`absolute right-0 top-0 h-full px-2 text-primary opacity-0 group-focus-within:opacity-100 hover:opacity-100 transition-opacity flex items-center bg-black/50 ${isAnalyzing ? 'animate-spin' : ''}`}
+                    disabled={isAnalyzing}
+                  >
+                    <span className="material-icons text-[10px]">{isAnalyzing ? 'sync' : 'play_arrow'}</span>
+                  </button>
+                </div>
+              </div>
             </div>
 
             <div className="space-y-8">
               {sliders.map(slider => (
-                <div key={slider.name} className={`relative ${slider.locked ? 'opacity-80' : ''}`}>
+                <div key={slider.name} className={`relative group/slider ${slider.locked ? 'opacity-80' : ''}`}>
                   <div className="flex justify-between mb-2">
                     <label className="text-base text-gray-200 font-medium">{slider.label}</label>
                     <span className={`text-xs font-mono font-bold ${aiAnalysis ? 'text-primary' : 'text-gray-500'}`}>
@@ -199,6 +243,18 @@ const CalibrateAI: React.FC = () => {
                     <span className="text-[10px] uppercase text-gray-600 tracking-wider">{slider.lowLabel}</span>
                     <span className="text-[10px] uppercase text-gray-600 tracking-wider">{slider.highLabel}</span>
                   </div>
+
+                  {/* Derivation Factors Tooltip on Hover */}
+                  {aiAnalysis?.derivationFactors && aiAnalysis.derivationFactors[slider.name as keyof typeof aiAnalysis.derivationFactors] && (
+                    <div className="absolute top-full left-0 mt-2 p-2 bg-black/90 border border-white/10 rounded z-10 hidden group-hover/slider:block animate-fade-in text-[10px] text-gray-400 w-full shadow-xl">
+                      <span className="text-primary uppercase tracking-wider font-bold block mb-1">Driven By:</span>
+                      <ul className="list-disc list-inside">
+                        {aiAnalysis.derivationFactors[slider.name as keyof typeof aiAnalysis.derivationFactors]?.map((factor, idx) => (
+                          <li key={idx}>{factor}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
 
                   <p className="text-xs text-secondary-text mt-1 italic">
                     {slider.description}
