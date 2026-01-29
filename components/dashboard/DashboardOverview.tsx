@@ -233,21 +233,14 @@ const DashboardOverview: React.FC = () => {
                         <div className="flex-1 flex flex-col justify-center items-center relative z-10 space-y-4 mb-4">
                             <div className="absolute top-10 left-0 w-full h-full border-t border-white/5 rounded-full scale-150 pointer-events-none"></div>
 
-                            {allPlayers.map((player, index) => (
+                            {allPlayers.map((player) => (
                                 <Link
                                     key={player.id}
                                     to={`/dashboard/player-hub?player=${player.id}`}
-                                    className={`w-full flex items-center justify-between p-2 rounded-lg transition border group ${index === 2 // Highlight mid as example
-                                        ? 'bg-surface-darker hover:bg-white/5 border-primary/30 shadow-[0_0_10px_rgba(210,249,111,0.05)] relative'
-                                        : 'bg-surface-darker hover:bg-white/5 border-white/5 hover:border-white/20'
-                                        }`}
+                                    className="w-full flex items-center justify-between p-2 rounded-lg transition border group bg-surface-darker hover:bg-white/5 border-white/5 hover:border-white/20"
                                 >
-                                    {index === 2 && (
-                                        <div className="absolute inset-0 bg-primary/5 rounded-lg opacity-20 animate-pulse pointer-events-none"></div>
-                                    )}
-                                    <div className={`flex items-center gap-3 relative z-10`}>
-                                        <div className={`w-8 h-8 rounded bg-gray-800 relative overflow-hidden transition ${index === 2 ? 'ring-2 ring-primary shadow-neon' : 'ring-1 ring-white/10 group-hover:ring-white/30'
-                                            }`}>
+                                    <div className="flex items-center gap-3 relative z-10">
+                                        <div className="w-8 h-8 rounded bg-gray-800 relative overflow-hidden transition ring-1 ring-white/10 group-hover:ring-white/30">
                                             {player.avatar ? (
                                                 <img className="w-full h-full object-cover" src={player.avatar} alt={player.name} />
                                             ) : (
@@ -257,11 +250,11 @@ const DashboardOverview: React.FC = () => {
                                             )}
                                         </div>
                                         <div className="flex flex-col">
-                                            <span className={`text-xs font-bold ${index === 2 ? 'text-white' : 'text-gray-200 group-hover:text-white'}`}>{player.name}</span>
-                                            <span className={`text-[9px] uppercase ${index === 2 ? 'text-primary' : 'text-gray-500'}`}>{player.role}</span>
+                                            <span className="text-xs font-bold text-gray-200 group-hover:text-white">{player.name}</span>
+                                            <span className="text-[9px] uppercase text-gray-500">{player.role}</span>
                                         </div>
                                     </div>
-                                    <div className={`flex flex-col items-end ${index === 2 ? 'relative z-10' : ''}`}>
+                                    <div className="flex flex-col items-end">
                                         <div className="w-16 h-1 bg-gray-800 rounded-full mb-1 overflow-hidden">
                                             <div
                                                 className={`h-full rounded-full ${player.synergy >= 90 ? 'bg-primary shadow-neon' :
