@@ -22,6 +22,7 @@ interface DashboardState {
     // Real Data State
     isLoading: boolean;
     error: string | null;
+    userProfile: { name: string; email: string; avatar?: string } | null;
     teamProfile: any | null;
 
     // Data
@@ -72,6 +73,7 @@ const initialState: DashboardState = {
     simulationResult: null,
     isLoading: true,
     error: null,
+    userProfile: null,
     teamProfile: null,
     allPlayers: mockPlayers,
     allMatches: mockMatches,
@@ -153,6 +155,15 @@ export const useDashboardStore = create<DashboardState & DashboardActions>((set,
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error("No user found");
 
+            // Set User Profile
+            set({
+                userProfile: {
+                    name: user.user_metadata?.username || user.email?.split('@')[0] || 'Coach',
+                    email: user.email || '',
+                    avatar: user.user_metadata?.avatar_url
+                }
+            });
+
             // 2. Get Workspace
             const { data: workspace, error: wsError } = await supabase
                 .from('workspaces')
@@ -171,7 +182,7 @@ export const useDashboardStore = create<DashboardState & DashboardActions>((set,
                 .from('ai_calibration')
                 .select('*')
                 .eq('workspace_id', workspace.id)
-                .single();
+                .maybeSingle();
 
             // Set Team Profile from Workspace + AI Data
             set({
@@ -179,7 +190,7 @@ export const useDashboardStore = create<DashboardState & DashboardActions>((set,
                     teamName: workspace.team_name,
                     region: 'Global', // Placeholder as region isn't in workspace table yet
                     game: workspace.game_title,
-                    ...aiData // Spread AI data for access
+                    ...(aiData || {}) // Spread AI data safely
                 }
             });
 

@@ -1,7 +1,9 @@
 import React from 'react';
+import { useDashboardStore } from '../../stores/useDashboardStore';
 
 const CoachProfile: React.FC = () => {
     const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
+    const userProfile = useDashboardStore((state) => state.userProfile);
 
     return (
         <div className="w-full relative">
@@ -152,14 +154,20 @@ const CoachProfile: React.FC = () => {
                     <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
                         <div className="relative group">
                             <div className="absolute inset-0 bg-primary/20 rounded-full blur-md opacity-0 group-hover:opacity-100 transition duration-500"></div>
-                            <img alt="Alex Chen" className="w-32 h-32 rounded-full border-4 border-surface-darker ring-2 ring-primary relative z-10 object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAnZHcSrpkq-4S4qmJXdr6_VhmwSYKTgBwySukjrnGqn8M8DPxDi-_T89gMvPjZJuk5_YnTIKw4EKg0qcJLf5m9Bt-dXlPiBq2kKdwYXHZTaOlCgsFapA1gpGLbBNZ5_-MITHR2kuaqWAzhqxlkrEJ21e6rhziCrRwoZu9BRP_WmTwNzPz1Q9vIcYV5_dAJqKG6SXpWb7DxmTtCkQbEXLcIaXyMBNx34AFE2Hfk8o7S1p-4J0HIXtEmVWCEuRn8PAe7U9GsA4ysQNo" />
+                            {userProfile?.avatar ? (
+                                <img src={userProfile.avatar} alt={userProfile.name} className="w-32 h-32 rounded-full border-4 border-surface-darker ring-2 ring-primary relative z-10 object-cover" />
+                            ) : (
+                                <div className="w-32 h-32 rounded-full border-4 border-surface-darker ring-2 ring-primary relative z-10 bg-surface-dark flex items-center justify-center">
+                                    <span className="text-4xl font-bold text-gray-500">{userProfile?.name?.substring(0, 2).toUpperCase() || 'CH'}</span>
+                                </div>
+                            )}
                             <div className="absolute bottom-0 right-0 z-20 bg-background-dark border border-white/10 rounded-full p-1.5 shadow-lg">
                                 <div className="w-4 h-4 bg-green-500 rounded-full border-2 border-background-dark"></div>
                             </div>
                         </div>
                         <div className="flex-1 text-center md:text-left">
                             <div className="flex flex-col md:flex-row md:items-center gap-3 mb-2 justify-center md:justify-start">
-                                <h1 className="text-3xl font-bold text-white tracking-tight">Alex Chen</h1>
+                                <h1 className="text-3xl font-bold text-white tracking-tight">{userProfile?.name || 'Coach'}</h1>
                                 <span className="px-3 py-1 bg-white/5 border border-white/10 rounded-full text-xs text-gray-300 font-medium">Head Coach</span>
                                 <span className="px-3 py-1 bg-primary/10 border border-primary/20 rounded-full text-xs text-primary font-bold shadow-neon flex items-center gap-1">
                                     <span className="material-icons-outlined text-[14px]">auto_awesome</span>

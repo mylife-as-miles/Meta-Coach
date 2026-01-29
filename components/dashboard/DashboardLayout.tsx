@@ -1,6 +1,7 @@
 import React from 'react';
 import { Outlet, NavLink, Link, useNavigate } from 'react-router-dom';
 import { DashboardProvider } from '../../context/DashboardContext';
+import { useDashboardStore } from '../../stores/useDashboardStore';
 import supabase from '../../lib/supabase';
 
 const NavItem = ({ to, children, end = false }: { to: string, children: React.ReactNode, end?: boolean }) => (
@@ -21,6 +22,7 @@ const DashboardLayout: React.FC = () => {
     const [showNotifications, setShowNotifications] = React.useState(false);
     const [showProfileMenu, setShowProfileMenu] = React.useState(false);
     const navigate = useNavigate();
+    const userProfile = useDashboardStore((state) => state.userProfile);
 
     const handleSignOut = async () => {
         try {
@@ -165,10 +167,14 @@ const DashboardLayout: React.FC = () => {
                                 className="flex items-center gap-3 hover:opacity-80 transition cursor-pointer"
                             >
                                 <div className="w-9 h-9 rounded-full border-2 border-surface-dark ring-2 ring-primary/20 bg-primary flex items-center justify-center overflow-hidden">
-                                    <span className="font-bold text-black text-xs">AC</span>
+                                    {userProfile?.avatar ? (
+                                        <img src={userProfile.avatar} alt={userProfile.name} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <span className="font-bold text-black text-xs">{userProfile?.name?.substring(0, 2).toUpperCase() || 'CH'}</span>
+                                    )}
                                 </div>
                                 <div className="hidden lg:block text-xs text-left">
-                                    <p className="text-white font-medium">Alex Chen</p>
+                                    <p className="text-white font-medium">{userProfile?.name || 'Coach'}</p>
                                     <p className="text-gray-400">Head Coach</p>
                                 </div>
                                 <span className={`material-icons-outlined text-gray-500 text-sm hidden lg:block transition-transform duration-200 ${showProfileMenu ? 'rotate-180' : ''}`}>expand_more</span>
