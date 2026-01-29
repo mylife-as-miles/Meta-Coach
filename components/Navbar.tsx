@@ -9,8 +9,8 @@ const Navbar: React.FC<NavbarProps> = ({ onLoginClick }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
-    <nav className="w-full z-50 fixed top-0 border-b border-white/5 backdrop-blur-md bg-background-dark/80">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 flex justify-between items-center">
+    <div className="fixed top-6 left-0 right-0 z-50 flex justify-center px-4">
+      <nav className="w-full max-w-7xl bg-background-dark/80 backdrop-blur-xl border border-white/10 rounded-2xl px-6 py-3 flex justify-between items-center shadow-2xl">
         {/* Logo */}
         <div className="flex items-center gap-2 cursor-pointer group z-50 relative" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
           <div className="w-8 h-8 bg-primary rounded flex items-center justify-center text-black transition-transform group-hover:scale-110">
@@ -37,7 +37,7 @@ const Navbar: React.FC<NavbarProps> = ({ onLoginClick }) => {
         </div>
 
         {/* Mobile Toggle */}
-        <button 
+        <button
           className="md:hidden z-50 text-gray-300 hover:text-white"
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         >
@@ -59,8 +59,8 @@ const Navbar: React.FC<NavbarProps> = ({ onLoginClick }) => {
             </button>
           </div>
         </div>
-      </div>
-    </nav>
+      </nav>
+    </div>
   );
 };
 

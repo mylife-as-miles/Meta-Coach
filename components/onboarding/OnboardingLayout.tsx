@@ -28,13 +28,13 @@ const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
             </div>
 
             {/* Navigation */}
-            <nav className="w-full z-50 fixed top-0 px-6 py-6 backdrop-blur-sm border-b border-white/5">
-                <div className="max-w-7xl mx-auto flex justify-between items-center">
+            <div className="fixed top-6 left-0 right-0 z-50 flex justify-center px-4">
+                <nav className="w-full max-w-7xl bg-surface-dark/50 backdrop-blur-md border border-white/10 rounded-full px-6 py-3 flex justify-between items-center shadow-lg transition-all hover:bg-surface-dark/80">
                     <Link to="/" className="flex items-center gap-2">
                         <div className="w-8 h-8 bg-primary rounded flex items-center justify-center text-black font-bold text-lg shadow-[0_0_10px_rgba(210,249,111,0.4)]">
                             <span className="material-icons text-sm">auto_graph</span>
                         </div>
-                        <span className="text-xl font-bold tracking-tight">MetaCoach</span>
+                        <span className="text-xl font-bold tracking-tight text-white">MetaCoach</span>
                     </Link>
                     <div className="flex items-center gap-4">
                         <div className="hidden md:flex items-center gap-2 px-3 py-1 bg-surface-dark border border-white/10 rounded-full text-xs text-gray-400">
@@ -45,8 +45,8 @@ const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
                             <span className="material-symbols-outlined text-sm">person</span>
                         </div>
                     </div>
-                </div>
-            </nav>
+                </nav>
+            </div>
 
             {/* Main Content */}
             <main className="flex-grow flex flex-col items-center justify-center relative z-10 min-h-screen pt-24 pb-12 px-6">
@@ -59,8 +59,8 @@ const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
                             <div key={step} className={`flex flex-col items-center gap-3 relative z-10 w-1/3 ${step > currentStep ? 'opacity-50' : ''}`}>
                                 <div
                                     className={`w-8 h-8 rounded flex items-center justify-center font-bold text-sm ring-4 ring-background-dark ${step <= currentStep
-                                            ? 'bg-primary text-black shadow-[0_0_15px_rgba(210,249,111,0.5)]'
-                                            : 'bg-surface-dark border border-white/20 text-gray-500'
+                                        ? 'bg-primary text-black shadow-[0_0_15px_rgba(210,249,111,0.5)]'
+                                        : 'bg-surface-dark border border-white/20 text-gray-500'
                                         }`}
                                 >
                                     {step < currentStep ? (
