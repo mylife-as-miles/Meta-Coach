@@ -5,6 +5,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { corsHeaders } from '../_shared/cors.ts'
 
 const VLR_API_BASE = 'https://vlr.orlandomm.net/api/v1'
+const GRID_API_URL = 'https://api-op.grid.gg/central-data/graphql'
 
 const fetchValorantImage = async (nickname: string): Promise<string | null> => {
     try {

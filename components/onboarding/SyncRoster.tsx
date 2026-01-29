@@ -26,6 +26,7 @@ interface GridPlayer {
   firstName?: string;
   lastName?: string;
   externalLinks?: any[];
+  imageUrl?: string | null;
 }
 
 const SyncRoster: React.FC = () => {
@@ -55,7 +56,7 @@ const SyncRoster: React.FC = () => {
       try {
         console.log('Fetching players for team:', gridTeamId);
         const { data, error } = await supabase.functions.invoke('grid-players', {
-          body: { teamId: gridTeamId }
+          body: { teamId: gridTeamId, titleId: gridTitleId }
         });
 
         if (error) throw error;
@@ -136,16 +137,27 @@ const SyncRoster: React.FC = () => {
                 <div
                   key={role.name}
                   className={`group relative bg-surface-dark/40 backdrop-blur-md border rounded-xl overflow-hidden transition-all duration-300 hover:bg-surface-dark/60 ${isFilled
-                      ? 'border-primary/20 shadow-[0_0_20px_rgba(210,249,111,0.02)]'
-                      : 'border-white/5'
+                    ? 'border-primary/20 shadow-[0_0_20px_rgba(210,249,111,0.02)]'
+                    : 'border-white/5'
                     }`}
                 >
+                  {/* Background Image (If Available) */}
+                  {playerMeta?.imageUrl && (
+                    <div
+                      className="absolute inset-0 bg-cover bg-center opacity-20 group-hover:opacity-30 transition-opacity grayscale group-hover:grayscale-0 pointer-events-none"
+                      style={{ backgroundImage: `url(${playerMeta.imageUrl})` }}
+                    ></div>
+                  )}
+
+                  {/* Gradient Overlay for Text Readability */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-surface-darker via-surface-darker/90 to-transparent pointer-events-none"></div>
+
                   {/* Background Role Icon (faded) */}
                   <div className="absolute -right-4 -bottom-4 text-[100px] text-white/[0.02] pointer-events-none select-none">
                     <span className="material-symbols-outlined">{role.icon}</span>
                   </div>
 
-                  <div className="flex items-center p-4 gap-5">
+                  <div className="flex items-center p-4 gap-5 relative z-10">
 
                     {/* Role Indicator */}
                     <div className={`w-14 h-14 rounded-lg flex flex-col items-center justify-center border transition-colors ${isFilled ? 'bg-primary/10 border-primary/20 text-primary' : 'bg-surface-dark border-white/5 text-gray-600'
