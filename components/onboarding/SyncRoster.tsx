@@ -236,6 +236,7 @@ const SyncRoster: React.FC = () => {
                     <img
                       key={currentPlayerMeta.imageUrl} // Key change forces animation
                       src={currentPlayerMeta.imageUrl}
+                      referrerPolicy="no-referrer"
                       alt={currentPlayerMeta.nickname}
                       className="h-[90%] md:h-[110%] object-contain object-bottom drop-shadow-[0_0_30px_rgba(0,0,0,0.5)] animate-fade-in-up md:translate-x-10"
                     />
@@ -280,19 +281,19 @@ const SyncRoster: React.FC = () => {
                       key={role.name}
                       onClick={() => setActiveIndex(idx)}
                       className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition-all duration-300 min-w-[100px] ${isSelected
-                          ? 'bg-surface-dark border-primary/50 ring-1 ring-primary/50'
-                          : 'bg-surface-dark/30 border-white/5 hover:border-white/20'
+                        ? 'bg-surface-dark border-primary/50 ring-1 ring-primary/50'
+                        : 'bg-surface-dark/30 border-white/5 hover:border-white/20'
                         }`}
                     >
                       <span className={`text-[10px] bg-background-dark/50 px-1.5 rounded uppercase tracking-wider ${isSelected ? 'text-primary' : 'text-gray-500'}`}>
                         {role.name}
                       </span>
                       <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center overflow-hidden ${filled
-                          ? 'border-green-500/50 bg-green-500/10'
-                          : 'border-white/10 bg-white/5'
+                        ? 'border-green-500/50 bg-green-500/10'
+                        : 'border-white/10 bg-white/5'
                         }`}>
                         {gridPlayers[idx]?.imageUrl ? (
-                          <img src={gridPlayers[idx].imageUrl!} className="w-full h-full object-cover" />
+                          <img src={gridPlayers[idx].imageUrl!} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
                         ) : (
                           <span className={`material-symbols-outlined text-sm ${filled ? 'text-green-500' : 'text-gray-600'}`}>
                             {role.icon}
