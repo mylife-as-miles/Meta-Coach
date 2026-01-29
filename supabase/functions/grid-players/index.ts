@@ -7,37 +7,7 @@ import { corsHeaders } from '../_shared/cors.ts'
 const VLR_API_BASE = 'https://vlr.orlandomm.net/api/v1'
 const GRID_API_URL = 'https://api-op.grid.gg/central-data/graphql'
 
-const fetchValorantImage = async (nickname: string): Promise<string | null> => {
-    try {
-        // Search for player
-        const searchRes = await fetch(`${VLR_API_BASE}/players?q=${encodeURIComponent(nickname)}`)
-        if (!searchRes.ok) return null
 
-        const searchData = await searchRes.json()
-        const player = searchData.data?.[0] // Take first match
-
-        if (!player?.id) return null
-
-        // Get player details for image
-        // Sometimes search returns image, but let's be safe if detailed endpoint is needed.
-        // Looking at common VLR wrappers, search usually returns basic info including img.
-        // If not, we'd query /players/:id. Let's assume search result might have it or we query detail.
-        // Based on user snippet, they used /players/:id. Let's try that.
-
-        const detailRes = await fetch(`${VLR_API_BASE}/players/${player.id}`)
-        if (!detailRes.ok) {
-            // Fallback: maybe search result had it?
-            return player.img || null
-        }
-
-        const detailData = await detailRes.json()
-        return detailData.data?.info?.img || player.img || null
-
-    } catch (e) {
-        console.error(`Error fetching VLR image for ${nickname}:`, e)
-        return null
-    }
-}
 
 serve(async (req) => {
     // Handle CORS preflight
@@ -144,11 +114,26 @@ serve(async (req) => {
             imageUrl: null // Default null
         }))
 
+        const fetchValorantImageById = async (externalId: string): Promise<string | null> => {
+            try {
+                const res = await fetch(`https://vlr.orlandomm.net/api/v1/players/${externalId}`)
+                if (!res.ok) return null
+                const data = await res.json()
+                return data.data?.info?.img || null
+            } catch (e) {
+                console.error(`Error fetching image for ${externalId}:`, e)
+                return null
+            }
+        }
+
+        // ... inside serve ...
+
         // Enrich with Images (Valorant specific for now)
         if (titleId === '6' || titleId === '29') { // Valorant title IDs
-            console.log('Fetching Valorant images...')
+            console.log('Fetching Valorant images using External IDs...')
             const imagePromises = players.map(async (p: any) => {
-                const img = await fetchValorantImage(p.nickname)
+                const valLink = p.externalLinks?.find((l: any) => l.dataProvider.name === "VALORANT")
+                const img = valLink ? await fetchValorantImageById(valLink.externalEntity.id) : null
                 return { ...p, imageUrl: img }
             })
             players = await Promise.all(imagePromises)

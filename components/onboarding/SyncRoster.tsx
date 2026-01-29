@@ -128,9 +128,6 @@ const SyncRoster: React.FC = () => {
   const handleNext = () => {
     if (activeIndex < activeRoles.length - 1) {
       setActiveIndex(prev => prev + 1);
-    } else {
-      // If on last slide, go to next step
-      handleContinue();
     }
   };
 
