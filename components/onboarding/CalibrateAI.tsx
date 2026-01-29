@@ -1,18 +1,16 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useOnboarding } from '../../context/OnboardingContext';
+import { useOnboardingStore } from '../../stores/useOnboardingStore';
 import OnboardingLayout from './OnboardingLayout';
 
 const CalibrateAI: React.FC = () => {
   const navigate = useNavigate();
-  const {
-    aiConfig,
-    setAIConfig,
-    completeOnboarding,
-    isSaving,
-    teamName,
-    gameTitle
-  } = useOnboarding();
+  const aiConfig = useOnboardingStore((state) => state.aiConfig);
+  const setAIConfig = useOnboardingStore((state) => state.setAIConfig);
+  const completeOnboarding = useOnboardingStore((state) => state.completeOnboarding);
+  const isSaving = useOnboardingStore((state) => state.isSaving);
+  const teamName = useOnboardingStore((state) => state.teamName);
+  const gameTitle = useOnboardingStore((state) => state.gameTitle);
 
   const [isCalibrating, setIsCalibrating] = useState(false);
 
@@ -30,7 +28,7 @@ const CalibrateAI: React.FC = () => {
     // Simulate AI calibration
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    const success = await completeOnboarding();
+    const success = await completeOnboarding(navigate);
 
     if (!success) {
       setIsCalibrating(false);

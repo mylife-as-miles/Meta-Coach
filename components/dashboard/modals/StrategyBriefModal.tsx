@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Modal from '../../ui/Modal';
 import { supabase } from '../../../lib/supabase';
 import { strategyBriefData as mockStrategyBriefData } from '../../../lib/mockData';
-import { useDashboard } from '../../../context/DashboardContext';
+import { useDashboardStore } from '../../../stores/useDashboardStore';
 
 interface StrategyBriefModalProps {
     isOpen: boolean;
@@ -11,7 +11,7 @@ interface StrategyBriefModalProps {
 }
 
 const StrategyBriefModal: React.FC<StrategyBriefModalProps> = ({ isOpen, onClose, opponentId }) => {
-    const { teamProfile } = useDashboard();
+    const teamProfile = useDashboardStore((state) => state.teamProfile);
     const [isLoading, setIsLoading] = useState(false);
     const [matchPrepData, setMatchPrepData] = useState<any>(null);
     const [error, setError] = useState<string | null>(null);

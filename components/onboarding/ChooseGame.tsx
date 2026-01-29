@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useOnboarding } from '../../context/OnboardingContext';
+import { useOnboardingStore } from '../../stores/useOnboardingStore';
 import OnboardingLayout from './OnboardingLayout';
 import { supabase } from '../../lib/supabase';
 
@@ -31,7 +31,7 @@ const GAMES = [
 
 const ChooseGame: React.FC = () => {
   const navigate = useNavigate();
-  const { setGameAndTeam } = useOnboarding();
+  const setGameAndTeam = useOnboardingStore((state) => state.setGameAndTeam);
 
   const [selectedGame, setSelectedGame] = useState<string | null>(null);
   const [selectedTeam, setSelectedTeam] = useState<{ id: string; name: string } | null>(null);

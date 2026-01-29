@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useOnboarding } from '../../context/OnboardingContext';
+import { useOnboardingStore } from '../../stores/useOnboardingStore';
 import OnboardingLayout from './OnboardingLayout';
 import { supabase } from '../../lib/supabase';
 
@@ -31,7 +31,14 @@ interface GridPlayer {
 
 const SyncRoster: React.FC = () => {
   const navigate = useNavigate();
-  const { roster, updateRosterPlayer, teamName, gameTitle, gridTitleId, gridTeamId, setRoster } = useOnboarding();
+  const roster = useOnboardingStore((state) => state.roster);
+  const updateRosterPlayer = useOnboardingStore((state) => state.updateRosterPlayer);
+  const teamName = useOnboardingStore((state) => state.teamName);
+  const gameTitle = useOnboardingStore((state) => state.gameTitle);
+  const gridTitleId = useOnboardingStore((state) => state.gridTitleId);
+  const gridTeamId = useOnboardingStore((state) => state.gridTeamId);
+  const setRoster = useOnboardingStore((state) => state.setRoster);
+
   const [activeRoles, setActiveRoles] = useState(LOL_ROLES);
   const [isLoading, setIsLoading] = useState(true);
   const [gridPlayers, setGridPlayers] = useState<GridPlayer[]>([]);

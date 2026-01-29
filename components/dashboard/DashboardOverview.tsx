@@ -1,12 +1,24 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useDashboard } from '../../context/DashboardContext';
+import { useDashboardStore } from '../../stores/useDashboardStore';
 import StrategyBriefModal from './modals/StrategyBriefModal';
 import { players } from '../../lib/mockData';
 
 const DashboardOverview: React.FC = () => {
     const navigate = useNavigate();
-    const { strategyBriefOpen, openStrategyBrief, closeStrategyBrief, allPlayers, allMatches, isLoading, teamProfile } = useDashboard();
+    const strategyBriefOpen = useDashboardStore((state) => state.strategyBriefOpen);
+    const openStrategyBrief = useDashboardStore((state) => state.openStrategyBrief);
+    const closeStrategyBrief = useDashboardStore((state) => state.closeStrategyBrief);
+    const allPlayers = useDashboardStore((state) => state.allPlayers);
+    const allMatches = useDashboardStore((state) => state.allMatches);
+    const isLoading = useDashboardStore((state) => state.isLoading);
+    const teamProfile = useDashboardStore((state) => state.teamProfile);
+    const fetchDashboardData = useDashboardStore((state) => state.fetchDashboardData);
+
+    // Fetch data on mount
+    useEffect(() => {
+        fetchDashboardData();
+    }, [fetchDashboardData]);
 
     if (isLoading) {
         return (

@@ -1,20 +1,18 @@
 import React, { useState } from 'react';
-import { useDashboard } from '../../context/DashboardContext';
+import { useDashboardStore } from '../../stores/useDashboardStore';
 import ChampionPickerModal from './modals/ChampionPickerModal';
 import SimulationResultModal from './modals/SimulationResultModal';
 import { Champion } from '../../lib/mockData';
 
 const StrategyLab: React.FC = () => {
-    const {
-        championPickerOpen,
-        openChampionPicker,
-        closeChampionPicker,
-        simulationResultOpen,
-        closeSimulationResult,
-        simulationRunning,
-        simulationResult,
-        runSimulation
-    } = useDashboard();
+    const championPickerOpen = useDashboardStore((state) => state.championPickerOpen);
+    const openChampionPicker = useDashboardStore((state) => state.openChampionPicker);
+    const closeChampionPicker = useDashboardStore((state) => state.closeChampionPicker);
+    const simulationResultOpen = useDashboardStore((state) => state.simulationResultOpen);
+    const closeSimulationResult = useDashboardStore((state) => state.closeSimulationResult);
+    const simulationRunning = useDashboardStore((state) => state.simulationRunning);
+    const simulationResult = useDashboardStore((state) => state.simulationResult);
+    const runSimulation = useDashboardStore((state) => state.runSimulation);
 
     const [selectedMid, setSelectedMid] = useState<Champion | null>(null);
     const [gamePhase, setGamePhase] = useState<'early' | 'mid' | 'late'>('mid');
@@ -336,8 +334,8 @@ const StrategyLab: React.FC = () => {
                                 onClick={runSimulation}
                                 disabled={simulationRunning}
                                 className={`w-full py-3 rounded-xl text-black font-bold text-sm transition shadow-neon flex items-center justify-center gap-2 cursor-pointer ${simulationRunning
-                                        ? 'bg-gray-500 cursor-not-allowed opacity-75'
-                                        : 'bg-primary hover:bg-primary-dark'
+                                    ? 'bg-gray-500 cursor-not-allowed opacity-75'
+                                    : 'bg-primary hover:bg-primary-dark'
                                     }`}
                             >
                                 {simulationRunning ? (

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Modal from '../../ui/Modal';
 import { Match } from '../../../lib/mockData';
 import { supabase } from '../../../lib/supabase';
-import { useDashboard } from '../../../context/DashboardContext';
+import { useDashboardStore } from '../../../stores/useDashboardStore';
 
 interface MatchDetailModalProps {
     isOpen: boolean;
@@ -36,7 +36,7 @@ interface GameData {
 }
 
 const MatchDetailModal: React.FC<MatchDetailModalProps> = ({ isOpen, onClose, match }) => {
-    const { teamProfile } = useDashboard();
+    const teamProfile = useDashboardStore((state) => state.teamProfile);
     const [isLoading, setIsLoading] = useState(false);
     const [seriesData, setSeriesData] = useState<any>(null);
     const [error, setError] = useState<string | null>(null);

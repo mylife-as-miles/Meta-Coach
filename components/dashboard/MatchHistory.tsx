@@ -1,9 +1,13 @@
 import React from 'react';
-import { useDashboard } from '../../context/DashboardContext';
+import { useDashboardStore } from '../../stores/useDashboardStore';
 import MatchDetailModal from './modals/MatchDetailModal';
 
 const MatchHistory: React.FC = () => {
-    const { matchDetailOpen, selectedMatch, openMatchDetail, closeMatchDetail, allMatches } = useDashboard();
+    const matchDetailOpen = useDashboardStore((state) => state.matchDetailOpen);
+    const selectedMatch = useDashboardStore((state) => state.selectedMatch);
+    const openMatchDetail = useDashboardStore((state) => state.openMatchDetail);
+    const closeMatchDetail = useDashboardStore((state) => state.closeMatchDetail);
+    const allMatches = useDashboardStore((state) => state.allMatches);
     return (
         <div className="flex flex-col">
             <header className="flex flex-col lg:flex-row lg:items-end justify-between mb-8 gap-6">
@@ -96,8 +100,8 @@ const MatchHistory: React.FC = () => {
                                             <div className="flex justify-between items-center mt-1">
                                                 <span className="text-xs text-gray-400">Micro Error Rate</span>
                                                 <span className={`text-[10px] font-bold px-1.5 rounded ${match.performance.microErrorRate === 'LOW' ? 'text-green-400 bg-green-400/10' :
-                                                        match.performance.microErrorRate === 'MED' ? 'text-yellow-400 bg-yellow-400/10' :
-                                                            'text-red-400 bg-red-400/10'
+                                                    match.performance.microErrorRate === 'MED' ? 'text-yellow-400 bg-yellow-400/10' :
+                                                        'text-red-400 bg-red-400/10'
                                                     }`}>
                                                     {match.performance.microErrorRate}
                                                 </span>

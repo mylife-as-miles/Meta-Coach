@@ -1,22 +1,20 @@
 import React, { useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useDashboard } from '../../context/DashboardContext';
+import { useDashboardStore } from '../../stores/useDashboardStore';
 import ComparePlayersModal from './modals/ComparePlayersModal';
 import EditAttributesModal from './modals/EditAttributesModal';
 
 const PlayerHub: React.FC = () => {
     const [searchParams] = useSearchParams();
-    const {
-        selectedPlayer,
-        selectPlayer,
-        allPlayers,
-        comparePlayersOpen,
-        openComparePlayers,
-        closeComparePlayers,
-        editAttributesOpen,
-        openEditAttributes,
-        closeEditAttributes
-    } = useDashboard();
+    const selectedPlayer = useDashboardStore((state) => state.selectedPlayer);
+    const selectPlayer = useDashboardStore((state) => state.selectPlayer);
+    const allPlayers = useDashboardStore((state) => state.allPlayers);
+    const comparePlayersOpen = useDashboardStore((state) => state.comparePlayersOpen);
+    const openComparePlayers = useDashboardStore((state) => state.openComparePlayers);
+    const closeComparePlayers = useDashboardStore((state) => state.closeComparePlayers);
+    const editAttributesOpen = useDashboardStore((state) => state.editAttributesOpen);
+    const openEditAttributes = useDashboardStore((state) => state.openEditAttributes);
+    const closeEditAttributes = useDashboardStore((state) => state.closeEditAttributes);
 
     // Handle URL params for direct linking
     useEffect(() => {
@@ -293,8 +291,8 @@ const PlayerHub: React.FC = () => {
                             className={`snap-start shrink-0 transition-opacity ${selectedPlayer.id === player.id ? 'opacity-100 scale-105' : 'opacity-70 hover:opacity-100'}`}
                         >
                             <div className={`w-48 h-72 relative rounded-2xl border overflow-hidden cursor-pointer transition-all ${selectedPlayer.id === player.id
-                                    ? 'border-2 border-primary shadow-[0_0_5px_rgba(210,249,111,0.3),0_0_15px_rgba(210,249,111,0.1)]'
-                                    : 'border-white/10 bg-surface-dark hover:border-white/30'
+                                ? 'border-2 border-primary shadow-[0_0_5px_rgba(210,249,111,0.3),0_0_15px_rgba(210,249,111,0.1)]'
+                                : 'border-white/10 bg-surface-dark hover:border-white/30'
                                 }`}>
                                 <div className={`absolute inset-0 bg-gradient-to-b ${selectedPlayer.id === player.id ? 'from-gray-800 to-black' : 'from-gray-800/50 to-black'}`}></div>
                                 <div className="absolute top-2 left-3 z-10">

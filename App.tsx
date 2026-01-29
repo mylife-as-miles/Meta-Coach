@@ -6,7 +6,6 @@ import AuthGuard from './components/AuthGuard';
 import ChooseGame from './components/onboarding/ChooseGame';
 import SyncRoster from './components/onboarding/SyncRoster';
 import CalibrateAI from './components/onboarding/CalibrateAI';
-import { OnboardingProvider } from './context/OnboardingContext';
 import DashboardLayout from './components/dashboard/DashboardLayout';
 import DashboardOverview from './components/dashboard/DashboardOverview';
 import MatchHistory from './components/dashboard/MatchHistory';
@@ -21,13 +20,11 @@ import { Sun, Moon } from './components/Icons';
 const OnboardingRoutes: React.FC = () => {
   return (
     <AuthGuard>
-      <OnboardingProvider>
-        <Routes>
-          <Route path="step-1" element={<ChooseGame />} />
-          <Route path="step-2" element={<SyncRoster />} />
-          <Route path="step-3" element={<CalibrateAI />} />
-        </Routes>
-      </OnboardingProvider>
+      <Routes>
+        <Route path="step-1" element={<ChooseGame />} />
+        <Route path="step-2" element={<SyncRoster />} />
+        <Route path="step-3" element={<CalibrateAI />} />
+      </Routes>
     </AuthGuard>
   );
 };
