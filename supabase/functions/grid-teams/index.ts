@@ -1,5 +1,5 @@
 // supabase/functions/grid-teams/index.ts
-// Fetch all teams from GRID (no title filter)
+// Fetch teams by title from GRID (standard filtered query)
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { corsHeaders } from '../_shared/cors.ts'
@@ -18,10 +18,32 @@ serve(async (req) => {
       throw new Error('GRID_API_KEY not configured')
     }
 
-    // Query all teams (no title filter) - GRID has 3793+ teams
+    // Get titleId from query params or body
+    const url = new URL(req.url)
+    let titleId = url.searchParams.get('titleId')
+
+    if (!titleId && req.method === 'POST') {
+      const body = await req.json()
+      titleId = body.titleId
+    }
+
+    if (!titleId) {
+      return new Response(
+        JSON.stringify({ error: 'titleId is required' }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400,
+        }
+      )
+    }
+
+    // Query teams filtered by titleId
     const teamsQuery = `
-      query GetTeams {
-        teams(first: 100) {
+      query GetTeamsForTitle($titleId: ID!) {
+        teams(
+          filter: { title: { id: { equals: $titleId } } }
+          first: 50
+        ) {
           edges {
             node {
               id
@@ -29,6 +51,14 @@ serve(async (req) => {
               logoUrl
               colorPrimary
               colorSecondary
+              externalLinks {
+                dataProvider {
+                  name
+                }
+                externalEntity {
+                  id
+                }
+              }
             }
           }
         }
@@ -41,7 +71,10 @@ serve(async (req) => {
         'Content-Type': 'application/json',
         'x-api-key': gridApiKey,
       },
-      body: JSON.stringify({ query: teamsQuery }),
+      body: JSON.stringify({
+        query: teamsQuery,
+        variables: { titleId }
+      }),
     })
 
     if (!teamsRes.ok) {
@@ -57,6 +90,7 @@ serve(async (req) => {
       logoUrl: edge.node.logoUrl || null,
       colorPrimary: edge.node.colorPrimary || null,
       colorSecondary: edge.node.colorSecondary || null,
+      externalLinks: edge.node.externalLinks || []
     }))
 
     // Sort alphabetically
