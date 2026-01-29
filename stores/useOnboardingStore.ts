@@ -129,24 +129,33 @@ export const useOnboardingStore = create<OnboardingState & OnboardingActions>((s
 
             const { data: workspace, error: workspaceError } = await supabase
                 .from('workspaces')
-                .insert({
+                .upsert({
                     user_id: user.id,
                     grid_title_id: state.gridTitleId,
                     grid_team_id: state.gridTeamId,
                     team_name: state.teamName,
                     game_title: state.gameTitle,
-                })
+                    updated_at: new Date().toISOString()
+                }, { onConflict: 'user_id, grid_team_id' })
                 .select()
                 .single();
 
             if (workspaceError) {
-                console.error('Error creating workspace:', workspaceError);
+                console.error('Error creating/updating workspace:', workspaceError);
                 return false;
             }
 
-            console.log("Workspace created:", workspace);
+            console.log("Workspace synced:", workspace);
 
             // 2. Create roster entries
+            // First, clear existing roster for this workspace to prevent duplicates or stale data
+            const { error: deleteError } = await supabase
+                .from('roster')
+                .delete()
+                .eq('workspace_id', workspace.id);
+
+            if (deleteError) console.error('Error clearing old roster:', deleteError);
+
             const rosterEntries = state.roster
                 .filter(p => p.ign.trim() !== '')
                 .map(p => ({
@@ -176,14 +185,16 @@ export const useOnboardingStore = create<OnboardingState & OnboardingActions>((s
             // 3. Create AI calibration
             const { error: calibrationError } = await supabase
                 .from('ai_calibration')
-                .insert({
+                .upsert({
                     workspace_id: workspace.id,
                     aggression: state.aiConfig.aggression,
                     resource_priority: state.aiConfig.resourcePriority,
                     vision_investment: state.aiConfig.visionInvestment,
                     early_game_pathing: state.aiConfig.earlyGamePathing,
                     objective_control: state.aiConfig.objectiveControl,
-                });
+                    // If these are not present in state, we might overwrite existing AI analysis? 
+                    // Ideally we should preserve them if check_function not run, but for onboarding we overwrite.
+                }, { onConflict: 'workspace_id' });
 
             if (calibrationError) {
                 console.error('Error creating AI calibration:', calibrationError);
