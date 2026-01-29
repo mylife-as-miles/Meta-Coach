@@ -47,6 +47,11 @@ const SyncRoster: React.FC = () => {
     navigate('/onboarding/step-3');
   };
 
+  // Create handleBack function
+  const handleBack = () => {
+    navigate('/onboarding/step-1');
+  };
+
   const handleSkip = () => {
     navigate('/onboarding/step-3');
   };
@@ -133,6 +138,14 @@ const SyncRoster: React.FC = () => {
 
         {/* Action Buttons */}
         <div className="flex justify-center gap-4">
+          <button
+            onClick={handleBack}
+            className="px-6 py-3 rounded-lg font-medium border border-white/10 text-gray-400 hover:text-white hover:border-white/30 transition-all flex items-center gap-2"
+          >
+            <span className="material-icons text-sm">arrow_back</span>
+            Back
+          </button>
+
           <button
             onClick={handleSkip}
             className="px-6 py-3 rounded-lg font-medium border border-white/10 text-gray-400 hover:text-white hover:border-white/30 transition-all flex items-center gap-2"
