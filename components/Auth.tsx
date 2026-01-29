@@ -181,14 +181,57 @@ const Auth: React.FC<AuthProps> = ({ onNavigateHome }) => {
         {/* Left Section - Visuals (Reduced size) */}
         <div className="hidden lg:flex lg:w-[45%] relative bg-[#0E100A] items-center justify-center border-r border-white/5 overflow-hidden">
           <div className="relative w-full h-full flex flex-col items-center justify-center p-8">
-            <div className="relative w-[400px] h-[400px] flex items-center justify-center mb-8 animate-float scale-75">
-              {/* Existing Visuals Kept but Scaled Down */}
-              <div className="absolute inset-0 bg-primary/5 rounded-full blur-3xl animate-pulse-slow"></div>
-              <div className="relative w-40 h-40 bg-surface-dark/40 backdrop-blur-md rounded-full border border-white/10 flex items-center justify-center shadow-[0_0_50px_rgba(0,0,0,0.5)] z-20">
-                <span className="material-symbols-outlined text-7xl text-primary animate-pulse" style={{ fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
+            <div className="relative w-[400px] h-[400px] flex items-center justify-center mb-8 animate-float scale-90">
+              {/* Core Glow */}
+              <div className="absolute inset-0 bg-primary/5 rounded-full blur-[60px] animate-pulse-slow"></div>
+
+              {/* Central Processor */}
+              <div className="relative w-32 h-32 bg-[#0E100A]/80 backdrop-blur-md rounded-full border border-primary/30 flex items-center justify-center shadow-[0_0_30px_rgba(210,249,111,0.1)] z-20">
+                <span className="material-symbols-outlined text-5xl text-primary animate-pulse" style={{ fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
+
+                {/* Inner Ring */}
+                <div className="absolute inset-2 border border-primary/20 rounded-full"></div>
               </div>
-              <div className="absolute inset-16 border border-white/5 rounded-full animate-spin-slow"></div>
-              <div className="absolute inset-8 border border-dashed border-white/10 rounded-full animate-[spin_25s_linear_infinite_reverse]"></div>
+
+              {/* Orbiting Rings */}
+              <div className="absolute inset-[80px] border border-white/5 rounded-full animate-[spin_30s_linear_infinite]">
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-2 h-2 bg-primary/50 rounded-full shadow-[0_0_10px_currentColor]"></div>
+              </div>
+              <div className="absolute inset-[40px] border border-white/5 rounded-full animate-[spin_40s_linear_infinite_reverse]">
+                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-blue-400/50 rounded-full"></div>
+              </div>
+
+              {/* Radar Scan Effect */}
+              <div className="absolute inset-[20px] rounded-full border border-white/5 overflow-hidden opacity-30">
+                <div className="absolute top-1/2 left-1/2 w-full h-1/2 bg-gradient-to-t from-primary/20 to-transparent origin-top animate-[spin_4s_linear_infinite]"></div>
+              </div>
+
+              {/* Floating Data UI Cards - Simulation Elements */}
+              {/* Card 1: Win Prob */}
+              <div className="absolute top-[20%] right-[5%] bg-[#1A1C14]/90 border border-white/10 backdrop-blur-md py-2 px-3 rounded-lg flex items-center gap-3 shadow-xl animate-[bounce_4s_infinite] z-30">
+                <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center">
+                  <span className="material-icons text-primary text-xs">analytics</span>
+                </div>
+                <div>
+                  <div className="text-[10px] text-gray-400 uppercase tracking-wider font-bold">Win Probability</div>
+                  <div className="text-sm text-white font-mono font-bold flex items-center gap-1">
+                    64.2% <span className="text-[10px] text-green-400">▲ 2.1%</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 2: Draft Analysis */}
+              <div className="absolute bottom-[20%] left-[5%] bg-[#1A1C14]/90 border border-white/10 backdrop-blur-md py-2 px-3 rounded-lg flex items-center gap-3 shadow-xl animate-[bounce_5s_infinite] delay-700 z-30">
+                <div className="w-8 h-8 rounded bg-blue-500/10 flex items-center justify-center">
+                  <span className="material-icons text-blue-400 text-xs">psychology</span>
+                </div>
+                <div>
+                  <div className="text-[10px] text-gray-400 uppercase tracking-wider font-bold">Draft Insight</div>
+                  <div className="text-xs text-white leading-tight mt-0.5">
+                    Pick Priority: <span className="text-blue-300 font-mono">Ahri</span>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="text-center z-20 max-w-sm mt-[-30px]">
@@ -228,8 +271,8 @@ const Auth: React.FC<AuthProps> = ({ onNavigateHome }) => {
 
               {submitMessage.text && (
                 <div className={`text-xs p-3 rounded border ${submitMessage.type === 'error'
-                    ? 'bg-red-500/10 border-red-500/30 text-red-400'
-                    : 'bg-green-500/10 border-green-500/30 text-green-400'
+                  ? 'bg-red-500/10 border-red-500/30 text-red-400'
+                  : 'bg-green-500/10 border-green-500/30 text-green-400'
                   }`}>
                   {submitMessage.text}
                 </div>
@@ -243,8 +286,8 @@ const Auth: React.FC<AuthProps> = ({ onNavigateHome }) => {
                     <div className="relative">
                       <input
                         className={`block w-full px-3 py-2.5 bg-surface-dark border rounded text-white text-sm focus:outline-none focus:ring-1 transition-all ${errors.username && touched.username
-                            ? 'border-red-500 focus:border-red-500'
-                            : 'border-white/10 focus:border-primary focus:ring-primary'
+                          ? 'border-red-500 focus:border-red-500'
+                          : 'border-white/10 focus:border-primary focus:ring-primary'
                           }`}
                         id="username" name="username" placeholder="MetaCoachUser"
                         value={formData.username} onChange={handleChange} onBlur={handleBlur}
@@ -260,8 +303,8 @@ const Auth: React.FC<AuthProps> = ({ onNavigateHome }) => {
                   <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest" htmlFor="email">Email</label>
                   <input
                     className={`block w-full px-3 py-2.5 bg-surface-dark border rounded text-white text-sm focus:outline-none focus:ring-1 transition-all ${errors.email && touched.email
-                        ? 'border-red-500 focus:border-red-500'
-                        : 'border-white/10 focus:border-primary focus:ring-primary'
+                      ? 'border-red-500 focus:border-red-500'
+                      : 'border-white/10 focus:border-primary focus:ring-primary'
                       }`}
                     id="email" name="email" placeholder="coach@metacoach.gg"
                     value={formData.email} onChange={handleChange} onBlur={handleBlur}
@@ -282,8 +325,8 @@ const Auth: React.FC<AuthProps> = ({ onNavigateHome }) => {
                     <div className="relative">
                       <input
                         className={`block w-full px-3 py-2.5 bg-surface-dark border rounded text-white text-sm focus:outline-none focus:ring-1 transition-all pr-10 ${errors.password && touched.password
-                            ? 'border-red-500 focus:border-red-500'
-                            : 'border-white/10 focus:border-primary focus:ring-primary'
+                          ? 'border-red-500 focus:border-red-500'
+                          : 'border-white/10 focus:border-primary focus:ring-primary'
                           }`}
                         id="password" name="password" placeholder="••••••••"
                         value={formData.password} onChange={handleChange} onBlur={handleBlur}
