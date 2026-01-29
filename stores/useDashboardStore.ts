@@ -184,13 +184,34 @@ export const useDashboardStore = create<DashboardState & DashboardActions>((set,
                 .eq('workspace_id', workspace.id)
                 .maybeSingle();
 
-            // Set Team Profile from Workspace + AI Data
+            // 4. Get Authentic Team Data from GRID (Lean Integration)
+            let gridTeamData: { teamName?: string; region?: string; logoUrl?: string } = {};
+            if (workspace.grid_team_id) {
+                try {
+                    const { data: gridRes, error: gridError } = await supabase.functions.invoke('grid-teams', {
+                        body: { teamId: workspace.grid_team_id }
+                    });
+
+                    if (!gridError && gridRes && gridRes.team) {
+                        gridTeamData = {
+                            teamName: gridRes.team.name,
+                            region: gridRes.team.region?.name || 'Global',
+                            logoUrl: gridRes.team.logoUrl
+                        };
+                    }
+                } catch (e) {
+                    console.warn("Retrieved GRID Team Identity failed:", e);
+                }
+            }
+
+            // Set Team Profile from Workspace + GRID Data + AI Data
             set({
                 teamProfile: {
-                    teamName: workspace.team_name,
-                    region: 'Global', // Placeholder as region isn't in workspace table yet
+                    teamName: gridTeamData.teamName || workspace.team_name,
+                    region: gridTeamData.region || 'Global',
                     game: workspace.game_title,
-                    ...(aiData || {}) // Spread AI data safely
+                    logoUrl: gridTeamData.logoUrl || null,
+                    ...(aiData || {})
                 }
             });
 

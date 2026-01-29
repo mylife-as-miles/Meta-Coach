@@ -18,18 +18,20 @@ serve(async (req) => {
       throw new Error('GRID_API_KEY not configured')
     }
 
-    // Get titleId from query params or body
+    // Get parameters from query params or body
     const url = new URL(req.url)
     let titleId = url.searchParams.get('titleId')
+    let teamId = url.searchParams.get('teamId')
 
-    if (!titleId && req.method === 'POST') {
+    if (!titleId && !teamId && req.method === 'POST') {
       const body = await req.json()
       titleId = body.titleId
+      teamId = body.teamId
     }
 
-    if (!titleId) {
+    if (!titleId && !teamId) {
       return new Response(
-        JSON.stringify({ error: 'titleId is required' }),
+        JSON.stringify({ error: 'titleId or teamId is required' }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 400,
@@ -37,32 +39,52 @@ serve(async (req) => {
       )
     }
 
-    // Map Valorant ID if necessary (from app's 29/6 to correct one if mixed up, but user said use "6")
-    // User explicitly asked to use "6" for Valorant
-    if (titleId === '29') {
-      titleId = '6'; // Correct mappings based on user feedback
-    }
+    let query = '';
+    let variables = {};
 
-    // Query teams using simplified titleId filter
-    const teamsQuery = `
-      query GetTeamsForTitle($titleId: ID!) {
-        teams(
-          filter: { titleId: $titleId }
-          first: 50
-        ) {
-          totalCount
-          edges {
-            node {
-              id
+    if (teamId) {
+      // Lean Query #1: Team Identity
+      query = `
+        query GetTeam($id: ID!) {
+          team(id: $id) {
+            id
+            name
+            shortName
+            logoUrl
+            region {
               name
-              logoUrl
-              colorPrimary
-              colorSecondary
             }
           }
         }
+      `;
+      variables = { id: teamId };
+    } else {
+      // Map Valorant ID if necessary
+      if (titleId === '29') {
+        titleId = '6';
       }
-    `
+
+      query = `
+        query GetTeamsForTitle($titleId: ID!) {
+            teams(
+            filter: { titleId: $titleId }
+            first: 50
+            ) {
+            totalCount
+            edges {
+                node {
+                id
+                name
+                logoUrl
+                colorPrimary
+                colorSecondary
+                }
+            }
+            }
+        }
+        `;
+      variables = { titleId };
+    }
 
     const teamsRes = await fetch(GRID_API_URL, {
       method: 'POST',
@@ -70,39 +92,49 @@ serve(async (req) => {
         'Content-Type': 'application/json',
         'x-api-key': gridApiKey,
       },
-      body: JSON.stringify({
-        query: teamsQuery,
-        variables: { titleId }
-      }),
+      body: JSON.stringify({ query, variables }),
     })
 
     if (!teamsRes.ok) {
-      throw new Error(`GRID API error: ${teamsRes.status}`)
+      const text = await teamsRes.text();
+      console.error('GRID API Error:', text);
+      throw new Error(`GRID API error: ${teamsRes.status}`);
     }
 
-    const teamsData = await teamsRes.json()
-    const teamsEdges = teamsData.data?.teams?.edges || []
+    const json = await teamsRes.json();
 
-    const teams = teamsEdges.map((edge: any) => ({
-      id: edge.node.id,
-      name: edge.node.name,
-      logoUrl: edge.node.logoUrl || null,
-      colorPrimary: edge.node.colorPrimary || null,
-      colorSecondary: edge.node.colorSecondary || null,
-    }))
+    if (json.errors) {
+      console.error('GRID GraphQLErrors:', json.errors);
+      throw new Error('GRID Query failed');
+    }
 
-    // Sort alphabetically
-    teams.sort((a: any, b: any) => a.name.localeCompare(b.name))
+    // Return format depends on query
+    let result;
+    if (teamId) {
+      result = { team: json.data?.team };
+    } else {
+      const teamsEdges = json.data?.teams?.edges || []
+      const teams = teamsEdges.map((edge: any) => ({
+        id: edge.node.id,
+        name: edge.node.name,
+        logoUrl: edge.node.logoUrl || null,
+        colorPrimary: edge.node.colorPrimary || null,
+        colorSecondary: edge.node.colorSecondary || null,
+      }))
+      // Sort alphabetically
+      teams.sort((a: any, b: any) => a.name.localeCompare(b.name))
+      result = { teams };
+    }
 
     return new Response(
-      JSON.stringify({ teams }),
+      JSON.stringify(result),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
       }
     )
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching teams:', error)
     return new Response(
       JSON.stringify({ error: error.message }),
