@@ -1,0 +1,43 @@
+// supabase/functions/_shared/grid-config.ts
+// GRID API configuration and URLs
+
+/**
+ * GRID API Endpoints
+ * 
+ * Central Data API - Titles, Teams, Series IDs
+ * Series State API - Post-match results & stats
+ * File Download API - Full event history for deep analysis
+ */
+
+export const GRID_URLS = {
+    // Titles, Teams, Players, Tournaments, Series IDs
+    CENTRAL_DATA: 'https://api-op.grid.gg/central-data/graphql',
+
+    // Post-match results, player stats, team outcomes
+    SERIES_STATE: 'https://api-op.grid.gg/live-data-feed/series-state/graphql',
+
+    // Full event history, timeline, pattern mining
+    FILE_DOWNLOAD: 'https://api.grid.gg',
+} as const;
+
+/**
+ * Get GRID API headers
+ */
+export function getGridHeaders(apiKey: string) {
+    return {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+    };
+}
+
+/**
+ * API usage guide:
+ * 
+ * Central Data → Series IDs
+ *      ↓
+ * Series State → Match summary stats
+ *      ↓
+ * File Download → Deep patterns
+ *      ↓
+ * Gemini 2.5 Pro → AI reasoning
+ */
