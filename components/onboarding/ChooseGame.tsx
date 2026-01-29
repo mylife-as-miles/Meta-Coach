@@ -123,39 +123,38 @@ const ChooseGame: React.FC = () => {
             <div
               key={game.id}
               onClick={() => handleGameSelect(game.id)}
-              className={`group relative bg-surface-darker/80 backdrop-blur-sm border rounded-xl overflow-hidden transition-all duration-300 cursor-pointer ${selectedGame === game.id
-                ? 'border-primary shadow-[0_0_30px_rgba(210,249,111,0.15)]'
-                : `border-white/10 ${game.hoverBorder} ${game.hoverShadow}`
+              className={`group relative border rounded-2xl overflow-hidden transition-all duration-300 cursor-pointer p-6 flex items-center justify-between ${selectedGame === game.id
+                ? 'bg-surface-dark border-primary shadow-[0_0_20px_rgba(210,249,111,0.2)]'
+                : 'bg-surface-dark/50 border-white/5 hover:border-white/20'
                 }`}
             >
-              <div className="absolute inset-0 bg-gradient-to-b from-transparent to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
-
-              <div className="p-6 flex items-center gap-4">
-                <div className={`w-16 h-16 rounded-lg bg-gradient-to-br ${game.gradient} border border-white/10 flex items-center justify-center relative overflow-hidden group-hover:scale-105 transition-transform duration-500`}>
-                  <div className="absolute inset-0 grid-bg opacity-30"></div>
-                  <span className={`text-lg font-bold ${game.textColor} z-10`}>
-                    {game.id === 'lol' ? 'LoL' : 'VAL'}
-                  </span>
+              <div className="flex items-center gap-6">
+                {/* Game Logo/Icon */}
+                <div className={`w-16 h-16 rounded-xl flex items-center justify-center text-xl font-bold bg-surface-darker border border-white/10 ${game.textColor}`}>
+                  {game.id === 'lol' ? 'LoL' : 'VAL'}
                 </div>
 
-                <div className="flex-1">
+                {/* Game Details */}
+                <div>
                   <h3 className="text-xl font-bold text-white mb-1">{game.name}</h3>
-                  <p className="text-xs text-gray-500">{game.description}</p>
-                </div>
-
-                <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${selectedGame === game.id
-                  ? 'border-primary bg-primary'
-                  : 'border-white/20'
-                  }`}>
-                  {selectedGame === game.id && (
-                    <span className="material-icons text-black text-sm">check</span>
-                  )}
+                  <p className="text-xs text-gray-500 max-w-[240px] leading-relaxed">{game.description}</p>
                 </div>
               </div>
 
-              <div className="px-6 pb-4 flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
-                <span className="text-[10px] text-gray-500 uppercase tracking-widest">GRID Data Source Active</span>
+              {/* Selection State / Status */}
+              <div className="flex flex-col items-end gap-3">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all ${selectedGame === game.id
+                    ? 'bg-primary border-primary text-black'
+                    : 'border-white/10 text-transparent'
+                  }`}>
+                  <span className="material-icons text-lg font-bold">check</span>
+                </div>
+              </div>
+
+              {/* Active Indicator (Absolute) */}
+              <div className="absolute bottom-4 left-6 flex items-center gap-2">
+                <span className={`w-2 h-2 rounded-full ${selectedGame === game.id ? 'bg-green-500 animate-pulse' : 'bg-gray-600'}`}></span>
+                <span className="text-[10px] font-bold tracking-widest text-gray-500 uppercase">GRID Data Source Active</span>
               </div>
             </div>
           ))}

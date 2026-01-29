@@ -1,5 +1,5 @@
 // supabase/functions/grid-teams/index.ts
-// Fetch teams by title from GRID (standard filtered query)
+// Fetch teams by title from GRID (simplified titleId filter)
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { corsHeaders } from '../_shared/cors.ts'
@@ -37,13 +37,14 @@ serve(async (req) => {
       )
     }
 
-    // Query teams filtered by titleId
+    // Query teams using simplified titleId filter
     const teamsQuery = `
       query GetTeamsForTitle($titleId: ID!) {
         teams(
-          filter: { title: { id: { equals: $titleId } } }
+          filter: { titleId: $titleId }
           first: 50
         ) {
+          totalCount
           edges {
             node {
               id
@@ -51,14 +52,6 @@ serve(async (req) => {
               logoUrl
               colorPrimary
               colorSecondary
-              externalLinks {
-                dataProvider {
-                  name
-                }
-                externalEntity {
-                  id
-                }
-              }
             }
           }
         }
@@ -90,7 +83,6 @@ serve(async (req) => {
       logoUrl: edge.node.logoUrl || null,
       colorPrimary: edge.node.colorPrimary || null,
       colorSecondary: edge.node.colorSecondary || null,
-      externalLinks: edge.node.externalLinks || []
     }))
 
     // Sort alphabetically
