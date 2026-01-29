@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useOnboarding } from '../../context/OnboardingContext';
 import OnboardingLayout from './OnboardingLayout';
 
 const CalibrateAI: React.FC = () => {
+  const navigate = useNavigate();
   const {
     aiConfig,
     setAIConfig,
@@ -34,6 +36,10 @@ const CalibrateAI: React.FC = () => {
       setIsCalibrating(false);
       console.error('Failed to complete onboarding');
     }
+  };
+
+  const handleBack = () => {
+    navigate('/onboarding/step-2');
   };
 
   const sliders = [
@@ -145,8 +151,8 @@ const CalibrateAI: React.FC = () => {
               key={toggle.name}
               onClick={() => handleToggleChange(toggle.name)}
               className={`p-5 rounded-xl border text-left transition-all ${aiConfig[toggle.name]
-                  ? 'bg-primary/10 border-primary/50 shadow-[0_0_20px_rgba(210,249,111,0.1)]'
-                  : 'bg-surface-darker/80 border-white/10 hover:border-white/20'
+                ? 'bg-primary/10 border-primary/50 shadow-[0_0_20px_rgba(210,249,111,0.1)]'
+                : 'bg-surface-darker/80 border-white/10 hover:border-white/20'
                 }`}
             >
               <div className="flex items-start gap-3">
@@ -170,14 +176,23 @@ const CalibrateAI: React.FC = () => {
           ))}
         </div>
 
-        {/* Confirm Button */}
-        <div className="flex justify-center">
+        {/* Action Buttons */}
+        <div className="flex justify-center gap-4">
+          <button
+            onClick={handleBack}
+            className="px-6 py-4 rounded-lg font-medium border border-white/10 text-gray-400 hover:text-white hover:border-white/30 transition-all flex items-center gap-2"
+            disabled={isCalibrating || isSaving}
+          >
+            <span className="material-icons text-sm">arrow_back</span>
+            Back
+          </button>
+
           <button
             onClick={handleConfirm}
             disabled={isCalibrating || isSaving}
             className={`px-10 py-4 rounded-lg font-bold text-lg transition-all flex items-center gap-3 ${isCalibrating || isSaving
-                ? 'bg-surface-dark text-gray-500 cursor-wait border border-white/10'
-                : 'bg-primary text-black hover:bg-primary-dark shadow-[0_0_30px_rgba(210,249,111,0.4)]'
+              ? 'bg-surface-dark text-gray-500 cursor-wait border border-white/10'
+              : 'bg-primary text-black hover:bg-primary-dark shadow-[0_0_30px_rgba(210,249,111,0.4)]'
               }`}
           >
             {isCalibrating || isSaving ? (
