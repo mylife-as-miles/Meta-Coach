@@ -3,6 +3,7 @@ import { Routes, Route, useNavigate } from 'react-router-dom';
 import Landing from './components/Landing';
 import Auth from './components/Auth';
 import AuthGuard from './components/AuthGuard';
+import GuestGuard from './components/GuestGuard';
 import ChooseGame from './components/onboarding/ChooseGame';
 import SyncRoster from './components/onboarding/SyncRoster';
 import CalibrateAI from './components/onboarding/CalibrateAI';
@@ -56,8 +57,17 @@ const App: React.FC = () => {
 
       <Routes>
         {/* Public Routes */}
-        <Route path="/" element={<Landing />} />
-        <Route path="/auth" element={<Auth onNavigateHome={() => navigate('/')} />} />
+        {/* Public Routes (redirect to dashboard if logged in) */}
+        <Route path="/" element={
+          <GuestGuard>
+            <Landing />
+          </GuestGuard>
+        } />
+        <Route path="/auth" element={
+          <GuestGuard>
+            <Auth onNavigateHome={() => navigate('/')} />
+          </GuestGuard>
+        } />
 
         {/* Protected: Onboarding Routes */}
         <Route path="/onboarding/*" element={<OnboardingRoutes />} />
