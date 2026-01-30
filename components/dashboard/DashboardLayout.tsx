@@ -3,6 +3,7 @@ import { Outlet, NavLink, Link, useNavigate } from 'react-router-dom';
 import { DashboardProvider } from '../../context/DashboardContext';
 import { useDashboardStore } from '../../stores/useDashboardStore';
 import supabase from '../../lib/supabase';
+import Logo from '../Logo';
 
 const NavItem = ({ to, children, end = false }: { to: string, children: React.ReactNode, end?: boolean }) => (
     <NavLink
@@ -45,12 +46,7 @@ const DashboardLayout: React.FC = () => {
                 )}
 
                 <nav className="flex items-center justify-between px-4 md:px-6 py-5 bg-transparent w-full max-w-[1600px] mx-auto relative z-50">
-                    <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center transform rotate-45 shadow-neon">
-                            <span className="material-icons-outlined text-black transform -rotate-45 text-lg">sports_esports</span>
-                        </div>
-                        <span className="text-xl font-bold tracking-tight text-white">MetaCoach</span>
-                    </div>
+                    <Logo />
 
                     {/* Desktop Nav */}
                     <div className="hidden lg:flex items-center bg-surface-dark rounded-full p-1.5 shadow-sm border border-white/5">

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Activity, ArrowRight, Menu, X } from './Icons';
+import { Menu, X, ArrowRight } from './Icons';
+import Logo from './Logo';
 
 interface NavbarProps {
   onLoginClick?: () => void;
@@ -13,10 +14,7 @@ const Navbar: React.FC<NavbarProps> = ({ onLoginClick }) => {
       <nav className="w-full max-w-7xl bg-background-dark/80 backdrop-blur-xl border border-white/10 rounded-2xl px-6 py-3 flex justify-between items-center shadow-2xl">
         {/* Logo */}
         <div className="flex items-center gap-2 cursor-pointer group z-50 relative" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-          <div className="w-8 h-8 bg-primary rounded flex items-center justify-center text-black transition-transform group-hover:scale-110">
-            <Activity size={18} strokeWidth={3} />
-          </div>
-          <span className="text-xl font-bold tracking-tight text-white">MetaCoach</span>
+          <Logo />
         </div>
 
         {/* Desktop Links */}

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import Logo from './Logo';
 
 interface AuthProps {
   onNavigateHome: () => void;
@@ -256,11 +257,8 @@ const Auth: React.FC<AuthProps> = ({ onNavigateHome }) => {
         {/* Right Section - Login/Signup Form (Compact) */}
         <div className="w-full lg:w-[55%] flex flex-col relative bg-background-dark/95 backdrop-blur-sm border-l border-white/5">
           <div className="absolute top-0 left-0 p-6 w-full flex justify-between items-center z-10">
-            <div className="flex items-center gap-2 cursor-pointer group" onClick={onNavigateHome}>
-              <div className="w-8 h-8 bg-primary rounded flex items-center justify-center text-black shadow-neon transition-transform group-hover:rotate-3">
-                <span className="material-icons text-base">auto_graph</span>
-              </div>
-              <span className="text-lg font-bold tracking-tight text-white font-display">MetaCoach</span>
+            <div className="absolute top-0 left-0 p-6 w-full flex justify-between items-center z-10">
+              <Logo />
             </div>
           </div>
 

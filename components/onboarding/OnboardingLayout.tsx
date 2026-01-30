@@ -1,5 +1,6 @@
 import React, { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
+import Logo from '../Logo';
 
 interface OnboardingLayoutProps {
     children: ReactNode;
@@ -30,11 +31,8 @@ const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
             {/* Navigation */}
             <div className="fixed top-6 left-0 right-0 z-50 flex justify-center px-4">
                 <nav className="w-full max-w-7xl bg-surface-dark/50 backdrop-blur-md border border-white/10 rounded-full px-6 py-3 flex justify-between items-center shadow-lg transition-all hover:bg-surface-dark/80">
-                    <Link to="/" className="flex items-center gap-2">
-                        <div className="w-8 h-8 bg-primary rounded flex items-center justify-center text-black font-bold text-lg shadow-[0_0_10px_rgba(210,249,111,0.4)]">
-                            <span className="material-icons text-sm">auto_graph</span>
-                        </div>
-                        <span className="text-xl font-bold tracking-tight text-white">MetaCoach</span>
+                    <Link to="/" className="hover:opacity-80 transition-opacity">
+                        <Logo />
                     </Link>
                     <div className="flex items-center gap-4">
                         <div className="hidden md:flex items-center gap-2 px-3 py-1 bg-surface-dark border border-white/10 rounded-full text-xs text-gray-400">
