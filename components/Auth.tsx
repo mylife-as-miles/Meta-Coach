@@ -49,7 +49,7 @@ const Auth: React.FC<AuthProps> = ({ onNavigateHome }) => {
           } else {
             setSubmitMessage({
               type: 'success',
-              text: 'Account created! Please check your email to verify.'
+              text: 'Account created! Please check your email to verify. If you don\'t see it, check your spam folder.'
             });
           }
 
