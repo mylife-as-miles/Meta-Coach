@@ -5,6 +5,10 @@
   <h3 style="color: #D2F96F;">Next-Generation Tactical Intelligence</h3>
 </div>
 
+<div align="center">
+  <img src="docs/images/dashboard-preview.png" alt="MetaCoach Dashboard Preview" width="100%" style="border-radius: 8px; margin: 24px 0;" />
+</div>
+
 ---
 
 **MetaCoach** is a high-performance, AI-driven analytics dashboard designed for professional esports coaching staff. Built with a focus on real-time data visualization, it provides deep insights into live match operations, player performance, and strategic execution.
