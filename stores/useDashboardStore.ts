@@ -301,7 +301,10 @@ export const useDashboardStore = create<DashboardState & DashboardActions>((set,
                     const { data: matchesData, error: matchError } = await Promise.race([invokePromise, timeoutPromise]) as any;
                     clearTimeout(timeoutId);
 
-                    if (!matchError && matchesData && matchesData.matches) {
+                    if (matchError) {
+                        console.warn("team-matches API returned error, using mock data:", matchError);
+                        set({ allMatches: mockMatches });
+                    } else if (matchesData && matchesData.matches) {
                         const mappedMatches: Match[] = matchesData.matches.map((m: any) => ({
                             id: m.id,
                             date: new Date(m.startTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
@@ -313,23 +316,19 @@ export const useDashboardStore = create<DashboardState & DashboardActions>((set,
                             opponent: {
                                 name: m.opponent?.name || 'Unknown',
                                 abbreviation: m.opponent?.abbreviation || (m.opponent?.name || 'UNK').substring(0, 3).toUpperCase(),
-                                color: 'red' // Could be dynamic if GRID provides team color
+                                color: 'red'
                             },
                             performance: { macroControl: 50, microErrorRate: 'MED' }
                         }));
-
-                        // Sort: Upcoming (ASC) then History (DESC) is what API returns, but we might want to ensure it here
-                        // or just set it. API returns [...upcoming, ...history]. 
-                        // If mappedMatches is empty, we keep existing mock matches or clear them?
-                        // Let's overwite with authentic data if we have it, otherwise fallback to mock if empty? 
-                        // Actually, if we have a team ID but no matches, it implies no matches.
-
                         set({ allMatches: mappedMatches });
+                    } else {
+                        // API returned no data - use mock
+                        console.log("fetchDashboardData: No matches from API, using mock data");
+                        set({ allMatches: mockMatches });
                     }
                 } catch (e) {
-                    console.warn("Failed to fetch matches", e);
-                    // Keep mock data if fetch fails? Or clear it? 
-                    // For now, let's keep mock data on error so dashboard isn't empty during dev
+                    console.warn("Failed to fetch matches, using mock data:", e);
+                    set({ allMatches: mockMatches });
                 }
             } else {
                 console.log("fetchDashboardData: No Grid Team ID, using mock matches");

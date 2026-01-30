@@ -37,12 +37,12 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             {/* Backdrop */}
             <div
-                className="fixed inset-0 bg-black/80 backdrop-blur-sm animate-fade-in"
+                className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm animate-fade-in"
                 onClick={onClose}
             />
 
             {/* Modal Content */}
-            <div className={`relative w-full ${sizeClasses[size]} bg-surface-dark border border-white/10 rounded-2xl shadow-2xl animate-scale-in overflow-hidden`}>
+            <div className={`relative z-[101] w-full ${sizeClasses[size]} bg-surface-dark border border-white/10 rounded-2xl shadow-2xl animate-scale-in overflow-hidden`}>
                 {/* Header */}
                 {title && (
                     <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 bg-surface-darker/50">
