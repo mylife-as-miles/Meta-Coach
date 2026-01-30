@@ -108,6 +108,12 @@ A `vercel.json` file is included to handle Single Page Application (SPA) routing
 }
 ```
 
+## 🎥 Marketing Assets
+ 
+A programmatic launch video is avaiable in `docs/videos/launch.mp4`.
+ 
+The source code is in the `video/` directory.
+ 
 ## 🤝 Contributing
 
 1.  Fork the repository.

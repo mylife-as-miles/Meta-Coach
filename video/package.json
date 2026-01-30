@@ -1,0 +1,27 @@
+{
+    "name": "metacoach-promo",
+    "version": "1.0.0",
+    "description": "MetaCoach Launch Video",
+    "scripts": {
+        "start": "remotion preview",
+        "build": "remotion render LaunchVideo out/launch.mp4",
+        "upgrade": "remotion upgrade",
+        "test": "eslint src --ext ts,tsx,js,jsx"
+    },
+    "dependencies": {
+        "react": "^18.0.0",
+        "react-dom": "^18.0.0",
+        "remotion": "4.0.126",
+        "@remotion/shapes": "^4.0.126",
+        "@remotion/transitions": "^4.0.126",
+        "zod": "^3.22.4"
+    },
+    "devDependencies": {
+        "@types/react": "^18.0.0",
+        "@types/web": "^0.0.86",
+        "typescript": "^5.0.0",
+        "eslint": "^8.0.0",
+        "prettier": "^3.0.0",
+        "@remotion/cli": "4.0.126"
+    }
+}
