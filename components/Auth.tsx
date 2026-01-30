@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useForm } from '@tanstack/react-form';
 import { supabase } from '../lib/supabase';
 import Logo from './Logo';
 
@@ -12,162 +13,85 @@ type AuthMode = 'login' | 'signup' | 'forgot-password';
 const Auth: React.FC<AuthProps> = ({ onNavigateHome }) => {
   const navigate = useNavigate();
   const [mode, setMode] = useState<AuthMode>('login');
-
-  // Form State
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    username: ''
-  });
-
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Validation State
-  const [errors, setErrors] = useState({
-    email: '',
-    password: '',
-    username: ''
-  });
-
-  const [touched, setTouched] = useState({
-    email: false,
-    password: false,
-    username: false
-  });
-
   const [submitMessage, setSubmitMessage] = useState({ type: '', text: '' });
+
+  // TanStack Form instance
+  const form = useForm({
+    defaultValues: {
+      email: '',
+      password: '',
+      username: '',
+    },
+    onSubmit: async ({ value }) => {
+      setSubmitMessage({ type: '', text: '' });
+      setIsSubmitting(true);
+
+      try {
+        if (mode === 'signup') {
+          const { data, error } = await supabase.auth.signUp({
+            email: value.email,
+            password: value.password,
+            options: {
+              data: {
+                username: value.username,
+                onboarding_complete: false
+              }
+            }
+          });
+
+          if (error) throw error;
+
+          if (data.session) {
+            setSubmitMessage({ type: 'success', text: 'Account created! Redirecting...' });
+            setTimeout(() => navigate('/onboarding/step-1'), 1500);
+          } else {
+            setSubmitMessage({
+              type: 'success',
+              text: 'Account created! Please check your email to verify.'
+            });
+          }
+
+        } else if (mode === 'login') {
+          const { data, error } = await supabase.auth.signInWithPassword({
+            email: value.email,
+            password: value.password,
+          });
+
+          if (error) throw error;
+
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('onboarding_complete')
+            .eq('id', data.user.id)
+            .single();
+
+          if (profile?.onboarding_complete) {
+            navigate('/dashboard');
+          } else {
+            navigate('/onboarding/step-1');
+          }
+        } else if (mode === 'forgot-password') {
+          const { error } = await supabase.auth.resetPasswordForEmail(value.email);
+          if (error) throw error;
+          setSubmitMessage({ type: 'success', text: 'Password reset link sent to your email.' });
+        }
+      } catch (err: any) {
+        console.error(err);
+        setSubmitMessage({ type: 'error', text: err.message || 'Authentication failed' });
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+  });
 
   // Reset form when switching modes
   useEffect(() => {
-    setErrors({ email: '', password: '', username: '' });
-    setTouched({ email: false, password: false, username: false });
-    setFormData({ email: '', password: '', username: '' });
+    form.reset();
     setSubmitMessage({ type: '', text: '' });
     setShowPassword(false);
   }, [mode]);
-
-  const validateField = (name: string, value: string) => {
-    let error = '';
-    switch (name) {
-      case 'email':
-        if (!value) error = 'Required';
-        else if (!/\S+@\S+\.\S+/.test(value)) error = 'Invalid email';
-        break;
-      case 'password':
-        if (!value) error = 'Required';
-        else if (value.length < 6) error = 'Min 6 chars';
-        break;
-      case 'username':
-        if (mode === 'signup') {
-          if (!value) error = 'Required';
-          else if (value.length < 3) error = 'Min 3 chars';
-        }
-        break;
-    }
-    return error;
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-
-    if (errors[name as keyof typeof errors]) {
-      setErrors(prev => ({ ...prev, [name]: '' }));
-    }
-  };
-
-  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setTouched(prev => ({ ...prev, [name]: true }));
-    const error = validateField(name, value);
-    setErrors(prev => ({ ...prev, [name]: error }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitMessage({ type: '', text: '' });
-
-    const emailError = validateField('email', formData.email);
-    const passwordError = mode === 'forgot-password' ? '' : validateField('password', formData.password);
-    const usernameError = validateField('username', formData.username);
-
-    setErrors({
-      email: emailError,
-      password: passwordError,
-      username: usernameError
-    });
-
-    setTouched({ email: true, password: true, username: true });
-
-    if (emailError || passwordError || (mode === 'signup' && usernameError)) {
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      if (mode === 'signup') {
-        const { data, error } = await supabase.auth.signUp({
-          email: formData.email,
-          password: formData.password,
-          options: {
-            data: {
-              username: formData.username,
-              onboarding_complete: false
-            }
-          }
-        });
-
-        if (error) throw error;
-
-        // Auto sign in happens if email confirmation is disabled.
-        // If email confirmation is ENABLED, data.session will be null.
-        if (data.session) {
-          setSubmitMessage({ type: 'success', text: 'Account created! Redirecting...' });
-          setTimeout(() => navigate('/onboarding/step-1'), 1500);
-        } else {
-          // Email confirmation required
-          setSubmitMessage({
-            type: 'success',
-            text: 'Account created! Please check your email to verify.'
-          });
-          // Do not redirect, let them check email
-        }
-
-      } else if (mode === 'login') {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: formData.email,
-          password: formData.password,
-        });
-
-        if (error) throw error;
-
-        // Check onboarding status
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('onboarding_complete')
-          .eq('id', data.user.id)
-          .single();
-
-        if (profile?.onboarding_complete) {
-          navigate('/dashboard');
-        } else {
-          navigate('/onboarding/step-1');
-        }
-      } else if (mode === 'forgot-password') {
-        const { error } = await supabase.auth.resetPasswordForEmail(formData.email);
-        if (error) throw error;
-        setSubmitMessage({ type: 'success', text: 'Password reset link sent to your email.' });
-      }
-    } catch (err: any) {
-      console.error(err);
-      setSubmitMessage({ type: 'error', text: err.message || 'Authentication failed' });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   const handleSocialLogin = async (provider: 'google' | 'discord') => {
     try {
@@ -286,70 +210,135 @@ const Auth: React.FC<AuthProps> = ({ onNavigateHome }) => {
                 </div>
               )}
 
-              <form className="space-y-4" onSubmit={handleSubmit} noValidate>
+              <form
+                className="space-y-4"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  form.handleSubmit();
+                }}
+                noValidate
+              >
                 {/* Username Field */}
                 {mode === 'signup' && (
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest" htmlFor="username">Username</label>
-                    <div className="relative">
-                      <input
-                        className={`block w-full px-3 py-2.5 bg-surface-dark border rounded text-white text-sm focus:outline-none focus:ring-1 transition-all ${errors.username && touched.username
-                          ? 'border-red-500 focus:border-red-500'
-                          : 'border-white/10 focus:border-primary focus:ring-primary'
-                          }`}
-                        id="username" name="username" placeholder="MetaCoachUser"
-                        value={formData.username} onChange={handleChange} onBlur={handleBlur}
-                        type="text"
-                      />
-                      {errors.username && touched.username && <p className="text-[10px] text-red-400 mt-1">{errors.username}</p>}
-                    </div>
-                  </div>
+                  <form.Field
+                    name="username"
+                    validators={{
+                      onChange: ({ value }) => {
+                        if (!value) return 'Required';
+                        if (value.length < 3) return 'Min 3 chars';
+                        return undefined;
+                      },
+                    }}
+                  >
+                    {(field) => (
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest" htmlFor="username">Username</label>
+                        <div className="relative">
+                          <input
+                            className={`block w-full px-3 py-2.5 bg-surface-dark border rounded text-white text-sm focus:outline-none focus:ring-1 transition-all ${field.state.meta.isTouched && field.state.meta.errors.length > 0
+                              ? 'border-red-500 focus:border-red-500'
+                              : 'border-white/10 focus:border-primary focus:ring-primary'
+                              }`}
+                            id="username"
+                            name="username"
+                            placeholder="MetaCoachUser"
+                            value={field.state.value}
+                            onChange={(e) => field.handleChange(e.target.value)}
+                            onBlur={field.handleBlur}
+                            type="text"
+                          />
+                          {field.state.meta.isTouched && field.state.meta.errors.length > 0 && (
+                            <p className="text-[10px] text-red-400 mt-1">{field.state.meta.errors[0]}</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </form.Field>
                 )}
 
                 {/* Email Field */}
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest" htmlFor="email">Email</label>
-                  <input
-                    className={`block w-full px-3 py-2.5 bg-surface-dark border rounded text-white text-sm focus:outline-none focus:ring-1 transition-all ${errors.email && touched.email
-                      ? 'border-red-500 focus:border-red-500'
-                      : 'border-white/10 focus:border-primary focus:ring-primary'
-                      }`}
-                    id="email" name="email" placeholder="coach@metacoach.gg"
-                    value={formData.email} onChange={handleChange} onBlur={handleBlur}
-                    type="email"
-                  />
-                  {errors.email && touched.email && <p className="text-[10px] text-red-400 mt-1">{errors.email}</p>}
-                </div>
-
-                {/* Password Field */}
-                {mode !== 'forgot-password' && (
-                  <div className="space-y-1">
-                    <div className="flex justify-between items-center">
-                      <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest" htmlFor="password">Password</label>
-                      {mode === 'login' && (
-                        <a onClick={() => setMode('forgot-password')} className="text-[10px] text-gray-400 hover:text-primary cursor-pointer">Forgot?</a>
-                      )}
-                    </div>
-                    <div className="relative">
+                <form.Field
+                  name="email"
+                  validators={{
+                    onChange: ({ value }) => {
+                      if (!value) return 'Required';
+                      if (!/\S+@\S+\.\S+/.test(value)) return 'Invalid email';
+                      return undefined;
+                    },
+                  }}
+                >
+                  {(field) => (
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest" htmlFor="email">Email</label>
                       <input
-                        className={`block w-full px-3 py-2.5 bg-surface-dark border rounded text-white text-sm focus:outline-none focus:ring-1 transition-all pr-10 ${errors.password && touched.password
+                        className={`block w-full px-3 py-2.5 bg-surface-dark border rounded text-white text-sm focus:outline-none focus:ring-1 transition-all ${field.state.meta.isTouched && field.state.meta.errors.length > 0
                           ? 'border-red-500 focus:border-red-500'
                           : 'border-white/10 focus:border-primary focus:ring-primary'
                           }`}
-                        id="password" name="password" placeholder="••••••••"
-                        value={formData.password} onChange={handleChange} onBlur={handleBlur}
-                        type={showPassword ? "text" : "password"}
+                        id="email"
+                        name="email"
+                        placeholder="coach@metacoach.gg"
+                        value={field.state.value}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        onBlur={field.handleBlur}
+                        type="email"
                       />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
-                      >
-                        <span className="material-icons text-base">{showPassword ? 'visibility_off' : 'visibility'}</span>
-                      </button>
+                      {field.state.meta.isTouched && field.state.meta.errors.length > 0 && (
+                        <p className="text-[10px] text-red-400 mt-1">{field.state.meta.errors[0]}</p>
+                      )}
                     </div>
-                    {errors.password && touched.password && <p className="text-[10px] text-red-400 mt-1">{errors.password}</p>}
-                  </div>
+                  )}
+                </form.Field>
+
+                {/* Password Field */}
+                {mode !== 'forgot-password' && (
+                  <form.Field
+                    name="password"
+                    validators={{
+                      onChange: ({ value }) => {
+                        if (!value) return 'Required';
+                        if (value.length < 6) return 'Min 6 chars';
+                        return undefined;
+                      },
+                    }}
+                  >
+                    {(field) => (
+                      <div className="space-y-1">
+                        <div className="flex justify-between items-center">
+                          <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest" htmlFor="password">Password</label>
+                          {mode === 'login' && (
+                            <a onClick={() => setMode('forgot-password')} className="text-[10px] text-gray-400 hover:text-primary cursor-pointer">Forgot?</a>
+                          )}
+                        </div>
+                        <div className="relative">
+                          <input
+                            className={`block w-full px-3 py-2.5 bg-surface-dark border rounded text-white text-sm focus:outline-none focus:ring-1 transition-all pr-10 ${field.state.meta.isTouched && field.state.meta.errors.length > 0
+                              ? 'border-red-500 focus:border-red-500'
+                              : 'border-white/10 focus:border-primary focus:ring-primary'
+                              }`}
+                            id="password"
+                            name="password"
+                            placeholder="••••••••"
+                            value={field.state.value}
+                            onChange={(e) => field.handleChange(e.target.value)}
+                            onBlur={field.handleBlur}
+                            type={showPassword ? "text" : "password"}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+                          >
+                            <span className="material-icons text-base">{showPassword ? 'visibility_off' : 'visibility'}</span>
+                          </button>
+                        </div>
+                        {field.state.meta.isTouched && field.state.meta.errors.length > 0 && (
+                          <p className="text-[10px] text-red-400 mt-1">{field.state.meta.errors[0]}</p>
+                        )}
+                      </div>
+                    )}
+                  </form.Field>
                 )}
 
                 <button
