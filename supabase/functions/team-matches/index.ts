@@ -1,5 +1,5 @@
 // supabase/functions/team-matches/index.ts
-// Fetch match history with DB Caching (Cache-Aside Pattern)
+// Fetch match history (past) and schedule (upcoming)
 // Uses GRID API Central Data Feed (allSeries query)
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
@@ -42,15 +42,18 @@ serve(async (req) => {
       )
     }
 
-    console.log(`Fetching from GRID for team ${teamId}`)
+    console.log(`Fetching matches for team ${teamId}`)
+    const nowISO = new Date().toISOString();
 
-    // Query: allSeries with teamIds filter (Canonical Way)
-    const matchesQuery = `
-      query GetTeamMatchHistory($teamId: ID!) {
-        allSeries(
+    // Query both History (Past) and Upcoming (Future)
+    // History: lt now, DESC, first 10
+    // Upcoming: gt now, ASC, first 5
+    const combinedQuery = `
+      query GetMatches($teamId: ID!) {
+        history: allSeries(
           filter: {
             teamIds: { in: [$teamId] }
-            startTimeScheduled: { lt: "2026-02-18T00:00:00Z" }
+            startTimeScheduled: { lt: "${nowISO}" }
           }
           first: 10
           orderBy: START_TIME_SCHEDULED
@@ -58,42 +61,57 @@ serve(async (req) => {
         ) {
           edges {
             node {
-              id
-              startTimeScheduled
-              endTimeActual
-              format {
-                name
-                nameShortened
-              }
-              type
-              tournament {
-                id
-                name
-                slug
-              }
-              teams {
-                baseInfo {
-                  id
-                  name
-                  nameShortened
-                }
-                scoreAdvantage
-              }
+              ...SeriesFields
+            }
+          }
+        }
+        upcoming: allSeries(
+          filter: {
+            teamIds: { in: [$teamId] }
+            startTimeScheduled: { gt: "${nowISO}" }
+          }
+          first: 5
+          orderBy: START_TIME_SCHEDULED
+          orderDirection: ASC
+        ) {
+          edges {
+            node {
+              ...SeriesFields
             }
           }
         }
       }
-    `
 
-    // Note: using a future date "2026-02-18" as a safe upper bound for "now" since `now` isn't a valid scalar input in GraphQL directly without variable.
-    // In a real prod env, we'd pass `new Date().toISOString()` as a variable `$now`.
-    const nowISO = new Date().toISOString();
+      fragment SeriesFields on Series {
+        id
+        startTimeScheduled
+        endTimeActual
+        format {
+          name
+          nameShortened
+        }
+        type
+        tournament {
+          id
+          name
+          slug
+        }
+        teams {
+          baseInfo {
+            id
+            name
+            nameShortened
+          }
+          scoreAdvantage
+        }
+      }
+    `
 
     const gridRes = await fetch(GRID_API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': gridApiKey },
       body: JSON.stringify({
-        query: matchesQuery.replace('"2026-02-18T00:00:00Z"', `"${nowISO}"`), // Dynamic replacement for simplicity or use variable
+        query: combinedQuery,
         variables: { teamId }
       }),
     })
@@ -111,56 +129,62 @@ serve(async (req) => {
       throw new Error('GRID Query failed');
     }
 
-    const edges = gridData.data?.allSeries?.edges ?? []
+    const historyEdges = gridData.data?.history?.edges ?? [];
+    const upcomingEdges = gridData.data?.upcoming?.edges ?? [];
 
-    const matches = edges.map((edge: any) => {
-      const node = edge.node;
+    const processNode = (node: any, isUpcoming: boolean) => {
+        // Find opponent: The participant that is NOT the current team
+        const opponentTeam = node.teams?.find((t: any) => t.baseInfo?.id !== teamId);
+        const myTeam = node.teams?.find((t: any) => t.baseInfo?.id === teamId);
 
-      // Find opponent: The participant that is NOT the current team
-      const opponentTeam = node.teams?.find((t: any) => t.baseInfo?.id !== teamId);
-      const myTeam = node.teams?.find((t: any) => t.baseInfo?.id === teamId);
+        let result = 'UPCOMING';
+        let status = 'scheduled';
 
-      // Determine winner if possible (simple heuristic based on scoreAdvantage or existence of endTimeActual)
-      // Note: scoreAdvantage logic depends on series format (e.g. map wins).
-      // Often strictly identifying a "winner" requires checking map scores or seriesResult if available.
-      // Here we map basic info.
+        if (!isUpcoming && node.endTimeActual) {
+            status = 'finished';
+            const myScore = myTeam?.scoreAdvantage || 0;
+            const oppScore = opponentTeam?.scoreAdvantage || 0;
+            if (myScore > oppScore) result = 'WIN';
+            else if (myScore < oppScore) result = 'LOSS';
+            else result = 'DRAW';
+        }
 
-      const isFinished = !!node.endTimeActual;
+        return {
+            id: node.id,
+            startTime: node.startTimeScheduled,
+            status: status,
+            format: node.format?.nameShortened || node.format?.name || 'Bo1',
+            type: node.type,
+            result: result,
+            score: isUpcoming ? 'VS' : `${myTeam?.scoreAdvantage || 0} - ${opponentTeam?.scoreAdvantage || 0}`,
+            opponent: opponentTeam ? {
+                id: opponentTeam.baseInfo.id,
+                name: opponentTeam.baseInfo.name,
+                abbreviation: opponentTeam.baseInfo.nameShortened
+            } : null,
+            tournament: node.tournament ? {
+                name: node.tournament.name
+            } : null
+        };
+    };
 
-      // Heuristic for result:
-      // If myTeam.scoreAdvantage > opponentTeam.scoreAdvantage => WIN
-      // This might not be 100% accurate for all titles but serves as a proxy.
-      let result = 'UPCOMING';
-      if (isFinished) {
-          const myScore = myTeam?.scoreAdvantage || 0;
-          const oppScore = opponentTeam?.scoreAdvantage || 0;
-          if (myScore > oppScore) result = 'WIN';
-          else if (myScore < oppScore) result = 'LOSS';
-          else result = 'DRAW'; // or unknown
-      } else {
-          result = 'SCHEDULED';
-      }
+    const historyMatches = historyEdges.map((e: any) => processNode(e.node, false));
+    const upcomingMatches = upcomingEdges.map((e: any) => processNode(e.node, true));
 
-      return {
-        id: node.id,
-        startTime: node.startTimeScheduled,
-        status: isFinished ? 'finished' : 'scheduled',
-        format: node.format?.nameShortened || node.format?.name || 'Bo1',
-        type: node.type,
-        result: result,
-        score: `${myTeam?.scoreAdvantage || 0} - ${opponentTeam?.scoreAdvantage || 0}`,
-        opponent: opponentTeam ? {
-            id: opponentTeam.baseInfo.id,
-            name: opponentTeam.baseInfo.name,
-            abbreviation: opponentTeam.baseInfo.nameShortened
-        } : null,
-        tournament: node.tournament ? {
-            name: node.tournament.name
-        } : null,
-        // Legacy fields for compat
-        winnerId: result === 'WIN' ? teamId : (result === 'LOSS' ? opponentTeam?.baseInfo?.id : null)
-      };
-    })
+    // Combine: Upcoming (ASC) -> History (DESC)
+    // But typically dashboards show Most Recent at top.
+    // If we want [Upcoming Soonest, Upcoming Later ... Past Recent, Past Older]
+    // Or [Upcoming Later, Upcoming Soonest, Past Recent, Past Older] to keep time continuous?
+    // Usually "Upcoming" is a separate section.
+    // If mixed: Future -> Past (Time Descending).
+    // Upcoming: we got ASC (Soonest first). So [Soonest, Next, Later].
+    // History: we got DESC (Recent first). So [Recent, Older].
+    // If we want Time Descending: [Upcoming Later, Upcoming Soonest, Past Recent, Past Older].
+    // Let's just return all and let frontend sort if needed, or stick to simple concatenation.
+    // Let's put Upcoming matches *first* in the list, ordered by soonest (ASC), then History (DESC).
+    // This highlights the "Next Match" at the top of the upcoming list.
+
+    const matches = [...upcomingMatches, ...historyMatches];
 
     return new Response(
       JSON.stringify({ matches, source: 'grid' }),
