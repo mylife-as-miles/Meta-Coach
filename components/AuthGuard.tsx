@@ -1,131 +1,88 @@
 // components/AuthGuard.tsx
 // Protects routes from unauthenticated access
-
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
-import type { User } from '@supabase/supabase-js';
+import { useSession, useProfile, authKeys } from '../hooks/useAuth';
 
 interface AuthGuardProps {
     children: React.ReactNode;
-    requireOnboarding?: boolean; // If true, redirects to onboarding if not complete
+    requireOnboarding?: boolean;
 }
 
 const AuthGuard: React.FC<AuthGuardProps> = ({ children, requireOnboarding = false }) => {
-    const [user, setUser] = useState<User | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [onboardingComplete, setOnboardingComplete] = useState<boolean | null>(null);
     const location = useLocation();
+    const queryClient = useQueryClient();
 
+    // 1. Get Session
+    const {
+        data: session,
+        isLoading: isSessionLoading,
+        error: sessionError
+    } = useSession();
+
+    // 2. Get Profile (logic dependent on session)
+    const userId = session?.user?.id;
+    const {
+        data: profile,
+        isLoading: isProfileLoading
+    } = useProfile(userId);
+
+    // 3. Setup global auth listener (could be moved to App.tsx)
     useEffect(() => {
-        let mounted = true;
-
-        // Safety timeout to prevent infinite loading
-        const timeoutId = setTimeout(() => {
-            if (mounted && loading) {
-                console.warn("AuthGuard: Authentication check timed out after 4s. Network slow?");
-                setLoading(false);
-            }
-        }, 4000);
-
-        const checkOnboardingStatus = async (sessionUser: User) => {
-            // Optimization: Check metadata first
-            if (sessionUser.user_metadata?.onboarding_complete === true) {
-                if (mounted) setOnboardingComplete(true);
-                return;
-            }
-
-            try {
-                // Fallback to DB check
-                const { data: profile, error } = await supabase
-                    .from('profiles')
-                    .select('onboarding_complete')
-                    .eq('id', sessionUser.id)
-                    .maybeSingle();
-
-                if (error) {
-                    console.warn("AuthGuard: Profile fetch error", error);
-                    // Don't fail auth just because profile check failed, but onboarding check might be false
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            // Update query cache when auth state changes
+            if (event === 'SIGNED_OUT') {
+                queryClient.setQueryData(authKeys.session, null);
+                queryClient.removeQueries({ queryKey: ['profile'] });
+            } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+                queryClient.setQueryData(authKeys.session, session);
+                queryClient.invalidateQueries({ queryKey: authKeys.session });
+                if (session?.user) {
+                    queryClient.invalidateQueries({ queryKey: authKeys.profile(session.user.id) });
                 }
-
-                if (mounted) {
-                    setOnboardingComplete(profile?.onboarding_complete ?? false);
-                }
-            } catch (err) {
-                console.error("AuthGuard: Profile check exception", err);
             }
-        };
+        });
 
-        const initAuth = async () => {
-            try {
-                // 1. Get initial session
-                const { data: { session }, error } = await supabase.auth.getSession();
+        return () => subscription.unsubscribe();
+    }, [queryClient]);
 
-                if (error) throw error;
-
-                if (mounted) {
-                    setUser(session?.user ?? null);
-                    if (session?.user && requireOnboarding) {
-                        await checkOnboardingStatus(session.user);
-                    }
-                }
-            } catch (err) {
-                console.error("AuthGuard: Initial session check failed", err);
-            } finally {
-                if (mounted) setLoading(false);
-            }
-        };
-
-        // Run initial check
-        initAuth();
-
-        // 2. Listen for changes
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(
-            async (_event, session) => {
-                if (!mounted) return;
-
-                setUser(session?.user ?? null);
-
-                if (session?.user && requireOnboarding) {
-                    await checkOnboardingStatus(session.user);
-                } else {
-                    setOnboardingComplete(null);
-                }
-
-                setLoading(false);
-            }
-        );
-
-        return () => {
-            mounted = false;
-            clearTimeout(timeoutId);
-            subscription.unsubscribe();
-        };
-    }, [requireOnboarding]);
-
-    // Show loading state
-    if (loading) {
+    // Loading State
+    if (isSessionLoading || (requireOnboarding && userId && isProfileLoading)) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-transparent">
                 <div className="flex flex-col items-center gap-4">
                     <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-                    <span className="text-gray-400 text-sm">Authenticating...</span>
+                    <span className="text-gray-400 text-sm">
+                        {isSessionLoading ? "Authenticating..." : "Checking access..."}
+                    </span>
                 </div>
             </div>
         );
     }
 
-    // Not authenticated - redirect to auth
-    if (!user) {
+    // Auth Check
+    if (!session?.user) {
+        // Redirect if no session found
         return <Navigate to="/auth" state={{ from: location }} replace />;
     }
 
-    // Authenticated but needs onboarding (for dashboard routes)
-    if (requireOnboarding && onboardingComplete === false) {
-        return <Navigate to="/onboarding/step-1" replace />;
+    // Onboarding Check
+    if (requireOnboarding) {
+        // Optimistic check from metadata for speed
+        if (session.user.user_metadata?.onboarding_complete === true) {
+            return <>{children}</>;
+        }
+
+        // Database truth check
+        const isProfileComplete = !!profile?.onboarding_complete;
+
+        if (!isProfileComplete) {
+            return <Navigate to="/onboarding/step-1" replace />;
+        }
     }
 
-    // Authenticated and onboarding check passed
     return <>{children}</>;
 };
 

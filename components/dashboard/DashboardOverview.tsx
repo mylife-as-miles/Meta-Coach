@@ -1,23 +1,27 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useDashboardStore } from '../../stores/useDashboardStore';
+import { useSession } from '../../hooks/useAuth';
+import { useWorkspace, usePlayers, useMatches, useTeamProfile } from '../../hooks/useDashboardQueries';
 import StrategyBriefModal from './modals/StrategyBriefModal';
 
 const DashboardOverview: React.FC = () => {
     const navigate = useNavigate();
+
+    // UI State from Zustand
     const strategyBriefOpen = useDashboardStore((state) => state.strategyBriefOpen);
     const openStrategyBrief = useDashboardStore((state) => state.openStrategyBrief);
     const closeStrategyBrief = useDashboardStore((state) => state.closeStrategyBrief);
-    const allPlayers = useDashboardStore((state) => state.allPlayers);
-    const allMatches = useDashboardStore((state) => state.allMatches);
-    const isLoading = useDashboardStore((state) => state.isLoading);
-    const teamProfile = useDashboardStore((state) => state.teamProfile);
-    const fetchDashboardData = useDashboardStore((state) => state.fetchDashboardData);
 
-    // Fetch data on mount
-    useEffect(() => {
-        fetchDashboardData();
-    }, [fetchDashboardData]);
+    // Server Data from TanStack Query
+    const { data: session } = useSession();
+    const userId = session?.user?.id;
+    const { data: workspace } = useWorkspace(userId);
+    const { data: allPlayers = [], isLoading: isPlayersLoading } = usePlayers(workspace?.id);
+    const { data: allMatches = [], isLoading: isMatchesLoading } = useMatches(workspace?.grid_team_id);
+    const { data: teamProfile } = useTeamProfile(workspace?.id, workspace?.grid_team_id);
+
+    const isLoading = isPlayersLoading || isMatchesLoading;
 
     if (isLoading) {
         return (

@@ -1,14 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { useDashboardStore } from '../../stores/useDashboardStore';
+import { useSession } from '../../hooks/useAuth';
+import { useWorkspace, useUserProfile, useTeamProfile, useMatches, useUpdateUserProfile } from '../../hooks/useDashboardQueries';
 
 const CoachProfile: React.FC = () => {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
-    // Store Data
-    const userProfile = useDashboardStore((state) => state.userProfile);
-    const teamProfile = useDashboardStore((state) => state.teamProfile);
-    const allMatches = useDashboardStore((state) => state.allMatches);
-    const updateUserProfile = useDashboardStore((state) => state.updateUserProfile);
+    // Server Data from TanStack Query
+    const { data: session } = useSession();
+    const userId = session?.user?.id;
+    const { data: workspace } = useWorkspace(userId);
+    const { data: userProfile } = useUserProfile(userId);
+    const { data: teamProfile } = useTeamProfile(workspace?.id, workspace?.grid_team_id);
+    const { data: allMatches = [] } = useMatches(workspace?.grid_team_id);
+
+    // Profile update mutation
+    const updateProfileMutation = useUpdateUserProfile();
 
     // Edit Form State
     const [formData, setFormData] = useState({
@@ -37,7 +43,9 @@ const CoachProfile: React.FC = () => {
     };
 
     const handleSave = async () => {
-        await updateUserProfile({
+        if (!userId) return;
+        await updateProfileMutation.mutateAsync({
+            userId,
             name: formData.name,
             role: formData.role,
             bio: formData.bio,
@@ -377,7 +385,7 @@ const CoachProfile: React.FC = () => {
                             </h3>
                             <div className="bg-gradient-to-br from-[#00A9E0]/20 to-surface-darker p-5 rounded-xl border border-[#00A9E0]/30 mb-4 flex flex-col items-center text-center relative overflow-hidden group">
                                 {teamLogo ? (
-                                     <div className="absolute inset-0 bg-center bg-no-repeat bg-contain opacity-5 transform scale-150 group-hover:rotate-12 transition duration-700" style={{ backgroundImage: `url('${teamLogo}')` }}></div>
+                                    <div className="absolute inset-0 bg-center bg-no-repeat bg-contain opacity-5 transform scale-150 group-hover:rotate-12 transition duration-700" style={{ backgroundImage: `url('${teamLogo}')` }}></div>
                                 ) : null}
                                 <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mb-3 shadow-[0_0_15px_rgba(0,169,224,0.3)] z-10 relative">
                                     {teamLogo ? (

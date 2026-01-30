@@ -1,14 +1,17 @@
 import React, { useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useDashboardStore } from '../../stores/useDashboardStore';
+import { useSession } from '../../hooks/useAuth';
+import { useWorkspace, usePlayers } from '../../hooks/useDashboardQueries';
 import ComparePlayersModal from './modals/ComparePlayersModal';
 import EditAttributesModal from './modals/EditAttributesModal';
 
 const PlayerHub: React.FC = () => {
     const [searchParams] = useSearchParams();
+
+    // UI State from Zustand
     const selectedPlayer = useDashboardStore((state) => state.selectedPlayer);
     const selectPlayer = useDashboardStore((state) => state.selectPlayer);
-    const allPlayers = useDashboardStore((state) => state.allPlayers);
     const comparePlayersOpen = useDashboardStore((state) => state.comparePlayersOpen);
     const openComparePlayers = useDashboardStore((state) => state.openComparePlayers);
     const closeComparePlayers = useDashboardStore((state) => state.closeComparePlayers);
@@ -16,14 +19,22 @@ const PlayerHub: React.FC = () => {
     const openEditAttributes = useDashboardStore((state) => state.openEditAttributes);
     const closeEditAttributes = useDashboardStore((state) => state.closeEditAttributes);
 
+    // Server Data from TanStack Query
+    const { data: session } = useSession();
+    const userId = session?.user?.id;
+    const { data: workspace } = useWorkspace(userId);
+    const { data: allPlayers = [] } = usePlayers(workspace?.id);
+
     // Handle URL params for direct linking
     useEffect(() => {
         const playerId = searchParams.get('player');
-        if (playerId && (!selectedPlayer || selectedPlayer.id !== playerId)) {
-            selectPlayer(playerId);
+        const playerFromUrl = playerId ? allPlayers.find(p => p.id === playerId) : null;
+
+        if (playerFromUrl && (!selectedPlayer || selectedPlayer.id !== playerId)) {
+            selectPlayer(playerFromUrl);
         } else if (!selectedPlayer && allPlayers.length > 0) {
             // Default to first player if none selected
-            selectPlayer(allPlayers[0].id);
+            selectPlayer(allPlayers[0]);
         }
     }, [searchParams, allPlayers, selectPlayer, selectedPlayer]);
 
@@ -287,7 +298,7 @@ const PlayerHub: React.FC = () => {
                     {allPlayers.map((player) => (
                         <div
                             key={player.id}
-                            onClick={() => selectPlayer(player.id)}
+                            onClick={() => selectPlayer(player)}
                             className={`snap-start shrink-0 transition-opacity ${selectedPlayer.id === player.id ? 'opacity-100 scale-105' : 'opacity-70 hover:opacity-100'}`}
                         >
                             <div className={`w-48 h-72 relative rounded-2xl border overflow-hidden cursor-pointer transition-all ${selectedPlayer.id === player.id

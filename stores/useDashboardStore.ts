@@ -1,9 +1,12 @@
-import { create } from 'zustand';
-import { supabase } from '../lib/supabase';
-import { Player, Match, matches as mockMatches } from '../lib/mockData';
+// stores/useDashboardStore.ts
+// Zustand store for UI/transient state only
+// Server data (profile, players, matches) is now handled by TanStack Query hooks
 
-interface DashboardState {
-    // Selected items
+import { create } from 'zustand';
+import { Player, Match } from '../lib/mockData';
+
+interface DashboardUIState {
+    // Selected items (for modals/detail views)
     selectedPlayer: Player | null;
     selectedMatch: Match | null;
 
@@ -15,44 +18,24 @@ interface DashboardState {
     championPickerOpen: boolean;
     simulationResultOpen: boolean;
 
-    // Simulation state
+    // Simulation state (client-side only)
     simulationRunning: boolean;
     simulationResult: { winProbability: number; insights: string[] } | null;
-
-    // Real Data State
-    isLoading: boolean;
-    error: string | null;
-    userProfile: {
-        id?: string;
-        name: string;
-        email: string;
-        avatar?: string;
-        role?: string;
-        bio?: string;
-        location?: string;
-        languages?: string[];
-        created_at?: string;
-    } | null;
-    teamProfile: any | null;
-
-    // Data
-    allPlayers: Player[];
-    allMatches: Match[];
 }
 
-interface DashboardActions {
+interface DashboardUIActions {
     // Player actions
-    selectPlayer: (playerId: string) => void;
+    selectPlayer: (player: Player) => void;
     clearSelectedPlayer: () => void;
 
     // Match actions
-    selectMatch: (matchId: string) => void;
+    selectMatch: (match: Match) => void;
     clearSelectedMatch: () => void;
 
     // Modal actions
     openStrategyBrief: () => void;
     closeStrategyBrief: () => void;
-    openMatchDetail: (matchId: string) => void;
+    openMatchDetail: (match: Match) => void;
     closeMatchDetail: () => void;
     openComparePlayers: () => void;
     closeComparePlayers: () => void;
@@ -63,23 +46,14 @@ interface DashboardActions {
     openSimulationResult: () => void;
     closeSimulationResult: () => void;
 
-    // Simulation actions
+    // Simulation action
     runSimulation: () => void;
 
-    // Data fetching
-    fetchDashboardData: () => Promise<void>;
-
-    // Profile actions
-    updateUserProfile: (updates: {
-        name?: string;
-        role?: string;
-        bio?: string;
-        location?: string;
-        languages?: string[];
-    }) => Promise<void>;
+    // Reset all state
+    reset: () => void;
 }
 
-const initialState: DashboardState = {
+const initialState: DashboardUIState = {
     selectedPlayer: null,
     selectedMatch: null,
     strategyBriefOpen: false,
@@ -90,48 +64,24 @@ const initialState: DashboardState = {
     simulationResultOpen: false,
     simulationRunning: false,
     simulationResult: null,
-    isLoading: true,
-    error: null,
-    userProfile: null,
-    teamProfile: null,
-    allPlayers: [],
-    allMatches: [],
 };
 
-export const useDashboardStore = create<DashboardState & DashboardActions>((set, get) => ({
+export const useDashboardStore = create<DashboardUIState & DashboardUIActions>((set) => ({
     ...initialState,
 
-    selectPlayer: (playerId) => {
-        const player = get().allPlayers.find(p => p.id === playerId);
-        if (player) {
-            set({ selectedPlayer: player });
-        }
-    },
+    // Player actions - now accept Player object directly
+    selectPlayer: (player) => set({ selectedPlayer: player }),
+    clearSelectedPlayer: () => set({ selectedPlayer: null }),
 
-    clearSelectedPlayer: () => {
-        set({ selectedPlayer: null });
-    },
+    // Match actions - now accept Match object directly
+    selectMatch: (match) => set({ selectedMatch: match }),
+    clearSelectedMatch: () => set({ selectedMatch: null }),
 
-    selectMatch: (matchId) => {
-        const match = get().allMatches.find(m => m.id === matchId);
-        if (match) {
-            set({ selectedMatch: match });
-        }
-    },
-
-    clearSelectedMatch: () => {
-        set({ selectedMatch: null });
-    },
-
+    // Modal actions
     openStrategyBrief: () => set({ strategyBriefOpen: true }),
     closeStrategyBrief: () => set({ strategyBriefOpen: false }),
 
-    openMatchDetail: (matchId) => {
-        const match = get().allMatches.find(m => m.id === matchId);
-        if (match) {
-            set({ selectedMatch: match, matchDetailOpen: true });
-        }
-    },
+    openMatchDetail: (match) => set({ selectedMatch: match, matchDetailOpen: true }),
     closeMatchDetail: () => set({ matchDetailOpen: false, selectedMatch: null }),
 
     openComparePlayers: () => set({ comparePlayersOpen: true }),
@@ -146,10 +96,10 @@ export const useDashboardStore = create<DashboardState & DashboardActions>((set,
     openSimulationResult: () => set({ simulationResultOpen: true }),
     closeSimulationResult: () => set({ simulationResultOpen: false }),
 
+    // Simulation (mocked for now - could become a mutation later)
     runSimulation: () => {
         set({ simulationRunning: true });
 
-        // Simulate processing time
         setTimeout(() => {
             const winProb = Math.floor(Math.random() * 30) + 55; // 55-85%
             const insights = [
@@ -166,247 +116,6 @@ export const useDashboardStore = create<DashboardState & DashboardActions>((set,
         }, 2000);
     },
 
-    fetchDashboardData: async () => {
-        console.log("fetchDashboardData: Started");
-        set({ isLoading: true, error: null });
-
-        try {
-            // 1. Get User with timeout
-            console.log("fetchDashboardData: Getting User...");
-
-            const getUserWithTimeout = async () => {
-                const timeoutMs = 8000;
-                const userPromise = supabase.auth.getUser();
-                const timeoutPromise = new Promise((_, reject) =>
-                    setTimeout(() => reject(new Error('Auth timeout - network may be slow')), timeoutMs)
-                );
-                return Promise.race([userPromise, timeoutPromise]) as ReturnType<typeof supabase.auth.getUser>;
-            };
-
-            const { data: { user }, error: userError } = await getUserWithTimeout();
-
-            if (userError) {
-                console.error("fetchDashboardData: Auth error", userError);
-                throw userError;
-            }
-            if (!user) {
-                console.warn("fetchDashboardData: No user found, using defaults");
-                set({ isLoading: false });
-                return;
-            }
-            console.log("fetchDashboardData: User found", user.id);
-
-            // Fetch comprehensive profile data (with error handling)
-            let profileData = null;
-            try {
-                const { data, error: profileError } = await supabase
-                    .from('profiles')
-                    .select('*')
-                    .eq('id', user.id)
-                    .maybeSingle();
-
-                if (profileError) {
-                    console.warn("fetchDashboardData: Profile fetch error (continuing)", profileError);
-                }
-                profileData = data;
-            } catch (profileErr) {
-                console.warn("fetchDashboardData: Profile exception (continuing)", profileErr);
-            }
-
-            // Set User Profile
-            set({
-                userProfile: {
-                    id: user.id,
-                    name: profileData?.full_name || profileData?.username || user.user_metadata?.username || user.email?.split('@')[0] || 'Coach',
-                    email: user.email || '',
-                    avatar: profileData?.avatar_url || user.user_metadata?.avatar_url,
-                    role: profileData?.role || 'Coach',
-                    bio: profileData?.bio,
-                    location: profileData?.location,
-                    languages: profileData?.languages,
-                    created_at: user.created_at
-                }
-            });
-
-            // 2. Get Workspace
-            console.log("fetchDashboardData: Getting Workspace...");
-            const { data: workspace, error: wsError } = await supabase
-                .from('workspaces')
-                .select('*')
-                .eq('user_id', user.id)
-                .single();
-
-            if (wsError || !workspace) {
-                console.log("fetchDashboardData: No workspace found, using mock data");
-                return; // Early return, finally block will set isLoading: false
-            }
-            console.log("fetchDashboardData: Workspace found", workspace.id);
-
-            // 3. Get AI Calibration
-            const { data: aiData } = await supabase
-                .from('ai_calibration')
-                .select('*')
-                .eq('workspace_id', workspace.id)
-                .maybeSingle();
-
-            // 4. Get Authentic Team Data from GRID (Lean Integration)
-            let gridTeamData: { teamName?: string; region?: string; logoUrl?: string } = {};
-            if (workspace.grid_team_id) {
-                try {
-                    const invokePromise = supabase.functions.invoke('grid-teams', {
-                        body: { teamId: workspace.grid_team_id }
-                    });
-
-                    let timeoutId: any;
-                    const timeoutPromise = new Promise((_, reject) => {
-                        timeoutId = setTimeout(() => reject(new Error('GRID API Timeout')), 10000);
-                    });
-
-                    const { data: gridRes, error: gridError } = await Promise.race([invokePromise, timeoutPromise]) as any;
-                    clearTimeout(timeoutId);
-
-                    if (!gridError && gridRes && gridRes.team) {
-                        gridTeamData = {
-                            teamName: gridRes.team.name,
-                            region: 'Global', // Default as region field removed
-                            logoUrl: gridRes.team.logoUrl
-                        };
-                        // Note: gridRes.team.nameShortened is available if needed for abbreviations
-                    }
-                } catch (e) {
-                    console.warn("Retrieved GRID Team Identity failed:", e);
-                }
-            }
-
-            // Set Team Profile from Workspace + GRID Data + AI Data
-            set({
-                teamProfile: {
-                    teamName: gridTeamData.teamName || workspace.team_name,
-                    region: gridTeamData.region || 'Global',
-                    game: workspace.game_title,
-                    logoUrl: gridTeamData.logoUrl || null,
-                    ...(aiData || {})
-                }
-            });
-
-            // 4. Get Roster from DB
-            const { data: roster, error: rosterError } = await supabase
-                .from('roster')
-                .select('*')
-                .eq('workspace_id', workspace.id);
-
-            if (!rosterError && roster && roster.length > 0) {
-                const mappedPlayers: Player[] = roster.map((p, index) => {
-                    // Default stats if no authentic data available yet
-                    const defaultStats = { mechanics: 80, objectives: 80, macro: 80, vision: 80, teamwork: 80, mental: 80 };
-
-                    return {
-                        id: p.id,
-                        name: p.ign || `Player ${index + 1}`,
-                        role: p.role as any,
-                        overall: Math.floor((p.readiness_score + p.synergy_score) / 2) || 85,
-                        stats: defaultStats,
-                        synergy: p.synergy_score ?? 85,
-                        readiness: p.readiness_score ?? 90,
-                        avatar: p.metadata?.imageUrl || null,
-                        isActive: p.is_active ?? true
-                    };
-                });
-                set({ allPlayers: mappedPlayers });
-            }
-
-            // 5. Get Matches (Authentic GRID Data)
-            if (workspace.grid_team_id) {
-                try {
-                    const invokePromise = supabase.functions.invoke('team-matches', {
-                        body: { teamId: workspace.grid_team_id }
-                    });
-
-                    let timeoutId: any;
-                    const timeoutPromise = new Promise((_, reject) => {
-                        timeoutId = setTimeout(() => reject(new Error('GRID API Timeout')), 10000);
-                    });
-
-                    const { data: matchesData, error: matchError } = await Promise.race([invokePromise, timeoutPromise]) as any;
-                    clearTimeout(timeoutId);
-
-                    if (matchError) {
-                        console.warn("team-matches API returned error, using mock data:", matchError);
-                        set({ allMatches: mockMatches });
-                    } else if (matchesData && matchesData.matches) {
-                        const mappedMatches: Match[] = matchesData.matches.map((m: any) => ({
-                            id: m.id,
-                            date: new Date(m.startTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-                            duration: m.status === 'scheduled' ? 'TBD' : (m.duration || '35:00'),
-                            result: m.result || (m.status === 'scheduled' ? 'UPCOMING' : 'UNKNOWN'),
-                            score: m.score || '0 - 0',
-                            format: m.format || 'Bo1',
-                            type: m.type || 'Ranked',
-                            opponent: {
-                                name: m.opponent?.name || 'Unknown',
-                                abbreviation: m.opponent?.abbreviation || (m.opponent?.name || 'UNK').substring(0, 3).toUpperCase(),
-                                color: 'red'
-                            },
-                            performance: { macroControl: 50, microErrorRate: 'MED' }
-                        }));
-                        set({ allMatches: mappedMatches });
-                    } else {
-                        // API returned no data - use mock
-                        console.log("fetchDashboardData: No matches from API, using mock data");
-                        set({ allMatches: mockMatches });
-                    }
-                } catch (e) {
-                    console.warn("Failed to fetch matches, using mock data:", e);
-                    set({ allMatches: mockMatches });
-                }
-            } else {
-                console.log("fetchDashboardData: No Grid Team ID, using mock matches");
-                set({ allMatches: mockMatches });
-            }
-
-            console.log("fetchDashboardData: Completed successfully");
-
-        } catch (err: any) {
-            console.error("Dashboard fetch error:", err);
-            set({ error: err.message });
-        } finally {
-            set({ isLoading: false });
-        }
-    },
-
-    updateUserProfile: async (updates) => {
-        const { userProfile } = get();
-        if (!userProfile?.id) return;
-
-        try {
-            const { error } = await supabase
-                .from('profiles')
-                .update({
-                    full_name: updates.name,
-                    role: updates.role,
-                    bio: updates.bio,
-                    location: updates.location,
-                    languages: updates.languages,
-                    updated_at: new Date().toISOString()
-                })
-                .eq('id', userProfile.id);
-
-            if (error) throw error;
-
-            // Optimistic update
-            set({
-                userProfile: {
-                    ...userProfile,
-                    ...updates,
-                    name: updates.name || userProfile.name
-                }
-            });
-        } catch (err) {
-            console.error("Failed to update profile", err);
-            // Optionally handle error
-        }
-    }
+    // Reset all state
+    reset: () => set(initialState),
 }));
-
-// Re-export types
-export type { DashboardState };

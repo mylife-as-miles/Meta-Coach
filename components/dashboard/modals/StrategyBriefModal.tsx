@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import Modal from '../../ui/Modal';
 import { supabase } from '../../../lib/supabase';
 import { strategyBriefData as mockStrategyBriefData } from '../../../lib/mockData';
-import { useDashboardStore } from '../../../stores/useDashboardStore';
+import { useSession } from '../../../hooks/useAuth';
+import { useWorkspace, useTeamProfile } from '../../../hooks/useDashboardQueries';
 
 interface StrategyBriefModalProps {
     isOpen: boolean;
@@ -11,7 +12,12 @@ interface StrategyBriefModalProps {
 }
 
 const StrategyBriefModal: React.FC<StrategyBriefModalProps> = ({ isOpen, onClose, opponentId }) => {
-    const teamProfile = useDashboardStore((state) => state.teamProfile);
+    // Get team profile from Query hooks
+    const { data: session } = useSession();
+    const userId = session?.user?.id;
+    const { data: workspace } = useWorkspace(userId);
+    const { data: teamProfile } = useTeamProfile(workspace?.id, workspace?.grid_team_id);
+
     const [isLoading, setIsLoading] = useState(false);
     const [matchPrepData, setMatchPrepData] = useState<any>(null);
     const [error, setError] = useState<string | null>(null);

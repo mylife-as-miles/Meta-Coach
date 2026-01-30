@@ -1,7 +1,8 @@
 import React from 'react';
 import { Outlet, NavLink, Link, useNavigate } from 'react-router-dom';
 import { DashboardProvider } from '../../context/DashboardContext';
-import { useDashboardStore } from '../../stores/useDashboardStore';
+import { useSession } from '../../hooks/useAuth';
+import { useUserProfile } from '../../hooks/useDashboardQueries';
 import supabase from '../../lib/supabase';
 import Logo from '../Logo';
 
@@ -23,7 +24,10 @@ const DashboardLayout: React.FC = () => {
     const [showNotifications, setShowNotifications] = React.useState(false);
     const [showProfileMenu, setShowProfileMenu] = React.useState(false);
     const navigate = useNavigate();
-    const userProfile = useDashboardStore((state) => state.userProfile);
+
+    // Use TanStack Query for server data
+    const { data: session } = useSession();
+    const { data: userProfile } = useUserProfile(session?.user?.id);
 
     const handleSignOut = async () => {
         try {

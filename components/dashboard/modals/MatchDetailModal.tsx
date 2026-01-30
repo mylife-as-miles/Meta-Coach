@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import Modal from '../../ui/Modal';
 import { Match } from '../../../lib/mockData';
 import { supabase } from '../../../lib/supabase';
-import { useDashboardStore } from '../../../stores/useDashboardStore';
+import { useSession } from '../../../hooks/useAuth';
+import { useWorkspace, useTeamProfile } from '../../../hooks/useDashboardQueries';
 
 interface MatchDetailModalProps {
     isOpen: boolean;
@@ -36,7 +37,12 @@ interface GameData {
 }
 
 const MatchDetailModal: React.FC<MatchDetailModalProps> = ({ isOpen, onClose, match }) => {
-    const teamProfile = useDashboardStore((state) => state.teamProfile);
+    // Get team profile from Query hooks
+    const { data: session } = useSession();
+    const userId = session?.user?.id;
+    const { data: workspace } = useWorkspace(userId);
+    const { data: teamProfile } = useTeamProfile(workspace?.id, workspace?.grid_team_id);
+
     const [isLoading, setIsLoading] = useState(false);
     const [seriesData, setSeriesData] = useState<any>(null);
     const [error, setError] = useState<string | null>(null);
