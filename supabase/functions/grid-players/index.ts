@@ -134,8 +134,12 @@ serve(async (req) => {
         }
 
         // Query players for the specific team
+        // Query players AND team details
         const playersQuery = `
       query GetPlayersForTeam($teamId: ID!) {
+        team(id: $teamId) {
+            name
+        }
         players(
           filter: { teamIdFilter: { id: $teamId } }
           first: 20
@@ -177,7 +181,16 @@ serve(async (req) => {
         }
 
         const playersData = await playersRes.json()
-        console.log('GRID API response data:', JSON.stringify(playersData, null, 2))
+        console.log('GRID API response data (partial):', JSON.stringify({ team: playersData.data?.team, playersCount: playersData.data?.players?.edges?.length }))
+
+        // Extract team name from GRID if not provided in params
+        if (!teamName) {
+            const gridTeamName = playersData.data?.team?.name
+            if (gridTeamName) {
+                console.log(`Using team name from GRID response: ${gridTeamName}`)
+                teamName = gridTeamName
+            }
+        }
 
         const playerEdges = playersData.data?.players?.edges || []
         console.log('Player edges count:', playerEdges.length)
