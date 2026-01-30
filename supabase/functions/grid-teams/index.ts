@@ -49,6 +49,7 @@ serve(async (req) => {
           team(id: $id) {
             id
             name
+            nameShortened
             logoUrl
           }
         }
@@ -71,6 +72,7 @@ serve(async (req) => {
                 node {
                 id
                 name
+                nameShortened
                 logoUrl
                 colorPrimary
                 colorSecondary
@@ -113,6 +115,7 @@ serve(async (req) => {
       const teams = teamsEdges.map((edge: any) => ({
         id: edge.node.id,
         name: edge.node.name,
+        nameShortened: edge.node.nameShortened || null,
         logoUrl: edge.node.logoUrl || null,
         colorPrimary: edge.node.colorPrimary || null,
         colorSecondary: edge.node.colorSecondary || null,

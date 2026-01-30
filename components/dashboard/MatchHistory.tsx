@@ -45,13 +45,21 @@ const MatchHistory: React.FC = () => {
                             <div key={match.id} className="bg-surface-dark rounded-2xl p-0 border border-white/5 hover:border-primary/30 transition duration-300 shadow-lg group overflow-hidden">
                                 <div className="grid grid-cols-12 h-full">
                                     <div className="col-span-12 md:col-span-2 bg-surface-darker p-5 flex flex-row md:flex-col items-center justify-between md:justify-center border-b md:border-b-0 md:border-r border-white/5 relative overflow-hidden">
-                                        <div className={`absolute inset-0 hidden md:block ${match.result === 'WIN' ? 'bg-primary/5' : 'bg-red-500/5'}`}></div>
-                                        <div className={`absolute left-0 top-0 bottom-0 w-1 shadow-neon ${match.result === 'WIN' ? 'bg-primary' : 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.4)]'}`}></div>
+                                        <div className={`absolute inset-0 hidden md:block ${match.result === 'WIN' ? 'bg-primary/5' : match.result === 'UPCOMING' ? 'bg-blue-500/5' : 'bg-red-500/5'}`}></div>
+                                        <div className={`absolute left-0 top-0 bottom-0 w-1 shadow-neon ${match.result === 'WIN' ? 'bg-primary' : match.result === 'UPCOMING' ? 'bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.4)]' : 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.4)]'}`}></div>
                                         <div className="flex flex-col items-center gap-1 z-10">
-                                            <span className={`text-2xl font-bold tracking-widest shadow-neon-text ${match.result === 'WIN' ? 'text-primary drop-shadow-[0_0_8px_rgba(210,249,111,0.5)]' : 'text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]'}`}>
-                                                {match.result}
+                                            <span className={`text-xl md:text-2xl font-bold tracking-widest shadow-neon-text ${
+                                                match.result === 'WIN' ? 'text-primary drop-shadow-[0_0_8px_rgba(210,249,111,0.5)]' :
+                                                match.result === 'UPCOMING' ? 'text-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]' :
+                                                'text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]'
+                                            }`}>
+                                                {match.result === 'UPCOMING' ? 'SOON' : match.result}
                                             </span>
-                                            <span className={`text-[10px] uppercase font-mono tracking-wide px-1.5 rounded ${match.result === 'WIN' ? 'text-primary/80 bg-primary/10' : 'text-red-400/80 bg-red-500/10'}`}>
+                                            <span className={`text-[10px] uppercase font-mono tracking-wide px-1.5 rounded ${
+                                                match.result === 'WIN' ? 'text-primary/80 bg-primary/10' :
+                                                match.result === 'UPCOMING' ? 'text-blue-400/80 bg-blue-500/10' :
+                                                'text-red-400/80 bg-red-500/10'
+                                            }`}>
                                                 {match.type || 'Ranked'}
                                             </span>
                                         </div>
