@@ -132,76 +132,47 @@ serve(async (req) => {
     const nowISO = new Date().toISOString();
     console.log(`[team-matches] Query time: ${nowISO}`)
 
-    // Query both History (Past) and Upcoming (Future)
-    // History: lt now, DESC, first 10
-    // Upcoming: gt now, ASC, first 5
+    // INTROSPECTION MODE:
+    // Let's find out what the schema actually supports for 'allSeries' or 'series'
     const combinedQuery = `
-      query GetMatches($teamId: ID!) {
-        history: allSeries(
-          filter: {
-            teamIds: { in: [$teamId] }
-            startTimeScheduled: { lt: "${nowISO}" }
-          }
-          first: 10
-          orderBy: START_TIME_SCHEDULED
-          orderDirection: DESC
-        ) {
-          edges {
-            node {
-              ...SeriesFields
-            }
-          }
-        }
-        upcoming: allSeries(
-          filter: {
-            teamIds: { in: [$teamId] }
-            startTimeScheduled: { gt: "${nowISO}" }
-          }
-          first: 5
-          orderBy: START_TIME_SCHEDULED
-          orderDirection: ASC
-        ) {
-          edges {
-            node {
-              ...SeriesFields
-            }
-          }
-        }
-      }
-
-      fragment SeriesFields on Series {
-        id
-        startTimeScheduled
-        endTimeActual
-        format {
-          name
-          nameShortened
-        }
-        type
-        tournament {
-          id
-          name
-          slug
-        }
-        teams {
-          baseInfo {
-            id
+      query IntrospectGRID {
+         __type(name: "Series") {
             name
-            nameShortened
-          }
-          scoreAdvantage
-        }
+            fields {
+                name
+                type {
+                    name
+                    kind
+                }
+            }
+         }
+         filterInput: __type(name: "SeriesFilter") {
+             name
+             inputFields {
+                 name
+                 type {
+                     name
+                     kind
+                 }
+             }
+         }
+         orderByEnum: __type(name: "SeriesOrderBy") {
+             name
+             enumValues {
+                 name
+             }
+         }
       }
-    `
+    `;
 
-    console.log(`[team-matches] Sending request to GRID API...`)
+    console.log(`[team-matches] Sending INTROSPECTION request to GRID API...`)
 
     const gridRes = await fetch(GRID_API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': gridApiKey },
       body: JSON.stringify({
         query: combinedQuery,
-        variables: { teamId }
+        variables: {}
       }),
     })
 
