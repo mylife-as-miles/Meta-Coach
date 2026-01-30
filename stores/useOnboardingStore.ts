@@ -230,7 +230,6 @@ export const useOnboardingStore = create<OnboardingState & OnboardingActions>()(
                             id: user.id,
                             onboarding_complete: true,
                             updated_at: new Date().toISOString(),
-                            username: user.user_metadata?.username || user.email?.split('@')[0],
                             role: state.role || 'Coach',
                         });
 
