@@ -79,13 +79,18 @@ IMPORTANT:
 
         const config = {
             tools: [
-                { googleSearch: {} }
+                { googleSearch: {} },
+                { urlContext: {} }
             ],
             responseMimeType: 'application/json',
+            thinkingConfig: {
+                thinkingLevel: 'HIGH',
+            },
+            mediaResolution: 'MEDIA_RESOLUTION_HIGH',
         }
 
         const response = await ai.models.generateContent({
-            model: 'gemini-2.0-flash',
+            model: 'gemini-3-flash-preview',
             config,
             contents: [{ role: 'user', parts: [{ text: prompt }] }],
         })

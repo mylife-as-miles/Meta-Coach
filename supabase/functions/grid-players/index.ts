@@ -54,10 +54,14 @@ Rules:
 - No explanations, just the JSON array`
 
         const response = await ai.models.generateContent({
-            model: 'gemini-2.0-flash',
+            model: 'gemini-3-flash-preview',
             config: {
-                tools: [{ googleSearch: {} }],
+                tools: [{ googleSearch: {} }, { urlContext: {} }],
                 responseMimeType: 'application/json',
+                thinkingConfig: {
+                    thinkingLevel: 'HIGH',
+                },
+                mediaResolution: 'MEDIA_RESOLUTION_HIGH',
             },
             contents: [{ role: 'user', parts: [{ text: prompt }] }],
         })
