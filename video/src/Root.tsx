@@ -1,5 +1,5 @@
 import { Composition } from 'remotion';
-import { LaunchVideo } from './LaunchVideo';
+import { LaunchVideo } from './LaunchVideo.tsx';
 
 
 export const Root: React.FC = () => {
