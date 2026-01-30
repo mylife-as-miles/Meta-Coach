@@ -195,7 +195,7 @@ export const useDashboardStore = create<DashboardState & DashboardActions>((set,
                     if (!gridError && gridRes && gridRes.team) {
                         gridTeamData = {
                             teamName: gridRes.team.name,
-                            region: gridRes.team.region?.name || 'Global',
+                            region: 'Global', // Default as region field removed
                             logoUrl: gridRes.team.logoUrl
                         };
                     }

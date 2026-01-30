@@ -37,7 +37,7 @@ serve(async (req) => {
       )
     }
 
-    // Lean Matches Query
+    // Lean Matches Query - removed 'format' to prevent schema error
     const matchesQuery = `
       query TeamMatches($teamId: ID!) {
         matches(filter: { teamIdFilter: { id: $teamId } }, first: 10) {
@@ -46,7 +46,6 @@ serve(async (req) => {
               id
               startTime
               status
-              format
               teams {
                 team {
                   id
@@ -95,7 +94,7 @@ serve(async (req) => {
       id: edge.node.id,
       startTime: edge.node.startTime,
       status: edge.node.status,
-      format: edge.node.format,
+      format: 'Bo3', // Default as field removed to fix 500
       teams: edge.node.teams?.map((t: any) => ({
         id: t.team.id,
         name: t.team.name

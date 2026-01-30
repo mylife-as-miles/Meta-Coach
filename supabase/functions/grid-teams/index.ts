@@ -49,11 +49,7 @@ serve(async (req) => {
           team(id: $id) {
             id
             name
-            shortName
             logoUrl
-            region {
-              name
-            }
           }
         }
       `;
