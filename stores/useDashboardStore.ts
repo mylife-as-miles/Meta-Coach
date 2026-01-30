@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
-import { Player, Match } from '../lib/mockData';
+import { Player, Match, matches as mockMatches } from '../lib/mockData';
 
 interface DashboardState {
     // Selected items
@@ -318,13 +318,22 @@ export const useDashboardStore = create<DashboardState & DashboardActions>((set,
                             performance: { macroControl: 50, microErrorRate: 'MED' }
                         }));
 
-                        if (mappedMatches.length > 0) {
-                            set({ allMatches: mappedMatches });
-                        }
+                        // Sort: Upcoming (ASC) then History (DESC) is what API returns, but we might want to ensure it here
+                        // or just set it. API returns [...upcoming, ...history]. 
+                        // If mappedMatches is empty, we keep existing mock matches or clear them?
+                        // Let's overwite with authentic data if we have it, otherwise fallback to mock if empty? 
+                        // Actually, if we have a team ID but no matches, it implies no matches.
+
+                        set({ allMatches: mappedMatches });
                     }
                 } catch (e) {
                     console.warn("Failed to fetch matches", e);
+                    // Keep mock data if fetch fails? Or clear it? 
+                    // For now, let's keep mock data on error so dashboard isn't empty during dev
                 }
+            } else {
+                console.log("fetchDashboardData: No Grid Team ID, using mock matches");
+                set({ allMatches: mockMatches });
             }
 
             console.log("fetchDashboardData: Completed successfully");

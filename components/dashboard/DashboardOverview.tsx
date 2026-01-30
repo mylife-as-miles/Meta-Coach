@@ -52,48 +52,61 @@ const DashboardOverview: React.FC = () => {
                         <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
                             <span className="material-icons-outlined text-6xl text-white">emoji_events</span>
                         </div>
-                        <div className="flex justify-between items-start mb-4 relative z-10">
-                            <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Upcoming Match</span>
-                            <span className="text-xs font-mono text-primary bg-primary/10 border border-primary/20 px-2 py-1 rounded shadow-neon">{allMatches[0]?.date || 'TBD'}</span>
-                        </div>
-                        <div className="flex items-center justify-between mb-6 relative z-10">
-                            <div className="text-center group-hover:scale-105 transition-transform duration-300">
-                                <div className="w-12 h-12 bg-blue-900/20 border border-blue-500/30 rounded-full flex items-center justify-center mb-2 mx-auto overflow-hidden">
-                                    {teamProfile?.logoUrl ? (
-                                        <img src={teamProfile.logoUrl} alt={teamProfile.teamName} className="w-full h-full object-cover" />
-                                    ) : (
-                                        <span className="font-bold text-blue-400">{teamProfile?.teamName?.substring(0, 2).toUpperCase() || 'YOU'}</span>
-                                    )}
+                        {(() => {
+                            const upcomingMatch = allMatches.find(m => m.result === 'UPCOMING');
+                            return upcomingMatch ? (
+                                <>
+                                    <div className="flex justify-between items-start mb-4 relative z-10">
+                                        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Upcoming Match</span>
+                                        <span className="text-xs font-mono text-primary bg-primary/10 border border-primary/20 px-2 py-1 rounded shadow-neon">{upcomingMatch.date}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between mb-6 relative z-10">
+                                        <div className="text-center group-hover:scale-105 transition-transform duration-300">
+                                            <div className="w-12 h-12 bg-blue-900/20 border border-blue-500/30 rounded-full flex items-center justify-center mb-2 mx-auto overflow-hidden">
+                                                {teamProfile?.logoUrl ? (
+                                                    <img src={teamProfile.logoUrl} alt={teamProfile.teamName} className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <span className="font-bold text-blue-400">{teamProfile?.teamName?.substring(0, 2).toUpperCase() || 'YOU'}</span>
+                                                )}
+                                            </div>
+                                            <span className="text-lg font-bold text-white">{teamProfile?.teamName || 'Your Team'}</span>
+                                        </div>
+                                        <div className="flex flex-col items-center">
+                                            <span className="text-2xl text-gray-600 font-light">VS</span>
+                                        </div>
+                                        <div className="text-center group-hover:scale-105 transition-transform duration-300">
+                                            <div className="w-12 h-12 bg-gray-800 border border-white/10 rounded-full flex items-center justify-center mb-2 mx-auto">
+                                                <span className="font-bold text-gray-400">{upcomingMatch.opponent?.abbreviation || '?'}</span>
+                                            </div>
+                                            <span className="text-lg font-bold text-white">{upcomingMatch.opponent?.name || 'TBD'}</span>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4 text-xs text-gray-400 mb-6 relative z-10">
+                                        <div>
+                                            <p className="uppercase tracking-wide opacity-50 text-gray-500">Region</p>
+                                            <p className="text-white font-medium">{teamProfile?.region || 'Global'}</p>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="uppercase tracking-wide opacity-50 text-gray-500">Format</p>
+                                            <p className="text-white font-medium">{upcomingMatch.format || 'Bo1'}</p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={openStrategyBrief}
+                                        className="w-full py-3 bg-white/5 hover:bg-white/10 border border-white/5 hover:border-primary/50 text-white rounded-xl text-sm font-semibold transition flex items-center justify-center gap-2 relative z-10 hover:shadow-neon hover:text-primary cursor-pointer"
+                                    >
+                                        <span className="material-icons-outlined text-sm">library_books</span>
+                                        View Strategy Brief
+                                    </button>
+                                </>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center h-full text-center z-10">
+                                    <span className="material-icons-outlined text-4xl text-gray-600 mb-2">event_busy</span>
+                                    <span className="text-lg font-bold text-gray-300">No Upcoming Matches</span>
+                                    <p className="text-xs text-gray-500 mt-1">Check back later for schedule updates.</p>
                                 </div>
-                                <span className="text-lg font-bold text-white">{teamProfile?.teamName || 'Your Team'}</span>
-                            </div>
-                            <div className="flex flex-col items-center">
-                                <span className="text-2xl text-gray-600 font-light">VS</span>
-                            </div>
-                            <div className="text-center group-hover:scale-105 transition-transform duration-300">
-                                <div className="w-12 h-12 bg-gray-800 border border-white/10 rounded-full flex items-center justify-center mb-2 mx-auto">
-                                    <span className="font-bold text-gray-400">{allMatches[0]?.opponent?.abbreviation || '?'}</span>
-                                </div>
-                                <span className="text-lg font-bold text-white">{allMatches[0]?.opponent?.name || 'TBD'}</span>
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4 text-xs text-gray-400 mb-6 relative z-10">
-                            <div>
-                                <p className="uppercase tracking-wide opacity-50 text-gray-500">Region</p>
-                                <p className="text-white font-medium">{teamProfile?.region || 'Global'}</p>
-                            </div>
-                            <div className="text-right">
-                                <p className="uppercase tracking-wide opacity-50 text-gray-500">Format</p>
-                                <p className="text-white font-medium">{allMatches[0]?.format || 'Bo1'}</p>
-                            </div>
-                        </div>
-                        <button
-                            onClick={openStrategyBrief}
-                            className="w-full py-3 bg-white/5 hover:bg-white/10 border border-white/5 hover:border-primary/50 text-white rounded-xl text-sm font-semibold transition flex items-center justify-center gap-2 relative z-10 hover:shadow-neon hover:text-primary cursor-pointer"
-                        >
-                            <span className="material-icons-outlined text-sm">library_books</span>
-                            View Strategy Brief
-                        </button>
+                            );
+                        })()}
                     </div>
 
                     {/* Recent Scrims / Matches */}

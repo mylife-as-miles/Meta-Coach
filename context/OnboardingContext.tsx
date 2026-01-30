@@ -178,7 +178,7 @@ export const OnboardingProvider: React.FC<{ children: ReactNode }> = ({ children
             }
 
             // 4. Mark onboarding complete (Upsert to handle missing profile rows)
-            await supabase
+            const { error: profileError } = await supabase
                 .from('profiles')
                 .upsert({
                     id: user.id,
@@ -189,6 +189,20 @@ export const OnboardingProvider: React.FC<{ children: ReactNode }> = ({ children
                     role: state.role || 'Coach',
                 })
                 .select();
+
+            if (profileError) {
+                console.error('Error updating profile:', profileError);
+                // We continue even if profile update fails? Ideally yes, but metadata is backup.
+            }
+
+            // 4.5 Update User Metadata for faster checks in AuthGuard/GuestGuard
+            const { error: userError } = await supabase.auth.updateUser({
+                data: { onboarding_complete: true }
+            });
+
+            if (userError) {
+                console.warn('Error updating user metadata:', userError);
+            }
 
             // 5. Navigate to dashboard
             navigate('/dashboard');
