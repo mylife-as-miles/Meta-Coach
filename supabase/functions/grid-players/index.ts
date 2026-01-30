@@ -11,7 +11,8 @@ const GRID_API_URL = 'https://api-op.grid.gg/central-data/graphql'
 async function searchPlayerImagesWithGemini(
     players: { id: string; nickname: string; imageUrl: string | null }[],
     teamName: string,
-    game: string
+    game: string,
+    liquipediaPath: string
 ): Promise<{ id: string; nickname: string; imageUrl: string | null }[]> {
     const geminiApiKey = Deno.env.get('GEMINI_API_KEY')
 
@@ -51,6 +52,7 @@ Return ONLY a JSON array like this:
 Rules:
 - Do NOT use images from **vlr.gg** or **owcdn.net** (they are hotlink protected and will fail).
 - Search for the player's **Liquipedia** profile. This is the PRIMARY source.
+- USE THE GAME PATH: liquipedia.net/${liquipediaPath}/...
 - Use the main infobox image from Liquipedia.
 - If Liquipedia fails, try Fandom or official team sites.
 - Return null ONLY if absolutely no image can be found.
@@ -216,6 +218,8 @@ serve(async (req) => {
             (titleId === '6' || titleId === '29') ? 'VALORANT' :
                 'esports'
 
+        const liquipediaPath = titleId === '3' ? 'leagueoflegends' : 'valorant'
+
         // Use Gemini + Google Search as fallback for players without images
         const playersWithMissingImages = players.filter((p: any) => !p.imageUrl)
         console.log(`Team name received: ${teamName} `)
@@ -225,7 +229,7 @@ serve(async (req) => {
         if (playersWithMissingImages.length > 0) {
             if (teamName) {
                 console.log(`Calling Gemini search for ${playersWithMissingImages.length} players from ${teamName}...`)
-                players = await searchPlayerImagesWithGemini(players, teamName, gameName)
+                players = await searchPlayerImagesWithGemini(players, teamName, gameName, liquipediaPath)
                 console.log(`After Gemini search: `, players.map((p: any) => ({ nickname: p.nickname, imageUrl: p.imageUrl })))
             } else {
                 console.warn('teamName not provided, skipping Gemini image search')

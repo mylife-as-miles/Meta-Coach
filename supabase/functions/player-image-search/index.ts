@@ -49,6 +49,8 @@ serve(async (req) => {
 
         const ai = new GoogleGenAI({ apiKey: geminiApiKey })
 
+        const liquipediaPath = game === 'League of Legends' ? 'leagueoflegends' : 'valorant'
+
         // Create a single prompt for all players to minimize API calls
         const playerList = players.map(p => p.nickname).join(', ')
 
@@ -74,7 +76,7 @@ Return a JSON array with this exact structure for each player:
 
 IMPORTANT: 
 - Do NOT use images from **vlr.gg** or **owcdn.net** (hotlink protected).
-- Search for the player's **Liquipedia** profile. This is the BEST source.
+- Search for the player's **Liquipedia** profile (liquipedia.net/${liquipediaPath}/...). This is the BEST source.
 - Use the main infobox image from Liquipedia.
 - If Liquipedia fails, try Fandom or official sites.
 - Return null ONLY if absolutely no image can be found after searching.

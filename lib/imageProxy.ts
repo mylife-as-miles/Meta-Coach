@@ -6,7 +6,7 @@ export function getProxiedImageUrl(url: string | null | undefined): string | und
     if (!url) return undefined;
 
     // Only proxy vulnerable domains
-    if (url.includes('owcdn.net')) {
+    if (url.includes('owcdn.net') || url.includes('liquipedia.net')) {
         return `${PROJECT_URL}/functions/v1/image-proxy?url=${encodeURIComponent(url)}`;
     }
 
