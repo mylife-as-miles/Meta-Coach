@@ -274,9 +274,14 @@ serve(async (req) => {
       let extractedTeamName = teamNameArg || 'Team';
       let extractedGame = game || 'Esports';
 
-      if (historyEdges.length > 0 && !teamNameArg) {
-        const myTeam = historyEdges[0].node.teams.find((t: any) => t.baseInfo.id === teamId);
-        if (myTeam) extractedTeamName = myTeam.baseInfo.name;
+      if (!teamNameArg && historyMatches.length > 0) {
+        // historyMatches contains processed nodes which have opponent check.
+        // The raw data is in allEdges. Let's use allEdges for safety to find "myTeam"
+        const matchNode = allEdges.find((e: any) => e.node.teams.some((t: any) => t.baseInfo.id === teamId));
+        if (matchNode) {
+          const myTeam = matchNode.node.teams.find((t: any) => t.baseInfo.id === teamId);
+          if (myTeam) extractedTeamName = myTeam.baseInfo.name;
+        }
       }
 
       if (extractedTeamName !== 'Team') {
