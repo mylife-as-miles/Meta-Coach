@@ -22,7 +22,17 @@ interface DashboardState {
     // Real Data State
     isLoading: boolean;
     error: string | null;
-    userProfile: { name: string; email: string; avatar?: string } | null;
+    userProfile: {
+        id?: string;
+        name: string;
+        email: string;
+        avatar?: string;
+        role?: string;
+        bio?: string;
+        location?: string;
+        languages?: string[];
+        created_at?: string;
+    } | null;
     teamProfile: any | null;
 
     // Data
@@ -58,6 +68,15 @@ interface DashboardActions {
 
     // Data fetching
     fetchDashboardData: () => Promise<void>;
+
+    // Profile actions
+    updateUserProfile: (updates: {
+        name?: string;
+        role?: string;
+        bio?: string;
+        location?: string;
+        languages?: string[];
+    }) => Promise<void>;
 }
 
 const initialState: DashboardState = {
@@ -155,12 +174,25 @@ export const useDashboardStore = create<DashboardState & DashboardActions>((set,
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error("No user found");
 
+            // Fetch comprehensive profile data
+            const { data: profileData } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', user.id)
+                .single();
+
             // Set User Profile
             set({
                 userProfile: {
-                    name: user.user_metadata?.username || user.email?.split('@')[0] || 'Coach',
+                    id: user.id,
+                    name: profileData?.full_name || profileData?.username || user.user_metadata?.username || user.email?.split('@')[0] || 'Coach',
                     email: user.email || '',
-                    avatar: user.user_metadata?.avatar_url
+                    avatar: profileData?.avatar_url || user.user_metadata?.avatar_url,
+                    role: profileData?.role || 'Coach',
+                    bio: profileData?.bio,
+                    location: profileData?.location,
+                    languages: profileData?.languages,
+                    created_at: user.created_at
                 }
             });
 
@@ -281,6 +313,39 @@ export const useDashboardStore = create<DashboardState & DashboardActions>((set,
             set({ isLoading: false, error: err.message });
         }
     },
+
+    updateUserProfile: async (updates) => {
+        const { userProfile } = get();
+        if (!userProfile?.id) return;
+
+        try {
+            const { error } = await supabase
+                .from('profiles')
+                .update({
+                    full_name: updates.name,
+                    role: updates.role,
+                    bio: updates.bio,
+                    location: updates.location,
+                    languages: updates.languages,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', userProfile.id);
+
+            if (error) throw error;
+
+            // Optimistic update
+            set({
+                userProfile: {
+                    ...userProfile,
+                    ...updates,
+                    name: updates.name || userProfile.name
+                }
+            });
+        } catch (err) {
+            console.error("Failed to update profile", err);
+            // Optionally handle error
+        }
+    }
 }));
 
 // Re-export types
