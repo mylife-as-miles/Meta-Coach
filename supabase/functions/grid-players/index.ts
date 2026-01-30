@@ -220,9 +220,18 @@ serve(async (req) => {
 
         // Use Gemini + Google Search as fallback for players without images
         const playersWithMissingImages = players.filter((p: any) => !p.imageUrl)
-        if (playersWithMissingImages.length > 0 && teamName) {
-            console.log(`${playersWithMissingImages.length} players missing images, using Gemini search...`)
-            players = await searchPlayerImagesWithGemini(players, teamName, gameName)
+        console.log(`Team name received: ${teamName}`)
+        console.log(`Players with missing images: ${playersWithMissingImages.length}`)
+        console.log(`Player image status:`, players.map((p: any) => ({ nickname: p.nickname, hasImage: !!p.imageUrl })))
+
+        if (playersWithMissingImages.length > 0) {
+            if (teamName) {
+                console.log(`Calling Gemini search for ${playersWithMissingImages.length} players from ${teamName}...`)
+                players = await searchPlayerImagesWithGemini(players, teamName, gameName)
+                console.log(`After Gemini search:`, players.map((p: any) => ({ nickname: p.nickname, imageUrl: p.imageUrl })))
+            } else {
+                console.warn('teamName not provided, skipping Gemini image search')
+            }
         }
 
         return new Response(
