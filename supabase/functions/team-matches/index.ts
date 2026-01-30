@@ -132,78 +132,67 @@ serve(async (req) => {
     const nowISO = new Date().toISOString();
     console.log(`[team-matches] Query time: ${nowISO}`)
 
-    // INTROSPECTION MODE:
-    // Let's find out what the schema actually supports for 'allSeries' or 'series'
+    // Query minimal fields and filter in memory to avoid schema validation errors
     const combinedQuery = `
-      query IntrospectGRID {
-         __type(name: "Series") {
-            name
-            fields {
+      query GetMatches($teamId: ID!) {
+        allSeries(
+          filter: {
+            teamIds: { in: [$teamId] }
+          }
+          first: 50
+        ) {
+          edges {
+            node {
+              id
+              startTimeScheduled
+              format {
                 name
-                type {
-                    name
-                    kind
+                nameShortened
+              }
+              type
+              tournament {
+                id
+                name
+              }
+              teams {
+                baseInfo {
+                  id
+                  name
+                  nameShortened
+                  logoUrl
                 }
+                scoreAdvantage
+              }
             }
-         }
-         filterInput: __type(name: "SeriesFilter") {
-             name
-             inputFields {
-                 name
-                 type {
-                     name
-                     kind
-                 }
-             }
-         }
-         orderByEnum: __type(name: "SeriesOrderBy") {
-             name
-             enumValues {
-                 name
-             }
-         }
+          }
+        }
       }
-    `;
+    `
 
-    console.log(`[team-matches] Sending INTROSPECTION request to GRID API...`)
+    console.log(`[team-matches] Sending request to GRID API...`)
 
     const gridRes = await fetch(GRID_API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': gridApiKey },
       body: JSON.stringify({
         query: combinedQuery,
-        variables: {}
+        variables: { teamId }
       }),
     })
 
     console.log(`[team-matches] GRID Response Status: ${gridRes.status} ${gridRes.statusText}`)
-    console.log(`[team-matches] GRID Response Headers:`, Object.fromEntries(gridRes.headers.entries()))
 
-    const responseText = await gridRes.text()
-    console.log(`[team-matches] GRID Raw Response (first 2000 chars):`, responseText.substring(0, 2000))
-
+    // Check for 502/bad response
     if (!gridRes.ok) {
-      console.error(`[team-matches] GRID API HTTP Error ${gridRes.status}:`, responseText)
+      const text = await gridRes.text();
+      console.error(`[team-matches] GRID API Error: ${text}`);
       return new Response(
-        JSON.stringify({
-          error: `GRID API error: ${gridRes.status}`,
-          details: responseText.substring(0, 500),
-          statusText: gridRes.statusText
-        }),
+        JSON.stringify({ error: 'GRID API Error', details: text }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 502 }
       )
     }
 
-    let gridData;
-    try {
-      gridData = JSON.parse(responseText)
-    } catch (parseError) {
-      console.error(`[team-matches] Failed to parse GRID response as JSON:`, parseError)
-      return new Response(
-        JSON.stringify({ error: 'Invalid JSON from GRID API', raw: responseText.substring(0, 500) }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 502 }
-      )
-    }
+    const gridData = await gridRes.json();
 
     if (gridData.errors) {
       console.error('[team-matches] GRID GraphQL Errors:', JSON.stringify(gridData.errors, null, 2))
@@ -213,31 +202,35 @@ serve(async (req) => {
       )
     }
 
-    console.log(`[team-matches] GRID Query successful. Processing data...`)
+    const allEdges = gridData.data?.allSeries?.edges ?? [];
+    const nowTime = new Date(nowISO).getTime();
 
-    const historyEdges = gridData.data?.history?.edges ?? [];
-    const upcomingEdges = gridData.data?.upcoming?.edges ?? [];
-
-    const processNode = (node: any, isUpcoming: boolean) => {
-      // Find opponent: The participant that is NOT the current team
+    const processNode = (node: any) => {
       const opponentTeam = node.teams?.find((t: any) => t.baseInfo?.id !== teamId);
       const myTeam = node.teams?.find((t: any) => t.baseInfo?.id === teamId);
+
+      const startTime = node.startTimeScheduled;
+      const isUpcoming = new Date(startTime).getTime() > nowTime;
 
       let result = 'UPCOMING';
       let status = 'scheduled';
 
-      if (!isUpcoming && node.endTimeActual) {
-        status = 'finished';
-        const myScore = myTeam?.scoreAdvantage || 0;
-        const oppScore = opponentTeam?.scoreAdvantage || 0;
-        if (myScore > oppScore) result = 'WIN';
-        else if (myScore < oppScore) result = 'LOSS';
-        else result = 'DRAW';
+      // Simple heuristic for finished if time passed
+      // Ideally check if scores exist or if startTime + duration passed
+      if (!isUpcoming) {
+        if (myTeam?.scoreAdvantage > 0 || opponentTeam?.scoreAdvantage > 0) {
+          status = 'finished';
+          const myScore = myTeam?.scoreAdvantage || 0;
+          const oppScore = opponentTeam?.scoreAdvantage || 0;
+          if (myScore > oppScore) result = 'WIN';
+          else if (myScore < oppScore) result = 'LOSS';
+          else result = 'DRAW';
+        }
       }
 
       return {
         id: node.id,
-        startTime: node.startTimeScheduled,
+        startTime: startTime,
         status: status,
         format: node.format?.nameShortened || node.format?.name || 'Bo1',
         type: node.type,
@@ -246,7 +239,8 @@ serve(async (req) => {
         opponent: opponentTeam ? {
           id: opponentTeam.baseInfo.id,
           name: opponentTeam.baseInfo.name,
-          abbreviation: opponentTeam.baseInfo.nameShortened
+          abbreviation: opponentTeam.baseInfo.nameShortened,
+          logoUrl: opponentTeam.baseInfo.logoUrl
         } : null,
         tournament: node.tournament ? {
           name: node.tournament.name
@@ -254,24 +248,21 @@ serve(async (req) => {
       };
     };
 
-    const historyMatches = historyEdges.map((e: any) => processNode(e.node, false));
-    const upcomingMatches = upcomingEdges.map((e: any) => processNode(e.node, true));
+    const allProcessed = allEdges.map((e: any) => processNode(e.node));
 
-    // Combine: Upcoming (ASC) -> History (DESC)
-    // But typically dashboards show Most Recent at top.
-    // If we want [Upcoming Soonest, Upcoming Later ... Past Recent, Past Older]
-    // Or [Upcoming Later, Upcoming Soonest, Past Recent, Past Older] to keep time continuous?
-    // Usually "Upcoming" is a separate section.
-    // If mixed: Future -> Past (Time Descending).
-    // Upcoming: we got ASC (Soonest first). So [Soonest, Next, Later].
-    // History: we got DESC (Recent first). So [Recent, Older].
-    // If we want Time Descending: [Upcoming Later, Upcoming Soonest, Past Recent, Past Older].
-    // Let's just return all and let frontend sort if needed, or stick to simple concatenation.
+    // Sort and Split in memory
+    const upcomingMatches = allProcessed
+      .filter((m: any) => new Date(m.startTime).getTime() > nowTime)
+      .sort((a: any, b: any) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
+      .slice(0, 5);
+
+    const historyMatches = allProcessed
+      .filter((m: any) => new Date(m.startTime).getTime() <= nowTime)
+      .sort((a: any, b: any) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
+      .slice(0, 10);
+
     // Let's put Upcoming matches *first* in the list, ordered by soonest (ASC), then History (DESC).
-    // This highlights the "Next Match" at the top of the upcoming list.
-
     let matches = [...upcomingMatches, ...historyMatches];
-
     // If no upcoming matches found, try Gemini
     if (upcomingMatches.length === 0) {
       console.log('[team-matches] No upcoming matches from GRID. Searching with Gemini...');
