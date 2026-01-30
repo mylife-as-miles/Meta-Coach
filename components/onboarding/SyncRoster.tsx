@@ -65,7 +65,7 @@ const SyncRoster: React.FC = () => {
       try {
         console.log('Fetching players for team:', gridTeamId);
         const { data, error } = await supabase.functions.invoke('grid-players', {
-          body: { teamId: gridTeamId, titleId: gridTitleId }
+          body: { teamId: gridTeamId, titleId: gridTitleId, teamName: teamName }
         });
 
         if (error) throw error;

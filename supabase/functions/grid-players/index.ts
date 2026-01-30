@@ -1,13 +1,92 @@
 // supabase/functions/grid-players/index.ts
-// Fetch players by teamId from GRID
+// Fetch players by teamId from GRID with AI-powered image search
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { corsHeaders } from '../_shared/cors.ts'
+import { GoogleGenAI } from 'npm:@google/genai@^1.0.0'
 
-const VLR_API_BASE = 'https://vlr.orlandomm.net/api/v1'
 const GRID_API_URL = 'https://api-op.grid.gg/central-data/graphql'
 
+// Gemini-powered image search for players without images
+async function searchPlayerImagesWithGemini(
+    players: { id: string; nickname: string; imageUrl: string | null }[],
+    teamName: string,
+    game: string
+): Promise<{ id: string; nickname: string; imageUrl: string | null }[]> {
+    const geminiApiKey = Deno.env.get('GEMINI_API_KEY')
 
+    if (!geminiApiKey) {
+        console.warn('GEMINI_API_KEY not configured, skipping AI image search')
+        return players
+    }
+
+    // Filter players that need images
+    const playersNeedingImages = players.filter(p => !p.imageUrl)
+
+    if (playersNeedingImages.length === 0) {
+        return players
+    }
+
+    console.log(`Using Gemini to search images for ${playersNeedingImages.length} players`)
+
+    try {
+        const ai = new GoogleGenAI({ apiKey: geminiApiKey })
+
+        const playerList = playersNeedingImages.map(p => p.nickname).join(', ')
+
+        const prompt = `Find official esports profile image URLs for these professional ${game} players from team "${teamName}":
+
+Players: ${playerList}
+
+Search these sources:
+- Liquipedia
+- vlr.gg (VALORANT)
+- lol.fandom.com (League of Legends)
+- Official team websites
+- Official tournament pages
+
+Return ONLY a JSON array like this:
+[{"nickname": "player_name", "imageUrl": "https://direct-image-url.jpg"}]
+
+Rules:
+- Only return direct image URLs (.jpg, .png, .webp)
+- If no image found, set imageUrl to null
+- No explanations, just the JSON array`
+
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.0-flash',
+            config: {
+                tools: [{ googleSearch: {} }],
+                responseMimeType: 'application/json',
+            },
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        })
+
+        const responseText = response.text || ''
+        console.log('Gemini image search response:', responseText)
+
+        const parsed = JSON.parse(responseText)
+
+        if (Array.isArray(parsed)) {
+            // Merge AI results back into players array
+            return players.map(player => {
+                if (player.imageUrl) return player // Already has image
+
+                const found = parsed.find((r: any) =>
+                    r.nickname?.toLowerCase() === player.nickname.toLowerCase()
+                )
+                return {
+                    ...player,
+                    imageUrl: found?.imageUrl || null
+                }
+            })
+        }
+    } catch (error) {
+        console.error('Gemini image search error:', error)
+    }
+
+    return players
+}
 
 serve(async (req) => {
     // Handle CORS preflight
@@ -18,9 +97,7 @@ serve(async (req) => {
     try {
         const gridApiKey = Deno.env.get('GRID_API_KEY')
 
-        // Debug: Log if API key exists (don't log the actual key!)
         console.log('GRID_API_KEY exists:', !!gridApiKey)
-        console.log('GRID_API_KEY length:', gridApiKey?.length || 0)
 
         if (!gridApiKey) {
             throw new Error('GRID_API_KEY not configured in Supabase Edge Function secrets')
@@ -29,32 +106,30 @@ serve(async (req) => {
         // Parse inputs from Body (POST) or Query Params (GET)
         let teamId: string | null = null
         let titleId: string | null = null
+        let teamName: string | null = null
 
-        // 1. Try Query Params first
         const url = new URL(req.url)
         teamId = url.searchParams.get('teamId')
         titleId = url.searchParams.get('titleId')
+        teamName = url.searchParams.get('teamName')
 
-        // 2. If not found and POST, try JSON body
-        if ((!teamId || !titleId) && req.method === 'POST') {
+        if (req.method === 'POST') {
             try {
                 const body = await req.json()
                 if (!teamId) teamId = body.teamId
                 if (!titleId) titleId = body.titleId
+                if (!teamName) teamName = body.teamName
             } catch (e) {
                 console.warn('Failed to parse JSON body:', e)
             }
         }
 
-        console.log('Request params:', { teamId, titleId })
+        console.log('Request params:', { teamId, titleId, teamName })
 
         if (!teamId) {
             return new Response(
                 JSON.stringify({ error: 'teamId is required' }),
-                {
-                    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-                    status: 400,
-                }
+                { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
             )
         }
 
@@ -114,6 +189,7 @@ serve(async (req) => {
             imageUrl: null // Default null
         }))
 
+        // Helper to fetch Valorant image by ID
         const fetchValorantImageById = async (externalId: string): Promise<string | null> => {
             try {
                 const res = await fetch(`https://vlr.orlandomm.net/api/v1/players/${externalId}`)
@@ -126,10 +202,8 @@ serve(async (req) => {
             }
         }
 
-        // ... inside serve ...
-
-        // Enrich with Images (Valorant specific for now)
-        if (titleId === '6' || titleId === '29') { // Valorant title IDs
+        // First try VLR API for Valorant players
+        if (titleId === '6' || titleId === '29') {
             console.log('Fetching Valorant images using External IDs...')
             const imagePromises = players.map(async (p: any) => {
                 const valLink = p.externalLinks?.find((l: any) => l.dataProvider.name === "VALORANT")
@@ -139,22 +213,28 @@ serve(async (req) => {
             players = await Promise.all(imagePromises)
         }
 
+        // Determine game name for Gemini search
+        const gameName = titleId === '3' ? 'League of Legends' :
+            (titleId === '6' || titleId === '29') ? 'VALORANT' :
+                'esports'
+
+        // Use Gemini + Google Search as fallback for players without images
+        const playersWithMissingImages = players.filter((p: any) => !p.imageUrl)
+        if (playersWithMissingImages.length > 0 && teamName) {
+            console.log(`${playersWithMissingImages.length} players missing images, using Gemini search...`)
+            players = await searchPlayerImagesWithGemini(players, teamName, gameName)
+        }
+
         return new Response(
             JSON.stringify({ players }),
-            {
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-                status: 200,
-            }
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
         )
 
     } catch (error) {
         console.error('Error fetching players:', error)
         return new Response(
             JSON.stringify({ error: error.message }),
-            {
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-                status: 500,
-            }
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
         )
     }
 })

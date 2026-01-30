@@ -171,6 +171,8 @@ export const useOnboardingStore = create<OnboardingState & OnboardingActions>((s
                     workspace_id: workspace.id,
                     role: p.role,
                     ign: p.ign,
+                    grid_player_id: p.gridId || null,
+                    image_url: p.imageUrl || null,
                     metadata: {
                         imageUrl: p.imageUrl,
                         gridId: p.gridId
