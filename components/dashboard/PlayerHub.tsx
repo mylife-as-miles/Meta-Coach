@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useDashboardStore } from '../../stores/useDashboardStore';
 import { useSession } from '../../hooks/useAuth';
 import { useWorkspace, usePlayers } from '../../hooks/useDashboardQueries';
+import { getProxiedImageUrl } from '../../lib/imageProxy';
 import ComparePlayersModal from './modals/ComparePlayersModal';
 import EditAttributesModal from './modals/EditAttributesModal';
 
@@ -135,7 +136,9 @@ const PlayerHub: React.FC = () => {
                                         </div>
                                     </div>
                                     <div className="flex flex-col items-end">
-                                        <img alt="USA" referrerPolicy="no-referrer" className="w-6 opacity-80 rounded-sm shadow-sm" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAFil26kJ3bUewkiNb-4gib2BeYc4Zx4NZjVRcWkLirY71c86hv4iOL2vPRy1KV0Qt1lVlZMRwMItsRt2oH389wzilXcbIm-i-nmKakxAZGwLtYFbY9VT5Q2KIRH2YcnWLWwVT_17XbL-Ng4f1vO2RbaTseAuUwd8wyB6YQ_w4Try1kkgG3VFzDyObGFq20bI0WhWA2ZKXkQYimaYOxyiAJu-qQzsmjRC4mwpkBWo2uAnVRSil0IyCt9h-EMh2oFSR5WbY3arxgeSc" />
+                                        <div className="flex flex-col items-end">
+                                            <img alt="USA" referrerPolicy="no-referrer" className="w-6 opacity-80 rounded-sm shadow-sm" src={getProxiedImageUrl("https://lh3.googleusercontent.com/aida-public/AB6AXuAFil26kJ3bUewkiNb-4gib2BeYc4Zx4NZjVRcWkLirY71c86hv4iOL2vPRy1KV0Qt1lVlZMRwMItsRt2oH389wzilXcbIm-i-nmKakxAZGwLtYFbY9VT5Q2KIRH2YcnWLWwVT_17XbL-Ng4f1vO2RbaTseAuUwd8wyB6YQ_w4Try1kkgG3VFzDyObGFq20bI0WhWA2ZKXkQYimaYOxyiAJu-qQzsmjRC4mwpkBWo2uAnVRSil0IyCt9h-EMh2oFSR5WbY3arxgeSc") || ''} />
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="absolute top-16 left-0 right-0 bottom-32 flex items-center justify-center z-10 pointer-events-none">

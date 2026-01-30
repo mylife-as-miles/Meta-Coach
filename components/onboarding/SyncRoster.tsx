@@ -4,6 +4,7 @@ import { useOnboardingStore } from '../../stores/useOnboardingStore';
 import OnboardingLayout from './OnboardingLayout';
 import { supabase } from '../../lib/supabase';
 import { useGridPlayers } from '../../hooks/useOnboardingQueries';
+import { getProxiedImageUrl } from '../../lib/imageProxy';
 
 const LOL_ROLES = [
   { name: 'Top', icon: 'shield', description: 'Frontline & Split Push' },
@@ -252,7 +253,7 @@ const SyncRoster: React.FC = () => {
                   <div className="relative w-full h-full flex items-end justify-center">
                     <img
                       key={currentPlayerMeta.imageUrl} // Key change forces animation
-                      src={currentPlayerMeta.imageUrl}
+                      src={getProxiedImageUrl(currentPlayerMeta.imageUrl) || ''}
                       referrerPolicy="no-referrer"
                       alt={currentPlayerMeta.nickname}
                       className="h-[90%] md:h-[110%] object-contain object-bottom drop-shadow-[0_0_30px_rgba(0,0,0,0.5)] animate-fade-in-up md:translate-x-10"
@@ -313,7 +314,7 @@ const SyncRoster: React.FC = () => {
                         : 'border-white/10 bg-white/5'
                         }`}>
                         {gridPlayers[idx]?.imageUrl ? (
-                          <img src={gridPlayers[idx].imageUrl!} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+                          <img src={getProxiedImageUrl(gridPlayers[idx].imageUrl!) || ''} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
                         ) : (
                           <span className={`material-symbols-outlined text-sm ${filled ? 'text-green-500' : 'text-gray-600'}`}>
                             {role.icon}
