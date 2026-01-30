@@ -285,15 +285,15 @@ export const useDashboardStore = create<DashboardState & DashboardActions>((set,
                         const mappedMatches: Match[] = matchesData.matches.map((m: any) => ({
                             id: m.id,
                             date: new Date(m.startTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-                            duration: m.status === 'scheduled' ? 'TBD' : '35:00', // Placeholder as duration isn't in lean query
-                            result: m.status === 'scheduled' ? 'UPCOMING' : (m.winnerId === workspace.grid_team_id ? 'WIN' : 'LOSS'),
-                            score: '0 - 0', // Score detail not in lean query, default placeholder
-                            format: typeof m.format === 'string' ? m.format : (m.format?.nameShortened || 'Bo1'),
-                            type: 'Ranked',
+                            duration: m.status === 'scheduled' ? 'TBD' : (m.duration || '35:00'),
+                            result: m.result || (m.status === 'scheduled' ? 'UPCOMING' : 'UNKNOWN'),
+                            score: m.score || '0 - 0',
+                            format: m.format || 'Bo1',
+                            type: m.type || 'Ranked',
                             opponent: {
-                                name: m.teams?.find((t: any) => t.id !== workspace.grid_team_id)?.name || 'Unknown',
-                                abbreviation: (m.teams?.find((t: any) => t.id !== workspace.grid_team_id)?.name || 'UNK').substring(0, 3).toUpperCase(),
-                                color: 'red'
+                                name: m.opponent?.name || 'Unknown',
+                                abbreviation: m.opponent?.abbreviation || (m.opponent?.name || 'UNK').substring(0, 3).toUpperCase(),
+                                color: 'red' // Could be dynamic if GRID provides team color
                             },
                             performance: { macroControl: 50, microErrorRate: 'MED' }
                         }));
