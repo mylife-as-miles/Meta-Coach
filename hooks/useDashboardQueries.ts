@@ -195,7 +195,7 @@ export function usePlayers(workspaceId: string | undefined) {
 // ============================================
 // Hook: useMatches
 // ============================================
-export function useMatches(gridTeamId: string | undefined) {
+export function useMatches(gridTeamId: string | undefined, gameTitle: string = 'Esports', teamName: string = 'Team') {
     return useQuery({
         queryKey: dashboardKeys.matches(gridTeamId),
         queryFn: async (): Promise<Match[]> => {
@@ -204,7 +204,11 @@ export function useMatches(gridTeamId: string | undefined) {
                 return mockMatches;
             }
 
-            const { data: matchesData, error } = await invokeWithTimeout<any>('team-matches', { teamId: gridTeamId });
+            const { data: matchesData, error } = await invokeWithTimeout<any>('team-matches', {
+                teamId: gridTeamId,
+                game: gameTitle,
+                teamName: teamName
+            });
 
             if (error || !matchesData?.matches) {
                 console.warn('Matches fetch failed, using mock data');

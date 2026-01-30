@@ -5,8 +5,87 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
+import { GoogleGenAI } from 'npm:@google/genai@^1.0.0'
 
 const GRID_API_URL = 'https://api-op.grid.gg/central-data/graphql'
+
+async function searchMatchesWithGemini(teamName: string, game: string, currentDate: string): Promise<any[]> {
+  const geminiApiKey = Deno.env.get('GEMINI_API_KEY')
+  if (!geminiApiKey) {
+    console.warn('GEMINI_API_KEY missing, skipping AI match search')
+    return [];
+  }
+
+  try {
+    const ai = new GoogleGenAI({ apiKey: geminiApiKey })
+    const prompt = `Find the upcoming match schedule for the professional esports team "${teamName}" in ${game}.
+Current Date: ${currentDate}
+
+Search sources like Liquipedia, vlr.gg (if Valorant), or Leaguepedia.
+Return up to 3 upcoming matches scheduled AFTER ${currentDate}.
+
+Return a JSON array with this structure:
+[
+  {
+    "opponentName": "Opponent Team Name",
+    "opponentLogo": "URL to opponent logo (Liquipedia/Wiki)",
+    "date": "ISO Date String (YYYY-MM-DDTHH:mm:ssZ)",
+    "tournament": "Tournament Name",
+    "format": "Bo1/Bo3/Bo5"
+  }
+]
+
+Rules:
+- STRICTLY JSON array only.
+- Prefer Liquipedia images for logos.
+- If exact time is unknown, use T00:00:00Z.
+- If no upcoming matches found, return empty array.`
+
+    const config = {
+      thinkingConfig: {
+        thinkingLevel: 'MINIMAL',
+      },
+      tools: [{ googleSearch: {} }],
+      responseMimeType: 'application/json',
+    };
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      config,
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    })
+
+    const responseText = response.text || '[]'
+    const matches = JSON.parse(responseText);
+
+    if (Array.isArray(matches)) {
+      return matches.map((m: any) => ({
+        id: `ai-${Math.random().toString(36).substr(2, 9)}`,
+        startTime: m.date,
+        status: 'scheduled',
+        format: m.format || 'Bo1',
+        type: 'Official',
+        result: 'UPCOMING',
+        score: 'VS',
+        opponent: {
+          name: m.opponentName,
+          abbreviation: m.opponentName.substring(0, 3).toUpperCase(),
+          logoUrl: m.opponentLogo
+        },
+        tournament: {
+          name: m.tournament
+        },
+        source: 'gemini'
+      }));
+    }
+    return [];
+
+  } catch (e) {
+    console.error('Gemini match search failed:', e);
+    return [];
+  }
+}
+
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -29,10 +108,14 @@ serve(async (req) => {
 
     const url = new URL(req.url)
     let teamId = url.searchParams.get('teamId')
+    let game = url.searchParams.get('game')
+    let teamNameArg = url.searchParams.get('teamName')
 
-    if (!teamId && req.method === 'POST') {
+    if (req.method === 'POST') {
       const body = await req.json()
-      teamId = body.teamId
+      if (!teamId) teamId = body.teamId
+      if (!game) game = body.game
+      if (!teamNameArg) teamNameArg = body.teamName
     }
 
     if (!teamId) {
@@ -216,7 +299,32 @@ serve(async (req) => {
     // Let's put Upcoming matches *first* in the list, ordered by soonest (ASC), then History (DESC).
     // This highlights the "Next Match" at the top of the upcoming list.
 
-    const matches = [...upcomingMatches, ...historyMatches];
+    let matches = [...upcomingMatches, ...historyMatches];
+
+    // If no upcoming matches found, try Gemini
+    if (upcomingMatches.length === 0) {
+      console.log('[team-matches] No upcoming matches from GRID. Searching with Gemini...');
+      // We need team name and game. We have teamId. 
+      // We can get team name from history if available, or query GRID for it specifically, 
+      // OR rely on what we have. historyEdges[0]?.node?.teams...
+
+      // Let's try to extract team Name from history if possible
+      let extractedTeamName = teamNameArg || 'Team';
+      let extractedGame = game || 'Esports';
+
+      if (historyEdges.length > 0 && !teamNameArg) {
+        const myTeam = historyEdges[0].node.teams.find((t: any) => t.baseInfo.id === teamId);
+        if (myTeam) extractedTeamName = myTeam.baseInfo.name;
+      }
+
+      if (extractedTeamName !== 'Team') {
+        const aiMatches = await searchMatchesWithGemini(extractedTeamName, extractedGame, nowISO.split('T')[0]);
+        if (aiMatches.length > 0) {
+          console.log(`[team-matches] Found ${aiMatches.length} AI matches`);
+          matches = [...aiMatches, ...matches];
+        }
+      }
+    }
 
     return new Response(
       JSON.stringify({ matches, source: 'grid' }),

@@ -1,7 +1,7 @@
 import React from 'react';
 import { useDashboardStore } from '../../stores/useDashboardStore';
 import { useSession } from '../../hooks/useAuth';
-import { useWorkspace, useMatches } from '../../hooks/useDashboardQueries';
+import { useWorkspace, useMatches, useTeamProfile } from '../../hooks/useDashboardQueries';
 import MatchDetailModal from './modals/MatchDetailModal';
 
 const MatchHistory: React.FC = () => {
@@ -15,7 +15,8 @@ const MatchHistory: React.FC = () => {
     const { data: session } = useSession();
     const userId = session?.user?.id;
     const { data: workspace } = useWorkspace(userId);
-    const { data: allMatches = [] } = useMatches(workspace?.grid_team_id);
+    const { data: teamProfile } = useTeamProfile(workspace?.id, workspace?.grid_team_id);
+    const { data: allMatches = [] } = useMatches(workspace?.grid_team_id, teamProfile?.game, teamProfile?.teamName);
 
     return (
         <div className="flex flex-col">
@@ -218,7 +219,7 @@ const MatchHistory: React.FC = () => {
                                 <div>
                                     <h4 className="text-sm font-bold text-gray-200 mb-1">Mid-Jungle Synergy</h4>
                                     <p className="text-xs text-gray-400 leading-relaxed">
-                                        Roam timings are highly synchronized. Successful gank conversion rate has increased to <span class="text-primary font-medium">68%</span> when support roams mid.
+                                        Roam timings are highly synchronized. Successful gank conversion rate has increased to <span className="text-primary font-medium">68%</span> when support roams mid.
                                     </p>
                                 </div>
                             </div>
