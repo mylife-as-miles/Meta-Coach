@@ -23,10 +23,10 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children, requireOnboarding = fal
         // Safety timeout to prevent infinite loading
         const timeoutId = setTimeout(() => {
             if (mounted && loading) {
-                console.warn("AuthGuard: Authentication check timed out after 8s");
+                console.warn("AuthGuard: Authentication check timed out after 4s. Network slow?");
                 setLoading(false);
             }
-        }, 8000);
+        }, 4000);
 
         const checkOnboardingStatus = async (sessionUser: User) => {
             // Optimization: Check metadata first
