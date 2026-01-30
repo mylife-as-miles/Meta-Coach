@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useOnboardingStore } from '../../stores/useOnboardingStore';
 import OnboardingLayout from './OnboardingLayout';
 import { supabase } from '../../lib/supabase';
+import { useGridPlayers } from '../../hooks/useOnboardingQueries';
 
 const LOL_ROLES = [
   { name: 'Top', icon: 'shield', description: 'Frontline & Split Push' },
@@ -40,10 +41,14 @@ const SyncRoster: React.FC = () => {
   const setRoster = useOnboardingStore((state) => state.setRoster);
 
   const [activeRoles, setActiveRoles] = useState(LOL_ROLES);
-  const [isLoading, setIsLoading] = useState(true);
-  const [gridPlayers, setGridPlayers] = useState<GridPlayer[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+
+  // Use TanStack Query
+  const {
+    data: gridPlayers = [],
+    isLoading
+  } = useGridPlayers(gridTeamId, gridTitleId);
 
   // 1. Determine Roles based on Title
   useEffect(() => {
@@ -54,72 +59,55 @@ const SyncRoster: React.FC = () => {
     }
   }, [gridTitleId]);
 
-  // 2. Fetch Players from GRID Edge Function
+  // 2. Sync fetched players to Roster Store
   useEffect(() => {
-    const fetchGridPlayers = async () => {
-      if (!gridTeamId) {
-        setIsLoading(false);
-        return;
-      }
+    if (gridPlayers && gridPlayers.length > 0 && !isLoading) {
+      console.log('Syncing fetched players to roster:', gridPlayers);
 
-      try {
-        console.log('Fetching players for team:', gridTeamId);
-        const { data, error } = await supabase.functions.invoke('grid-players', {
-          body: { teamId: gridTeamId, titleId: gridTitleId, teamName: teamName }
-        });
+      const newRoster = [...roster];
+      let hasUpdates = false;
 
-        if (error) throw error;
-
-        console.log('GRID Players:', data.players);
-        setGridPlayers(data.players || []);
-
-        // Auto-fill roster if empty
-        if (data.players && data.players.length > 0) {
-          const newRoster = [...roster];
-
-          data.players.forEach((p: GridPlayer, i: number) => {
-            // If we have more players than slots, expand the roster
-            if (i >= newRoster.length) {
-              newRoster.push({
-                role: 'Substitute',
-                ign: p.nickname,
-                imageUrl: p.imageUrl,
-                gridId: p.id
-              });
-            } else if (!newRoster[i].ign) {
-              // Fill existing empty slots
-              newRoster[i].ign = p.nickname;
-              newRoster[i].imageUrl = p.imageUrl;
-              newRoster[i].gridId = p.id;
-            }
-          });
-
-          setRoster(newRoster);
-
-          // Also update active roles for UI mapping
-          if (data.players.length > activeRoles.length) {
-            const extraCount = data.players.length - activeRoles.length;
-            const newRoles = [...activeRoles];
-            for (let k = 0; k < extraCount; k++) {
-              newRoles.push({
-                name: 'Substitute',
-                icon: 'group',
-                description: 'Reserve Player'
-              });
-            }
-            setActiveRoles(newRoles);
+      // Ensure active roles match player count for substitutes
+      if (gridPlayers.length > activeRoles.length) {
+        const extraCount = gridPlayers.length - activeRoles.length;
+        const newRoles = [...activeRoles];
+        // Only add roles if they aren't already there (prevent infinite loop/duplication)
+        if (newRoles.length < gridPlayers.length) {
+          for (let k = 0; k < extraCount; k++) {
+            newRoles.push({
+              name: 'Substitute',
+              icon: 'group',
+              description: 'Reserve Player'
+            });
           }
+          setActiveRoles(newRoles);
         }
-
-      } catch (err) {
-        console.error('Error fetching GRID players:', err);
-      } finally {
-        setIsLoading(false);
       }
-    };
 
-    fetchGridPlayers();
-  }, [gridTeamId]);
+      gridPlayers.forEach((p: any, i: number) => {
+        // If we have more players than slots, expand the roster
+        if (i >= newRoster.length) {
+          newRoster.push({
+            role: 'Substitute',
+            ign: p.nickname,
+            imageUrl: p.imageUrl,
+            gridId: p.id
+          });
+          hasUpdates = true;
+        } else if (!newRoster[i].ign) {
+          // Fill existing empty slots
+          newRoster[i].ign = p.nickname;
+          newRoster[i].imageUrl = p.imageUrl;
+          newRoster[i].gridId = p.id;
+          hasUpdates = true;
+        }
+      });
+
+      if (hasUpdates) {
+        setRoster(newRoster);
+      }
+    }
+  }, [gridPlayers, isLoading, activeRoles, roster, setRoster]); // Depend on gridPlayers result
 
 
   const handleInputChange = (index: number, value: string) => {

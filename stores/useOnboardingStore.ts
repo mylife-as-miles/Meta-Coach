@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import supabase from '../lib/supabase';
 
 // Types
@@ -89,178 +90,182 @@ const initialState: OnboardingState = {
     isSaving: false,
 };
 
-export const useOnboardingStore = create<OnboardingState & OnboardingActions>((set, get) => ({
-    ...initialState,
+export const useOnboardingStore = create<OnboardingState & OnboardingActions>()(
+    persist(
+        (set, get) => ({
+            ...initialState,
 
-    setGameAndTeam: (titleId, teamId, teamName, gameTitle) => {
-        set({
-            gridTitleId: titleId,
-            gridTeamId: teamId,
-            teamName,
-            gameTitle,
-        });
-    },
-
-    setRoster: (roster) => {
-        set({ roster });
-    },
-
-    updateRosterPlayer: (index, updates) => {
-        const roster = [...get().roster];
-        if (typeof updates === 'string') {
-            roster[index] = { ...roster[index], ign: updates };
-        } else {
-            roster[index] = { ...roster[index], ...updates };
-        }
-        set({ roster });
-    },
-
-    setAIConfig: (config) => {
-        set((state) => ({
-            aiConfig: { ...state.aiConfig, ...config },
-        }));
-    },
-
-    completeOnboarding: async (navigate) => {
-        set({ isSaving: true });
-
-        try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) {
-                console.error('No authenticated user');
-                return false;
-            }
-
-            const state = get();
-
-            // 1. Create workspace
-            console.log("Saving Workspace with state:", state);
-
-            const { data: workspace, error: workspaceError } = await supabase
-                .from('workspaces')
-                .upsert({
-                    user_id: user.id,
-                    grid_title_id: state.gridTitleId,
-                    grid_team_id: state.gridTeamId,
-                    team_name: state.teamName,
-                    game_title: state.gameTitle,
-                    updated_at: new Date().toISOString()
-                }, { onConflict: 'user_id, grid_team_id' })
-                .select()
-                .single();
-
-            if (workspaceError) {
-                console.error('Error creating/updating workspace:', workspaceError);
-                return false;
-            }
-
-            console.log("Workspace synced:", workspace);
-
-            // 2. Create roster entries
-            // First, clear existing roster for this workspace to prevent duplicates or stale data
-            const { error: deleteError } = await supabase
-                .from('roster')
-                .delete()
-                .eq('workspace_id', workspace.id);
-
-            if (deleteError) console.error('Error clearing old roster:', deleteError);
-
-            const rosterEntries = state.roster
-                .filter(p => p.ign.trim() !== '')
-                .map(p => ({
-                    workspace_id: workspace.id,
-                    role: p.role,
-                    ign: p.ign,
-                    grid_player_id: p.gridId || null,
-                    image_url: p.imageUrl || null,
-                    metadata: {
-                        imageUrl: p.imageUrl,
-                        gridId: p.gridId
-                    }
-                }));
-
-            if (rosterEntries.length > 0) {
-                const { error: rosterError } = await supabase
-                    .from('roster')
-                    .insert(rosterEntries);
-
-                if (rosterError) {
-                    console.error('Error creating roster:', rosterError);
-                    // Fail hard so we don't end up with broken state
-                    return false;
-                }
-            } else {
-                console.warn("No roster entries to save (empty filter?)");
-            }
-
-            // 3. Create AI calibration
-            const { error: calibrationError } = await supabase
-                .from('ai_calibration')
-                .upsert({
-                    workspace_id: workspace.id,
-                    aggression: state.aiConfig.aggression,
-                    resource_priority: state.aiConfig.resourcePriority,
-                    vision_investment: state.aiConfig.visionInvestment,
-                    early_game_pathing: state.aiConfig.earlyGamePathing,
-                    objective_control: state.aiConfig.objectiveControl,
-
-                    // New Fields (v2)
-                    matchup_delta: state.aiConfig.matchupDelta,
-                    derivation_factors: state.aiConfig.derivationFactors,
-                    opponent_name: state.aiConfig.opponentName,
-                    meta: state.aiConfig.meta,
-
-                    // AI Generated Legacy (Should be dynamic, but for now defaults or preserved)
-                    generated_reasoning: state.aiConfig.generatedReasoning,
-                    coaching_bias: state.aiConfig.coachingBias,
-                    confidence_score: state.aiConfig.confidenceScore
-                }, { onConflict: 'workspace_id' });
-
-            if (calibrationError) {
-                console.error('Error creating AI calibration:', calibrationError);
-            }
-
-            // 4. Mark onboarding complete
-            const { error: profileError } = await supabase
-                .from('profiles')
-                .upsert({
-                    id: user.id,
-                    onboarding_complete: true,
-                    updated_at: new Date().toISOString(),
-                    username: user.user_metadata?.username || user.email?.split('@')[0],
-                    role: state.role || 'Coach',
+            setGameAndTeam: (titleId, teamId, teamName, gameTitle) => {
+                set({
+                    gridTitleId: titleId,
+                    gridTeamId: teamId,
+                    teamName,
+                    gameTitle,
                 });
+            },
 
-            if (profileError) {
-                console.error('Error updating profile completion:', profileError);
-                return false;
-            }
+            setRoster: (roster) => {
+                set({ roster });
+            },
 
-            // 5. Sync Auth Metadata (so JWT/Session reflects the change immediately)
-            const { error: authError } = await supabase.auth.updateUser({
-                data: { onboarding_complete: true }
-            });
+            updateRosterPlayer: (index, updates) => {
+                const roster = [...get().roster];
+                if (typeof updates === 'string') {
+                    roster[index] = { ...roster[index], ign: updates };
+                } else {
+                    roster[index] = { ...roster[index], ...updates };
+                }
+                set({ roster });
+            },
 
-            if (authError) {
-                console.warn('Failed to sync auth metadata (non-critical):', authError);
-            }
+            setAIConfig: (config) => {
+                set((state) => ({
+                    aiConfig: { ...state.aiConfig, ...config },
+                }));
+            },
 
-            // 6. Navigate to dashboard
-            navigate('/dashboard');
-            return true;
+            completeOnboarding: async (navigate) => {
+                set({ isSaving: true });
 
-        } catch (error) {
-            console.error('Error completing onboarding:', error);
-            return false;
-        } finally {
-            set({ isSaving: false });
-        }
-    },
+                try {
+                    const { data: { user } } = await supabase.auth.getUser();
+                    if (!user) {
+                        console.error('No authenticated user');
+                        return false;
+                    }
 
-    reset: () => {
-        set(initialState);
-    },
-}));
+                    const state = get();
+
+                    // 1. Create workspace
+                    console.log("Saving Workspace with state:", state);
+
+                    const { data: workspace, error: workspaceError } = await supabase
+                        .from('workspaces')
+                        .upsert({
+                            user_id: user.id,
+                            grid_title_id: state.gridTitleId,
+                            grid_team_id: state.gridTeamId,
+                            team_name: state.teamName,
+                            game_title: state.gameTitle,
+                            updated_at: new Date().toISOString()
+                        }, { onConflict: 'user_id, grid_team_id' })
+                        .select()
+                        .single();
+
+                    if (workspaceError) {
+                        console.error('Error creating/updating workspace:', workspaceError);
+                        return false;
+                    }
+
+                    console.log("Workspace synced:", workspace);
+
+                    // 2. Create roster entries
+                    // First, clear existing roster for this workspace to prevent duplicates or stale data
+                    const { error: deleteError } = await supabase
+                        .from('roster')
+                        .delete()
+                        .eq('workspace_id', workspace.id);
+
+                    if (deleteError) console.error('Error clearing old roster:', deleteError);
+
+                    const rosterEntries = state.roster
+                        .filter(p => p.ign.trim() !== '')
+                        .map(p => ({
+                            workspace_id: workspace.id,
+                            role: p.role,
+                            ign: p.ign,
+                            grid_player_id: p.gridId || null,
+                            image_url: p.imageUrl || null,
+                            metadata: {
+                                imageUrl: p.imageUrl,
+                                gridId: p.gridId
+                            }
+                        }));
+
+                    if (rosterEntries.length > 0) {
+                        const { error: rosterError } = await supabase
+                            .from('roster')
+                            .insert(rosterEntries);
+
+                        if (rosterError) {
+                            console.error('Error creating roster:', rosterError);
+                            // Fail hard so we don't end up with broken state
+                            return false;
+                        }
+                    } else {
+                        console.warn("No roster entries to save (empty filter?)");
+                    }
+
+                    // 3. Create AI calibration
+                    const { error: calibrationError } = await supabase
+                        .from('ai_calibration')
+                        .upsert({
+                            workspace_id: workspace.id,
+                            aggression: state.aiConfig.aggression,
+                            resource_priority: state.aiConfig.resourcePriority,
+                            vision_investment: state.aiConfig.visionInvestment,
+                            early_game_pathing: state.aiConfig.earlyGamePathing,
+                            objective_control: state.aiConfig.objectiveControl,
+
+                            // New Fields (v2)
+                            matchup_delta: state.aiConfig.matchupDelta,
+                            derivation_factors: state.aiConfig.derivationFactors,
+                            opponent_name: state.aiConfig.opponentName,
+                            meta: state.aiConfig.meta,
+
+                            // AI Generated Legacy (Should be dynamic, but for now defaults or preserved)
+                            generated_reasoning: state.aiConfig.generatedReasoning,
+                            coaching_bias: state.aiConfig.coachingBias,
+                            confidence_score: state.aiConfig.confidenceScore
+                        }, { onConflict: 'workspace_id' });
+
+                    if (calibrationError) {
+                        console.error('Error creating AI calibration:', calibrationError);
+                    }
+
+                    // 4. Mark onboarding complete
+                    const { error: profileError } = await supabase
+                        .from('profiles')
+                        .upsert({
+                            id: user.id,
+                            onboarding_complete: true,
+                            updated_at: new Date().toISOString(),
+                            username: user.user_metadata?.username || user.email?.split('@')[0],
+                            role: state.role || 'Coach',
+                        });
+
+                    if (profileError) {
+                        console.error('Error updating profile completion:', profileError);
+                        return false;
+                    }
+
+                    // 5. Sync Auth Metadata (so JWT/Session reflects the change immediately)
+                    const { error: authError } = await supabase.auth.updateUser({
+                        data: { onboarding_complete: true }
+                    });
+
+                    if (authError) {
+                        console.warn('Failed to sync auth metadata (non-critical):', authError);
+                    }
+
+                    // 6. Navigate to dashboard
+                    navigate('/dashboard');
+                    return true;
+
+                } catch (error) {
+                    console.error('Error completing onboarding:', error);
+                    return false;
+                } finally {
+                    set({ isSaving: false });
+                }
+            },
+
+            reset: () => {
+                set(initialState);
+            },
+        }), {
+        name: 'onboarding-storage', // unique name
+    }));
 
 // Re-export types for consumers
 export type { RosterPlayer, AIConfig, OnboardingState };

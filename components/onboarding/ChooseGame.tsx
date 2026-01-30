@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useOnboardingStore } from '../../stores/useOnboardingStore';
 import OnboardingLayout from './OnboardingLayout';
 import { supabase } from '../../lib/supabase';
+import { useGridTeams } from '../../hooks/useOnboardingQueries';
 
 const GAMES = [
   {
@@ -29,6 +30,9 @@ const GAMES = [
   },
 ];
 
+
+// ... 
+
 const ChooseGame: React.FC = () => {
   const navigate = useNavigate();
   const setGameAndTeam = useOnboardingStore((state) => state.setGameAndTeam);
@@ -36,55 +40,25 @@ const ChooseGame: React.FC = () => {
   const [selectedGame, setSelectedGame] = useState<string | null>(null);
   const [selectedTeam, setSelectedTeam] = useState<{ id: string; name: string } | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
-  const [teams, setTeams] = useState<{ id: string; name: string }[]>([]);
-  const [isLoadingTeams, setIsLoadingTeams] = useState(false);
-  const [teamsError, setTeamsError] = useState<string | null>(null);
   const [teamSearchQuery, setTeamSearchQuery] = useState('');
 
+  // Derived state to get titleId for query
+  const selectedGameData = GAMES.find(g => g.id === selectedGame);
+  const titleId = selectedGameData?.titleId || null;
+
+  // Use TanStack Query
+  const {
+    data: teams = [],
+    isLoading: isLoadingTeams,
+    error: teamsErrorObj
+  } = useGridTeams(titleId);
+
+  const teamsError = teamsErrorObj ? (teamsErrorObj as Error).message : null;
+
   // Filter teams based on search query
-  const filteredTeams = teams.filter(team =>
+  const filteredTeams = teams.filter((team: any) =>
     team.name.toLowerCase().includes(teamSearchQuery.toLowerCase())
   );
-
-  // Fetch teams when a game is selected
-  useEffect(() => {
-    if (!selectedGame) {
-      setTeams([]);
-      return;
-    }
-
-    const fetchTeams = async () => {
-      setIsLoadingTeams(true);
-      setTeamsError(null);
-      setTeams([]);
-
-      const game = GAMES.find(g => g.id === selectedGame);
-      if (!game) return;
-
-      try {
-        const { data, error } = await supabase.functions.invoke('grid-teams', {
-          body: { titleId: game.titleId }
-        });
-
-        if (error) {
-          throw new Error(error.message || 'Failed to fetch teams');
-        }
-
-        if (data?.teams && Array.isArray(data.teams)) {
-          setTeams(data.teams);
-        } else {
-          setTeams([]);
-        }
-      } catch (err: any) {
-        console.error('Error fetching teams:', err);
-        setTeamsError(err.message || 'Could not load teams. Please try again.');
-      } finally {
-        setIsLoadingTeams(false);
-      }
-    };
-
-    fetchTeams();
-  }, [selectedGame]);
 
   const handleGameSelect = (gameId: string) => {
     setSelectedGame(gameId);
