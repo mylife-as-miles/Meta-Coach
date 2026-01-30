@@ -42,8 +42,12 @@ serve(async (req) => {
       )
     }
 
-    console.log(`Fetching matches for team ${teamId}`)
+    console.log(`[team-matches] Fetching matches for team: ${teamId}`)
+    console.log(`[team-matches] Using API URL: ${GRID_API_URL}`)
+    console.log(`[team-matches] API Key present: ${!!gridApiKey}, length: ${gridApiKey?.length}`)
+
     const nowISO = new Date().toISOString();
+    console.log(`[team-matches] Query time: ${nowISO}`)
 
     // Query both History (Past) and Upcoming (Future)
     // History: lt now, DESC, first 10
@@ -107,6 +111,8 @@ serve(async (req) => {
       }
     `
 
+    console.log(`[team-matches] Sending request to GRID API...`)
+
     const gridRes = await fetch(GRID_API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': gridApiKey },
@@ -116,56 +122,82 @@ serve(async (req) => {
       }),
     })
 
+    console.log(`[team-matches] GRID Response Status: ${gridRes.status} ${gridRes.statusText}`)
+    console.log(`[team-matches] GRID Response Headers:`, Object.fromEntries(gridRes.headers.entries()))
+
+    const responseText = await gridRes.text()
+    console.log(`[team-matches] GRID Raw Response (first 2000 chars):`, responseText.substring(0, 2000))
+
     if (!gridRes.ok) {
-        const text = await gridRes.text();
-        console.error(`GRID API error ${gridRes.status}:`, text);
-        throw new Error(`GRID API error: ${gridRes.status}`);
+      console.error(`[team-matches] GRID API HTTP Error ${gridRes.status}:`, responseText)
+      return new Response(
+        JSON.stringify({
+          error: `GRID API error: ${gridRes.status}`,
+          details: responseText.substring(0, 500),
+          statusText: gridRes.statusText
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 502 }
+      )
     }
 
-    const gridData = await gridRes.json()
+    let gridData;
+    try {
+      gridData = JSON.parse(responseText)
+    } catch (parseError) {
+      console.error(`[team-matches] Failed to parse GRID response as JSON:`, parseError)
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON from GRID API', raw: responseText.substring(0, 500) }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 502 }
+      )
+    }
 
     if (gridData.errors) {
-      console.error('GRID GraphQLErrors:', JSON.stringify(gridData.errors, null, 2));
-      throw new Error('GRID Query failed');
+      console.error('[team-matches] GRID GraphQL Errors:', JSON.stringify(gridData.errors, null, 2))
+      return new Response(
+        JSON.stringify({ error: 'GRID GraphQL query failed', graphqlErrors: gridData.errors }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 502 }
+      )
     }
+
+    console.log(`[team-matches] GRID Query successful. Processing data...`)
 
     const historyEdges = gridData.data?.history?.edges ?? [];
     const upcomingEdges = gridData.data?.upcoming?.edges ?? [];
 
     const processNode = (node: any, isUpcoming: boolean) => {
-        // Find opponent: The participant that is NOT the current team
-        const opponentTeam = node.teams?.find((t: any) => t.baseInfo?.id !== teamId);
-        const myTeam = node.teams?.find((t: any) => t.baseInfo?.id === teamId);
+      // Find opponent: The participant that is NOT the current team
+      const opponentTeam = node.teams?.find((t: any) => t.baseInfo?.id !== teamId);
+      const myTeam = node.teams?.find((t: any) => t.baseInfo?.id === teamId);
 
-        let result = 'UPCOMING';
-        let status = 'scheduled';
+      let result = 'UPCOMING';
+      let status = 'scheduled';
 
-        if (!isUpcoming && node.endTimeActual) {
-            status = 'finished';
-            const myScore = myTeam?.scoreAdvantage || 0;
-            const oppScore = opponentTeam?.scoreAdvantage || 0;
-            if (myScore > oppScore) result = 'WIN';
-            else if (myScore < oppScore) result = 'LOSS';
-            else result = 'DRAW';
-        }
+      if (!isUpcoming && node.endTimeActual) {
+        status = 'finished';
+        const myScore = myTeam?.scoreAdvantage || 0;
+        const oppScore = opponentTeam?.scoreAdvantage || 0;
+        if (myScore > oppScore) result = 'WIN';
+        else if (myScore < oppScore) result = 'LOSS';
+        else result = 'DRAW';
+      }
 
-        return {
-            id: node.id,
-            startTime: node.startTimeScheduled,
-            status: status,
-            format: node.format?.nameShortened || node.format?.name || 'Bo1',
-            type: node.type,
-            result: result,
-            score: isUpcoming ? 'VS' : `${myTeam?.scoreAdvantage || 0} - ${opponentTeam?.scoreAdvantage || 0}`,
-            opponent: opponentTeam ? {
-                id: opponentTeam.baseInfo.id,
-                name: opponentTeam.baseInfo.name,
-                abbreviation: opponentTeam.baseInfo.nameShortened
-            } : null,
-            tournament: node.tournament ? {
-                name: node.tournament.name
-            } : null
-        };
+      return {
+        id: node.id,
+        startTime: node.startTimeScheduled,
+        status: status,
+        format: node.format?.nameShortened || node.format?.name || 'Bo1',
+        type: node.type,
+        result: result,
+        score: isUpcoming ? 'VS' : `${myTeam?.scoreAdvantage || 0} - ${opponentTeam?.scoreAdvantage || 0}`,
+        opponent: opponentTeam ? {
+          id: opponentTeam.baseInfo.id,
+          name: opponentTeam.baseInfo.name,
+          abbreviation: opponentTeam.baseInfo.nameShortened
+        } : null,
+        tournament: node.tournament ? {
+          name: node.tournament.name
+        } : null
+      };
     };
 
     const historyMatches = historyEdges.map((e: any) => processNode(e.node, false));
