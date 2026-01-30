@@ -1,6 +1,6 @@
 // supabase/functions/team-matches/index.ts
 // Fetch match history with DB Caching (Cache-Aside Pattern)
-// Uses GRID API with correct nested team { matches } query
+// Uses GRID API with correct matchesConnection query
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -69,26 +69,29 @@ serve(async (req) => {
     // 2. Fetch from GRID (Cache Miss)
     console.log(`Fetching from GRID for team ${teamId}`)
 
-    // Correct Query: Nested matches under team
+    // Correct Query: matchesConnection (Canonical Way)
     const matchesQuery = `
       query TeamMatches($teamId: ID!) {
-        team(id: $teamId) {
-          id
-          name
-          matches(first: 10) {
-            edges {
-              node {
-                id
-                startTime
-                status
-                format {
-                   nameShortened
-                }
-                opponents {
-                  team {
-                    id
-                    name
-                  }
+        matchesConnection(
+          first: 10
+          orderBy: { startTime: DESC }
+          filter: {
+            participants: {
+              some: {
+                teamId: { eq: $teamId }
+              }
+            }
+          }
+        ) {
+          edges {
+            node {
+              id
+              startTime
+              status
+              participants {
+                team {
+                  id
+                  name
                 }
               }
             }
@@ -112,19 +115,14 @@ serve(async (req) => {
       throw new Error('GRID Query failed');
     }
 
-    // Defensive parsing
-    const team = gridData.data?.team
-    const edges = team?.matches?.edges ?? []
+    // Defensive parsing for matchesConnection
+    const edges = gridData.data?.matchesConnection?.edges ?? []
 
     const matches = edges.map((edge: any) => {
       const node = edge.node;
-      // Logic to find opponent: It's in the list of opponents, likely the one that isn't us
-      // But GRID 'opponents' field structure usually just lists the teams. 
-      // Note: User prompt code used 'opponents', but my previous code used 'teams'. 
-      // Let's assume user code 'opponents' is correct for this query type.
-      // Actually, the user code sample had: opponents { team { id name } }
 
-      const opponent = node.opponents?.find((t: any) => t.team?.id !== teamId)?.team;
+      // Find opponent: The participant that is NOT the current team
+      const opponent = node.participants?.find((p: any) => p.team?.id !== teamId)?.team;
 
       const startTime = new Date(node.startTime);
       const isPast = startTime < new Date();
@@ -134,16 +132,14 @@ serve(async (req) => {
         id: node.id,
         startTime: node.startTime,
         status: status,
-        format: node.format?.nameShortened || 'Bo1',
+        format: 'Bo1', // Default as format isn't in this specific query
         opponent: opponent ? { id: opponent.id, name: opponent.name } : null,
-        // Fallback for list of teams if needed by frontend, but frontend expects 'teams' array in some places? 
-        // My store mapping uses `teams?.find`. 
-        // Let's normalize it to what the store expects.
-        teams: node.opponents?.map((op: any) => ({
-          id: op.team?.id,
-          name: op.team?.name
+        // Normalizing structure for store consumption
+        teams: node.participants?.map((p: any) => ({
+          id: p.team?.id,
+          name: p.team?.name
         })) || [],
-        winnerId: null // Still null without extra query, staying lean as per user "matches" query focus
+        winnerId: null
       };
     })
 
