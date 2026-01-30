@@ -21,14 +21,14 @@ async function searchMatchesWithGemini(teamName: string, game: string, currentDa
     const prompt = `Find the upcoming match schedule for the professional esports team "${teamName}" in ${game}.
 Current Date: ${currentDate}
 
-Search sources like Liquipedia, vlr.gg (if Valorant), or Leaguepedia.
+Search the web for the OFFICIAL schedule. Do NOT restrict search to Liquipedia. Use official team sites, tournament pages, and major esports news outlets.
 Return up to 3 upcoming matches scheduled AFTER ${currentDate}.
 
 Return a JSON array with this structure:
 [
   {
     "opponentName": "Opponent Team Name",
-    "opponentLogo": "URL to opponent logo (Liquipedia/Wiki)",
+    "opponentLogo": "URL to opponent logo (High quality transparent PNG from web)",
     "date": "ISO Date String (YYYY-MM-DDTHH:mm:ssZ)",
     "tournament": "Tournament Name",
     "format": "Bo1/Bo3/Bo5"
@@ -37,7 +37,7 @@ Return a JSON array with this structure:
 
 Rules:
 - STRICTLY JSON array only.
-- Prefer Liquipedia images for logos.
+- Find the best quality logo available from any reliable source.
 - If exact time is unknown, use T00:00:00Z.
 - If no upcoming matches found, return empty array.`
 
