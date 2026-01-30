@@ -36,7 +36,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children, requireOnboarding = fal
             if (event === 'SIGNED_OUT') {
                 queryClient.setQueryData(authKeys.session, null);
                 queryClient.removeQueries({ queryKey: ['profile'] });
-            } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+            } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
                 queryClient.setQueryData(authKeys.session, session);
                 queryClient.invalidateQueries({ queryKey: authKeys.session });
                 if (session?.user) {
