@@ -2,7 +2,6 @@ import React, { useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useDashboardStore } from '../../stores/useDashboardStore';
 import StrategyBriefModal from './modals/StrategyBriefModal';
-import { players } from '../../lib/mockData';
 
 const DashboardOverview: React.FC = () => {
     const navigate = useNavigate();
@@ -55,7 +54,7 @@ const DashboardOverview: React.FC = () => {
                         </div>
                         <div className="flex justify-between items-start mb-4 relative z-10">
                             <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Upcoming Match</span>
-                            <span className="text-xs font-mono text-primary bg-primary/10 border border-primary/20 px-2 py-1 rounded shadow-neon">TBD</span>
+                            <span className="text-xs font-mono text-primary bg-primary/10 border border-primary/20 px-2 py-1 rounded shadow-neon">{allMatches[0]?.date || 'TBD'}</span>
                         </div>
                         <div className="flex items-center justify-between mb-6 relative z-10">
                             <div className="text-center group-hover:scale-105 transition-transform duration-300">
@@ -69,19 +68,19 @@ const DashboardOverview: React.FC = () => {
                             </div>
                             <div className="text-center group-hover:scale-105 transition-transform duration-300">
                                 <div className="w-12 h-12 bg-gray-800 border border-white/10 rounded-full flex items-center justify-center mb-2 mx-auto">
-                                    <span className="font-bold text-gray-400">?</span>
+                                    <span className="font-bold text-gray-400">{allMatches[0]?.opponent?.abbreviation || '?'}</span>
                                 </div>
-                                <span className="text-lg font-bold text-white">TBD</span>
+                                <span className="text-lg font-bold text-white">{allMatches[0]?.opponent?.name || 'TBD'}</span>
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4 text-xs text-gray-400 mb-6 relative z-10">
                             <div>
                                 <p className="uppercase tracking-wide opacity-50 text-gray-500">Region</p>
-                                <p className="text-white font-medium">{teamProfile?.region || 'Unknown'}</p>
+                                <p className="text-white font-medium">{teamProfile?.region || 'Global'}</p>
                             </div>
                             <div className="text-right">
                                 <p className="uppercase tracking-wide opacity-50 text-gray-500">Format</p>
-                                <p className="text-white font-medium">Best of 1</p>
+                                <p className="text-white font-medium">{allMatches[0]?.format || 'Bo1'}</p>
                             </div>
                         </div>
                         <button
@@ -141,8 +140,12 @@ const DashboardOverview: React.FC = () => {
                             <p className="text-[10px] text-gray-400 mt-1">Summoner's Rift • 14.3 Patch • Simulation Mode</p>
                         </div>
                         <div className="absolute top-4 right-4 z-10 flex gap-2">
-                            <span className="px-3 py-1 bg-blue-900/60 backdrop-blur-md rounded-md text-[10px] font-bold text-blue-200 border border-blue-500/30 shadow-[0_0_10px_rgba(59,130,246,0.2)]">Baron: 65%</span>
-                            <span className="px-3 py-1 bg-red-900/60 backdrop-blur-md rounded-md text-[10px] font-bold text-red-200 border border-red-500/30 shadow-[0_0_10px_rgba(239,68,68,0.2)]">Drake: 12%</span>
+                            <span className="px-3 py-1 bg-blue-900/60 backdrop-blur-md rounded-md text-[10px] font-bold text-blue-200 border border-blue-500/30 shadow-[0_0_10px_rgba(59,130,246,0.2)]">
+                                Baron: {teamProfile?.early_pressure_score || 50}%
+                            </span>
+                            <span className="px-3 py-1 bg-red-900/60 backdrop-blur-md rounded-md text-[10px] font-bold text-red-200 border border-red-500/30 shadow-[0_0_10px_rgba(239,68,68,0.2)]">
+                                Drake: {teamProfile?.objective_control ? 'High' : 'Low'}
+                            </span>
                         </div>
                         <div className="absolute top-[30%] left-[45%] w-24 h-24 bg-primary/10 rounded-full blur-2xl z-0"></div>
                         <div className="absolute bottom-[20%] right-[30%] w-32 h-32 bg-red-500/5 rounded-full blur-2xl z-0"></div>
@@ -185,39 +188,26 @@ const DashboardOverview: React.FC = () => {
                             </div>
                         </div>
                         <div className="space-y-3 overflow-y-auto h-[calc(100%-2rem)] pr-2 custom-scrollbar">
-                            {/* Static AI Analysis items for now as we don't have this API yet */}
-                            <div className="flex items-center p-3 hover:bg-white/5 rounded-xl transition group cursor-pointer border border-transparent hover:border-primary/20">
-                                <div className="w-10 h-10 rounded-lg bg-gray-900 flex items-center justify-center mr-4 relative border border-white/10">
-                                    <span className="material-icons text-white opacity-70">sports_esports</span>
-                                    <div className="absolute -bottom-1 -right-1 bg-yellow-500 text-[8px] text-black px-1 rounded font-bold shadow-sm">MID</div>
-                                </div>
-                                <div className="flex-1">
-                                    <div className="flex justify-between mb-1">
-                                        <span className="text-sm font-bold text-white group-hover:text-primary transition">Mid Laner <span className="text-gray-500 group-hover:text-gray-400 font-normal text-xs ml-1 transition">Azir</span></span>
-                                        <span className="text-xs font-mono text-gray-500">12:45</span>
+                            {teamProfile?.generated_reasoning ? (
+                                <div className="flex items-center p-3 hover:bg-white/5 rounded-xl transition group cursor-pointer border border-transparent hover:border-primary/20">
+                                    <div className="w-10 h-10 rounded-lg bg-gray-900 flex items-center justify-center mr-4 relative border border-white/10">
+                                        <span className="material-icons text-white opacity-70">psychology</span>
                                     </div>
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-xs text-gray-400">Shurima Shuffle Engange</span>
-                                        <span className="text-xs font-bold text-primary shadow-neon px-1.5 py-0.5 bg-primary/10 rounded">98/100</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="flex items-center p-3 hover:bg-white/5 rounded-xl transition group cursor-pointer border border-transparent hover:border-white/10">
-                                <div className="w-10 h-10 rounded-lg bg-gray-900 flex items-center justify-center mr-4 relative border border-white/10">
-                                    <span className="material-icons text-white opacity-70">sports_esports</span>
-                                    <div className="absolute -bottom-1 -right-1 bg-blue-500 text-[8px] text-white px-1 rounded font-bold shadow-sm">TOP</div>
-                                </div>
-                                <div className="flex-1">
-                                    <div className="flex justify-between mb-1">
-                                        <span className="text-sm font-bold text-white group-hover:text-primary transition">Top Laner <span className="text-gray-500 group-hover:text-gray-400 font-normal text-xs ml-1 transition">Aatrox</span></span>
-                                        <span className="text-xs font-mono text-gray-500">15:20</span>
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-xs text-gray-400">Teleport Flank (Mistimed)</span>
-                                        <span className="text-xs font-bold text-red-400 bg-red-900/20 px-1.5 py-0.5 rounded">42/100</span>
+                                    <div className="flex-1">
+                                        <div className="flex justify-between mb-1">
+                                            <span className="text-sm font-bold text-white group-hover:text-primary transition">Strategic Analysis</span>
+                                            <span className="text-xs font-mono text-gray-500">Live</span>
+                                        </div>
+                                        <div className="text-xs text-gray-400 leading-relaxed">
+                                            {teamProfile.generated_reasoning.substring(0, 120)}...
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
+                            ) : (
+                                <div className="text-center text-gray-500 text-xs py-10">
+                                    Run a strategy simulation to generate insights.
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
