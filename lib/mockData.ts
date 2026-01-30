@@ -23,7 +23,7 @@ export interface Match {
     id: string;
     date: string;
     duration: string;
-    result: 'WIN' | 'LOSS';
+    result: 'WIN' | 'LOSS' | 'UPCOMING';
     score: string;
     format: 'Bo1' | 'Bo3' | 'Bo5';
     type: 'Ranked' | 'Scrim';

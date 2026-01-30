@@ -241,25 +241,21 @@ export const useDashboardStore = create<DashboardState & DashboardActions>((set,
                 set({ allPlayers: mappedPlayers });
             }
 
-            // 5. Get Matches (Optional - keep existing logic or mock if function fails)
+            // 5. Get Matches (Authentic GRID Data)
             if (workspace.grid_team_id) {
-                // If we have a Grid Team ID, we could fetch real matches. 
-                // For now, let's keep the store's existing match logic or just leave it. 
-                // The main request is to populate dashboard with data from database (User's team).
-                // We'll leave the Function call as it was, assuming it works or fails gracefully.
                 try {
                     const { data: matchesData, error: matchError } = await supabase.functions.invoke('team-matches', {
                         body: { teamId: workspace.grid_team_id }
                     });
 
                     if (!matchError && matchesData && matchesData.matches) {
-                        const mappedMatches: Match[] = matchesData.matches.slice(0, 5).map((m: any) => ({
+                        const mappedMatches: Match[] = matchesData.matches.map((m: any) => ({
                             id: m.id,
                             date: new Date(m.startTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-                            duration: '35:00',
-                            result: m.winner?.id === workspace.grid_team_id ? 'WIN' : 'LOSS',
-                            score: `${m.games?.filter((g: any) => g.winnerId === workspace.grid_team_id).length} - ${m.games?.filter((g: any) => g.winnerId !== workspace.grid_team_id).length}`,
-                            format: m.format || 'Bo1',
+                            duration: m.status === 'scheduled' ? 'TBD' : '35:00', // Placeholder as duration isn't in lean query
+                            result: m.status === 'scheduled' ? 'UPCOMING' : (m.winnerId === workspace.grid_team_id ? 'WIN' : 'LOSS'),
+                            score: '0 - 0', // Score detail not in lean query, default placeholder
+                            format: typeof m.format === 'string' ? m.format : (m.format?.nameShortened || 'Bo1'),
                             type: 'Ranked',
                             opponent: {
                                 name: m.teams?.find((t: any) => t.id !== workspace.grid_team_id)?.name || 'Unknown',
@@ -268,6 +264,7 @@ export const useDashboardStore = create<DashboardState & DashboardActions>((set,
                             },
                             performance: { macroControl: 50, microErrorRate: 'MED' }
                         }));
+
                         if (mappedMatches.length > 0) {
                             set({ allMatches: mappedMatches });
                         }
