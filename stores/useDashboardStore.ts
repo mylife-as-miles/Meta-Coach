@@ -171,18 +171,47 @@ export const useDashboardStore = create<DashboardState & DashboardActions>((set,
         set({ isLoading: true, error: null });
 
         try {
-            // 1. Get User
+            // 1. Get User with timeout
             console.log("fetchDashboardData: Getting User...");
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) throw new Error("No user found");
+
+            const getUserWithTimeout = async () => {
+                const timeoutMs = 8000;
+                const userPromise = supabase.auth.getUser();
+                const timeoutPromise = new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('Auth timeout - network may be slow')), timeoutMs)
+                );
+                return Promise.race([userPromise, timeoutPromise]) as ReturnType<typeof supabase.auth.getUser>;
+            };
+
+            const { data: { user }, error: userError } = await getUserWithTimeout();
+
+            if (userError) {
+                console.error("fetchDashboardData: Auth error", userError);
+                throw userError;
+            }
+            if (!user) {
+                console.warn("fetchDashboardData: No user found, using defaults");
+                set({ isLoading: false });
+                return;
+            }
             console.log("fetchDashboardData: User found", user.id);
 
-            // Fetch comprehensive profile data
-            const { data: profileData } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', user.id)
-                .single();
+            // Fetch comprehensive profile data (with error handling)
+            let profileData = null;
+            try {
+                const { data, error: profileError } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', user.id)
+                    .maybeSingle();
+
+                if (profileError) {
+                    console.warn("fetchDashboardData: Profile fetch error (continuing)", profileError);
+                }
+                profileData = data;
+            } catch (profileErr) {
+                console.warn("fetchDashboardData: Profile exception (continuing)", profileErr);
+            }
 
             // Set User Profile
             set({
