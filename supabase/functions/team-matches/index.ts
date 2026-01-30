@@ -212,8 +212,8 @@ serve(async (req) => {
       const startTime = node.startTimeScheduled;
       const isUpcoming = new Date(startTime).getTime() > nowTime;
 
-      let result = 'UPCOMING';
-      let status = 'scheduled';
+      let result = isUpcoming ? 'UPCOMING' : 'FINISHED';
+      let status = isUpcoming ? 'scheduled' : 'finished';
 
       // Simple heuristic for finished if time passed
       // Ideally check if scores exist or if startTime + duration passed
@@ -225,6 +225,10 @@ serve(async (req) => {
           if (myScore > oppScore) result = 'WIN';
           else if (myScore < oppScore) result = 'LOSS';
           else result = 'DRAW';
+        } else {
+          // Past match with no score. Could be TBD, Cancelled, or minimal info
+          // keeping it as 'FINISHED' or could use 'UNKNOWN'
+          result = 'TBD';
         }
       }
 

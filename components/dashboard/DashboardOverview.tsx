@@ -123,26 +123,28 @@ const DashboardOverview: React.FC = () => {
                             {allMatches.length === 0 ? (
                                 <div className="text-center text-gray-500 text-xs py-10">No matches found</div>
                             ) : (
-                                allMatches.map(match => (
-                                    <div key={match.id} className="bg-surface-darker p-3 rounded-xl border border-white/5 hover:border-primary/20 transition group">
-                                        <div className="flex justify-between items-center mb-2">
-                                            <span className="font-bold text-sm text-gray-200 group-hover:text-white">vs {match.opponent.name}</span>
-                                            <span className={`text-xs font-mono px-1.5 py-0.5 rounded ${match.result === 'WIN' ? 'text-green-400 bg-green-900/20' : 'text-red-400 bg-red-900/20'}`}>
-                                                {match.result} {match.score}
-                                            </span>
-                                        </div>
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <div className="h-1 flex-1 bg-gray-800 rounded-full overflow-hidden">
-                                                <div className={`h-full w-2/3 shadow-neon ${match.result === 'WIN' ? 'bg-primary' : 'bg-red-500'}`}></div>
+                                allMatches
+                                    .filter(match => match.result !== 'UPCOMING')
+                                    .map(match => (
+                                        <div key={match.id} className="bg-surface-darker p-3 rounded-xl border border-white/5 hover:border-primary/20 transition group">
+                                            <div className="flex justify-between items-center mb-2">
+                                                <span className="font-bold text-sm text-gray-200 group-hover:text-white">vs {match.opponent.name}</span>
+                                                <span className={`text-xs font-mono px-1.5 py-0.5 rounded ${match.result === 'WIN' ? 'text-green-400 bg-green-900/20' : match.result === 'LOSS' ? 'text-red-400 bg-red-900/20' : 'text-gray-400 bg-gray-700/20'}`}>
+                                                    {match.result} {match.score}
+                                                </span>
                                             </div>
-                                            <span className="text-[10px] text-gray-500">{match.date}</span>
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <div className="h-1 flex-1 bg-gray-800 rounded-full overflow-hidden">
+                                                    <div className={`h-full w-2/3 shadow-neon ${match.result === 'WIN' ? 'bg-primary' : match.result === 'LOSS' ? 'bg-red-500' : 'bg-gray-500'}`}></div>
+                                                </div>
+                                                <span className="text-[10px] text-gray-500">{match.date}</span>
+                                            </div>
+                                            <div className="flex justify-between text-[10px] text-gray-500">
+                                                <span>{match.duration} Duration</span>
+                                                <span>{match.format}</span>
+                                            </div>
                                         </div>
-                                        <div className="flex justify-between text-[10px] text-gray-500">
-                                            <span>{match.duration} Duration</span>
-                                            <span>{match.format}</span>
-                                        </div>
-                                    </div>
-                                ))
+                                    ))
                             )}
                         </div>
                     </div>
@@ -321,7 +323,11 @@ const DashboardOverview: React.FC = () => {
             </div>
 
             {/* Strategy Brief Modal */}
-            <StrategyBriefModal isOpen={strategyBriefOpen} onClose={closeStrategyBrief} />
+            <StrategyBriefModal
+                isOpen={strategyBriefOpen}
+                onClose={closeStrategyBrief}
+                match={allMatches.find(m => m.result === 'UPCOMING')}
+            />
         </div>
     );
 };

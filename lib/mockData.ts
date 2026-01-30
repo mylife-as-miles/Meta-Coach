@@ -36,6 +36,7 @@ export interface Match {
         macroControl: number;
         microErrorRate: 'LOW' | 'MED' | 'HIGH';
     };
+    source?: 'grid' | 'gemini';
 }
 
 export interface Champion {

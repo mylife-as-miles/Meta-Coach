@@ -5,13 +5,15 @@ import { strategyBriefData as mockStrategyBriefData } from '../../../lib/mockDat
 import { useSession } from '../../../hooks/useAuth';
 import { useWorkspace, useTeamProfile } from '../../../hooks/useDashboardQueries';
 
+import { Match } from '../../../lib/mockData';
+
 interface StrategyBriefModalProps {
     isOpen: boolean;
     onClose: () => void;
-    opponentId?: string; // Optional: for fetching real opponent data
+    match?: Match | null; // Accept upcoming match
 }
 
-const StrategyBriefModal: React.FC<StrategyBriefModalProps> = ({ isOpen, onClose, opponentId }) => {
+const StrategyBriefModal: React.FC<StrategyBriefModalProps> = ({ isOpen, onClose, match }) => {
     // Get team profile from Query hooks
     const { data: session } = useSession();
     const userId = session?.user?.id;
@@ -22,7 +24,9 @@ const StrategyBriefModal: React.FC<StrategyBriefModalProps> = ({ isOpen, onClose
     const [matchPrepData, setMatchPrepData] = useState<any>(null);
     const [error, setError] = useState<string | null>(null);
 
-    // Fetch match prep data when modal opens with an opponentId
+    // Fetch match prep data when modal opens with an opponentId (from GRID)
+    const opponentId = match?.source === 'grid' ? match.opponent?.id : undefined;
+
     useEffect(() => {
         if (isOpen && opponentId) {
             const fetchMatchPrep = async () => {
@@ -44,31 +48,36 @@ const StrategyBriefModal: React.FC<StrategyBriefModalProps> = ({ isOpen, onClose
             };
             fetchMatchPrep();
         } else {
-            // Reset when modal closes
+            // Reset when modal closes or no GRID ID
             setMatchPrepData(null);
         }
     }, [isOpen, opponentId]);
 
-    // Use fetched data or fallback to mock
-    const displayData = matchPrepData ? {
-        opponent: matchPrepData.opponentProfile?.name?.substring(0, 2).toUpperCase() || 'OPP',
-        opponentName: matchPrepData.opponentProfile?.name || 'Unknown Opponent',
-        region: teamProfile?.region || mockStrategyBriefData.region,
-        format: mockStrategyBriefData.format,
-        matchTime: mockStrategyBriefData.matchTime,
-        headToHead: matchPrepData.headToHead || { totalMeetings: 0, ourWins: 0, theirWins: 0 },
+    // Format time helper
+    const getLiveIn = (dateStr?: string) => {
+        if (!dateStr) return 'TBD';
+        const date = new Date(dateStr);
+        const now = new Date();
+        const diffMs = date.getTime() - now.getTime();
+        const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
+        const diffDays = Math.floor(diffHrs / 24);
+
+        if (diffMs < 0) return 'Live Now';
+        if (diffDays > 0) return `in ${diffDays} day${diffDays > 1 ? 's' : ''}`;
+        if (diffHrs > 0) return `in ${diffHrs} hour${diffHrs > 1 ? 's' : ''}`;
+        return 'Soon';
+    };
+
+    // Use fetched data, then match prop, then fallback
+    const displayData = {
+        opponent: matchPrepData?.opponentProfile?.name?.substring(0, 2).toUpperCase() || match?.opponent?.abbreviation || 'OPP',
+        opponentName: matchPrepData?.opponentProfile?.name || match?.opponent?.name || 'Unknown Opponent',
+        // Prefer tournament name (Region) from match data if available
+        region: match?.tournament?.name || teamProfile?.region || mockStrategyBriefData.region,
+        format: match?.format || mockStrategyBriefData.format,
+        matchTime: getLiveIn(match?.startTime) || mockStrategyBriefData.matchTime,
+        headToHead: matchPrepData?.headToHead || { totalMeetings: 0, ourWins: 0, theirWins: 0 },
         // Keep mock data for detailed sections that aren't available from API yet
-        keyPlayers: mockStrategyBriefData.keyPlayers,
-        banSuggestions: mockStrategyBriefData.banSuggestions,
-        winConditions: mockStrategyBriefData.winConditions,
-        objectives: mockStrategyBriefData.objectives,
-    } : {
-        opponent: mockStrategyBriefData.opponent,
-        opponentName: 'T1',
-        region: mockStrategyBriefData.region,
-        format: mockStrategyBriefData.format,
-        matchTime: mockStrategyBriefData.matchTime,
-        headToHead: { totalMeetings: 5, ourWins: 2, theirWins: 3 },
         keyPlayers: mockStrategyBriefData.keyPlayers,
         banSuggestions: mockStrategyBriefData.banSuggestions,
         winConditions: mockStrategyBriefData.winConditions,
@@ -104,7 +113,7 @@ const StrategyBriefModal: React.FC<StrategyBriefModalProps> = ({ isOpen, onClose
                             </div>
                             <div className="text-right">
                                 <p className="text-white font-bold">{displayData.region}</p>
-                                <p className="text-xs text-gray-400">{displayData.format} • Live in {displayData.matchTime}</p>
+                                <p className="text-xs text-gray-400">{displayData.format} • {displayData.matchTime}</p>
                             </div>
                         </div>
 
