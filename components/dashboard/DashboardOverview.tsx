@@ -125,6 +125,7 @@ const DashboardOverview: React.FC = () => {
                             ) : (
                                 allMatches
                                     .filter(match => match.result !== 'UPCOMING')
+                                    .slice(0, 3) // Limit to 3 matches
                                     .map(match => (
                                         <div key={match.id} className="bg-surface-darker p-3 rounded-xl border border-white/5 hover:border-primary/20 transition group">
                                             <div className="flex justify-between items-center mb-2">
@@ -246,7 +247,7 @@ const DashboardOverview: React.FC = () => {
                         <div className="flex-1 flex flex-col justify-center items-center relative z-10 space-y-4 mb-4">
                             <div className="absolute top-10 left-0 w-full h-full border-t border-white/5 rounded-full scale-150 pointer-events-none"></div>
 
-                            {allPlayers.map((player) => (
+                            {allPlayers.slice(0, 5).map((player) => (
                                 <Link
                                     key={player.id}
                                     to={`/dashboard/player-hub?player=${player.id}`}
