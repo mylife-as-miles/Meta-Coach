@@ -43,7 +43,8 @@ serve(async (req) => {
       )
     }
 
-    // 1. Check Cache
+    // 1. Check Cache (DISABLED via user request: "always fetch from grid")
+    /*
     const { data: cacheHit } = await supabase
       .from('team_match_cache')
       .select('matches, updated_at')
@@ -63,6 +64,7 @@ serve(async (req) => {
         )
       }
     }
+    */
 
     // 2. Fetch from GRID (Cache Miss)
     console.log(`Fetching from GRID for team ${teamId}`)
