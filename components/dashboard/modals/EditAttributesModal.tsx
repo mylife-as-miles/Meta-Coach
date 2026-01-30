@@ -9,7 +9,7 @@ interface EditAttributesModalProps {
 }
 
 const EditAttributesModal: React.FC<EditAttributesModalProps> = ({ isOpen, onClose, player }) => {
-    const [stats, setStats] = useState({
+    const [stats, setStats] = useState<Record<string, number>>({
         mechanics: 50,
         objectives: 50,
         macro: 50,
@@ -47,32 +47,35 @@ const EditAttributesModal: React.FC<EditAttributesModalProps> = ({ isOpen, onClo
                 </div>
 
                 <div className="space-y-5">
-                    {Object.entries(stats).map(([key, value]) => (
-                        <div key={key}>
-                            <div className="flex justify-between text-xs mb-2">
-                                <span className="text-gray-300 font-bold uppercase tracking-wider">{key}</span>
-                                <span className="font-mono text-primary font-bold">{value}</span>
+                    {Object.entries(stats).map(([key, value]) => {
+                        const numValue = value as number;
+                        return (
+                            <div key={key}>
+                                <div className="flex justify-between text-xs mb-2">
+                                    <span className="text-gray-300 font-bold uppercase tracking-wider">{key}</span>
+                                    <span className="font-mono text-primary font-bold">{numValue}</span>
+                                </div>
+                                <div className="relative h-2 bg-surface-darker rounded-full">
+                                    <div
+                                        className="absolute left-0 top-0 bottom-0 bg-primary rounded-full shadow-neon"
+                                        style={{ width: `${numValue}%` }}
+                                    ></div>
+                                    <input
+                                        type="range"
+                                        min="0"
+                                        max="100"
+                                        value={numValue}
+                                        onChange={(e) => setStats(prev => ({ ...prev, [key]: parseInt(e.target.value) }))}
+                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                    />
+                                    <div
+                                        className="absolute w-4 h-4 bg-white rounded-full shadow-lg border-2 border-primary top-1/2 transform -translate-y-1/2 pointer-events-none transition-all"
+                                        style={{ left: `${numValue}%`, marginLeft: '-8px' }}
+                                    ></div>
+                                </div>
                             </div>
-                            <div className="relative h-2 bg-surface-darker rounded-full">
-                                <div
-                                    className="absolute left-0 top-0 bottom-0 bg-primary rounded-full shadow-neon"
-                                    style={{ width: `${value}%` }}
-                                ></div>
-                                <input
-                                    type="range"
-                                    min="0"
-                                    max="100"
-                                    value={value}
-                                    onChange={(e) => setStats(prev => ({ ...prev, [key]: parseInt(e.target.value) }))}
-                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                />
-                                <div
-                                    className="absolute w-4 h-4 bg-white rounded-full shadow-lg border-2 border-primary top-1/2 transform -translate-y-1/2 pointer-events-none transition-all"
-                                    style={{ left: `${value}%`, marginLeft: '-8px' }}
-                                ></div>
-                            </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
 
                 <div className="pt-4 border-t border-white/5 flex gap-3">

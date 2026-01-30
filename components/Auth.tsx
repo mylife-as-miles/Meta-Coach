@@ -249,7 +249,7 @@ const Auth: React.FC<AuthProps> = ({ onNavigateHome }) => {
                             type="text"
                           />
                           {field.state.meta.isTouched && field.state.meta.errors.length > 0 && (
-                            <p className="text-[10px] text-red-400 mt-1">{field.state.meta.errors[0]}</p>
+                            <p className="text-[10px] text-red-400 mt-1">{field.state.meta.errors[0] as string}</p>
                           )}
                         </div>
                       </div>
@@ -285,7 +285,7 @@ const Auth: React.FC<AuthProps> = ({ onNavigateHome }) => {
                         type="email"
                       />
                       {field.state.meta.isTouched && field.state.meta.errors.length > 0 && (
-                        <p className="text-[10px] text-red-400 mt-1">{field.state.meta.errors[0]}</p>
+                        <p className="text-[10px] text-red-400 mt-1">{field.state.meta.errors[0] as string}</p>
                       )}
                     </div>
                   )}
@@ -334,7 +334,7 @@ const Auth: React.FC<AuthProps> = ({ onNavigateHome }) => {
                           </button>
                         </div>
                         {field.state.meta.isTouched && field.state.meta.errors.length > 0 && (
-                          <p className="text-[10px] text-red-400 mt-1">{field.state.meta.errors[0]}</p>
+                          <p className="text-[10px] text-red-400 mt-1">{field.state.meta.errors[0] as string}</p>
                         )}
                       </div>
                     )}
