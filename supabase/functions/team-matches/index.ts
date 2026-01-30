@@ -1,13 +1,12 @@
 // supabase/functions/team-matches/index.ts
 // Fetch match history with DB Caching (Cache-Aside Pattern)
-// Uses GRID Central Data API (allSeries) + Series State API (seriesState)
+// Uses GRID API with correct nested team { matches } query
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
 
 const GRID_API_URL = 'https://api-op.grid.gg/central-data/graphql'
-const SERIES_STATE_URL = 'https://api-op.grid.gg/live-data-feed/series-state/graphql'
 const CACHE_DURATION_MINUTES = 15
 
 serve(async (req) => {
@@ -57,6 +56,7 @@ serve(async (req) => {
       const diffMinutes = (now - lastUpdate) / (1000 * 60)
 
       if (diffMinutes < CACHE_DURATION_MINUTES) {
+        console.log(`Serving from cache for team ${teamId} (Age: ${diffMinutes.toFixed(1)}m)`)
         return new Response(
           JSON.stringify({ matches: cacheHit.matches, source: 'cache' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
@@ -65,27 +65,28 @@ serve(async (req) => {
     }
 
     // 2. Fetch from GRID (Cache Miss)
-    // Step A: Get Series List
-    const seriesQuery = `
-      query TeamSeries($teamId: ID!) {
-        allSeries(
-          filter: { 
-             teams: { id: { equals: $teamId } }
-          }
-          first: 10
-          orderBy: { field: START_TIME, direction: DESC }
-        ) {
-          edges {
-            node {
-              id
-              startTimeScheduled
-              format {
-                nameShortened
-              }
-              teams {
-                baseInfo {
-                  id
-                  name
+    console.log(`Fetching from GRID for team ${teamId}`)
+
+    // Correct Query: Nested matches under team
+    const matchesQuery = `
+      query TeamMatches($teamId: ID!) {
+        team(id: $teamId) {
+          id
+          name
+          matches(first: 10) {
+            edges {
+              node {
+                id
+                startTime
+                status
+                format {
+                   nameShortened
+                }
+                opponents {
+                  team {
+                    id
+                    name
+                  }
                 }
               }
             }
@@ -93,66 +94,56 @@ serve(async (req) => {
         }
       }
     `
+    console.log('GRID QUERY:', matchesQuery)
 
     const gridRes = await fetch(GRID_API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': gridApiKey },
-      body: JSON.stringify({ query: seriesQuery, variables: { teamId } }),
+      body: JSON.stringify({ query: matchesQuery, variables: { teamId } }),
     })
 
-    if (!gridRes.ok) throw new Error(`GRID Central API error: ${gridRes.status}`);
+    if (!gridRes.ok) throw new Error(`GRID API error: ${gridRes.status}`);
     const gridData = await gridRes.json()
-    const edges = gridData.data?.allSeries?.edges || []
 
-    // Step B: Get Details for each Series (Parallel)
-    const matches = await Promise.all(edges.map(async (edge: any) => {
+    if (gridData.errors) {
+      console.error('GRID GraphQLErrors:', gridData.errors);
+      throw new Error('GRID Query failed');
+    }
+
+    // Defensive parsing
+    const team = gridData.data?.team
+    const edges = team?.matches?.edges ?? []
+
+    const matches = edges.map((edge: any) => {
       const node = edge.node;
-      const startTime = new Date(node.startTimeScheduled);
+      // Logic to find opponent: It's in the list of opponents, likely the one that isn't us
+      // But GRID 'opponents' field structure usually just lists the teams. 
+      // Note: User prompt code used 'opponents', but my previous code used 'teams'. 
+      // Let's assume user code 'opponents' is correct for this query type.
+      // Actually, the user code sample had: opponents { team { id name } }
+
+      const opponent = node.opponents?.find((t: any) => t.team?.id !== teamId)?.team;
+
+      const startTime = new Date(node.startTime);
       const isPast = startTime < new Date();
+      const status = node.status || (isPast ? 'finished' : 'scheduled');
 
-      // Base match object
-      let match = {
+      return {
         id: node.id,
-        startTime: node.startTimeScheduled,
-        status: isPast ? 'finished' : 'scheduled',
+        startTime: node.startTime,
+        status: status,
         format: node.format?.nameShortened || 'Bo1',
-        teams: node.teams?.map((t: any) => ({
-          id: t.baseInfo?.id,
-          name: t.baseInfo?.name
+        opponent: opponent ? { id: opponent.id, name: opponent.name } : null,
+        // Fallback for list of teams if needed by frontend, but frontend expects 'teams' array in some places? 
+        // My store mapping uses `teams?.find`. 
+        // Let's normalize it to what the store expects.
+        teams: node.opponents?.map((op: any) => ({
+          id: op.team?.id,
+          name: op.team?.name
         })) || [],
-        winnerId: null as string | null
+        winnerId: null // Still null without extra query, staying lean as per user "matches" query focus
       };
-
-      // If finished, fetch detail to get winner
-      if (isPast) {
-        try {
-          const stateQuery = `
-                    query SeriesState($id: ID!) {
-                        seriesState(id: $id) {
-                            teams {
-                                id
-                                won
-                            }
-                        }
-                    }
-                `;
-          const stateRes = await fetch(SERIES_STATE_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'x-api-key': gridApiKey },
-            body: JSON.stringify({ query: stateQuery, variables: { id: node.id } }),
-          });
-
-          if (stateRes.ok) {
-            const stateData = await stateRes.json();
-            const winner = stateData.data?.seriesState?.teams?.find((t: any) => t.won);
-            if (winner) match.winnerId = winner.id;
-          }
-        } catch (e) {
-          console.warn(`Failed to fetch state for series ${node.id}`, e);
-        }
-      }
-      return match;
-    }));
+    })
 
     // 3. Update Cache
     const { error: upsertError } = await supabase
