@@ -272,3 +272,33 @@ export function useUpdateUserProfile() {
         },
     });
 }
+
+// ============================================
+// Hook: useMatchStats (Stage 2 - Detailed Stats)
+// ============================================
+export function useMatchStats(seriesId: string | undefined | null) {
+    return useQuery({
+        queryKey: ['matchStats', seriesId],
+        queryFn: async () => {
+            if (!seriesId) return null;
+
+            console.log('[useMatchStats] Fetching stats for series:', seriesId);
+
+            const { data, error } = await invokeWithTimeout<{ stats: any }>(
+                'match-stats',
+                { seriesId },
+                15000 // 15s timeout for detailed stats
+            );
+
+            if (error) {
+                console.error('[useMatchStats] Error:', error);
+                throw error;
+            }
+
+            return data?.stats || null;
+        },
+        enabled: !!seriesId,
+        staleTime: 1000 * 60 * 10, // Cache for 10 minutes (stats don't change)
+        retry: 1,
+    });
+}

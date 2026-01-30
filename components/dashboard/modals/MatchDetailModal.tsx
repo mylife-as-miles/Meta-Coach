@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '../../ui/Modal';
 import { Match } from '../../../lib/mockData';
-import { supabase } from '../../../lib/supabase';
 import { useSession } from '../../../hooks/useAuth';
-import { useWorkspace, useTeamProfile } from '../../../hooks/useDashboardQueries';
+import { useWorkspace, useTeamProfile, useMatchStats } from '../../../hooks/useDashboardQueries';
 
 interface MatchDetailModalProps {
     isOpen: boolean;
@@ -43,35 +42,11 @@ const MatchDetailModal: React.FC<MatchDetailModalProps> = ({ isOpen, onClose, ma
     const { data: workspace } = useWorkspace(userId);
     const { data: teamProfile } = useTeamProfile(workspace?.id, workspace?.grid_team_id);
 
-    const [isLoading, setIsLoading] = useState(false);
-    const [seriesData, setSeriesData] = useState<any>(null);
-    const [error, setError] = useState<string | null>(null);
-
-    // Fetch series state when modal opens
-    useEffect(() => {
-        if (isOpen && match?.id) {
-            const fetchSeriesState = async () => {
-                setIsLoading(true);
-                setError(null);
-                try {
-                    const { data, error: fetchError } = await supabase.functions.invoke('series-state', {
-                        body: { seriesId: match.id }
-                    });
-
-                    if (fetchError) throw new Error(fetchError.message);
-                    setSeriesData(data);
-                } catch (err: any) {
-                    console.error('Error fetching series state:', err);
-                    setError(err.message);
-                } finally {
-                    setIsLoading(false);
-                }
-            };
-            fetchSeriesState();
-        } else {
-            setSeriesData(null);
-        }
-    }, [isOpen, match?.id]);
+    // Fetch match stats using the new hook (Stage 2)
+    const { data: matchStats, isLoading, error: statsError } = useMatchStats(
+        isOpen ? match?.id : null
+    );
+    const error = statsError?.message || null;
 
     if (!match) return null;
 
@@ -80,9 +55,9 @@ const MatchDetailModal: React.FC<MatchDetailModalProps> = ({ isOpen, onClose, ma
     const teamAbbr = teamName.substring(0, 2).toUpperCase();
 
     // Get first game player stats for display
-    const gameData: GameData | null = seriesData?.games?.[0] || null;
-    const ourTeamStats = gameData?.teams?.find(t => t.name === teamName || t.won === isWin);
-    const opponentTeamStats = gameData?.teams?.find(t => t !== ourTeamStats);
+    const gameData = matchStats?.games?.[0] || null;
+    const ourTeamStats = matchStats?.teams?.find((t: any) => t.name === teamName) || matchStats?.teams?.[0];
+    const opponentTeamStats = matchStats?.teams?.find((t: any) => t !== ourTeamStats);
 
     const formatDuration = (seconds: number) => {
         const mins = Math.floor(seconds / 60);
