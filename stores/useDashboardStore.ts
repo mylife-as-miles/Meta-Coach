@@ -167,12 +167,15 @@ export const useDashboardStore = create<DashboardState & DashboardActions>((set,
     },
 
     fetchDashboardData: async () => {
-        try {
-            set({ isLoading: true, error: null });
+        console.log("fetchDashboardData: Started");
+        set({ isLoading: true, error: null });
 
+        try {
             // 1. Get User
+            console.log("fetchDashboardData: Getting User...");
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error("No user found");
+            console.log("fetchDashboardData: User found", user.id);
 
             // Fetch comprehensive profile data
             const { data: profileData } = await supabase
@@ -197,6 +200,7 @@ export const useDashboardStore = create<DashboardState & DashboardActions>((set,
             });
 
             // 2. Get Workspace
+            console.log("fetchDashboardData: Getting Workspace...");
             const { data: workspace, error: wsError } = await supabase
                 .from('workspaces')
                 .select('*')
@@ -204,10 +208,10 @@ export const useDashboardStore = create<DashboardState & DashboardActions>((set,
                 .single();
 
             if (wsError || !workspace) {
-                console.log("No workspace found, using mock data");
-                set({ isLoading: false });
-                return;
+                console.log("fetchDashboardData: No workspace found, using mock data");
+                return; // Early return, finally block will set isLoading: false
             }
+            console.log("fetchDashboardData: Workspace found", workspace.id);
 
             // 3. Get AI Calibration
             const { data: aiData } = await supabase
@@ -220,9 +224,17 @@ export const useDashboardStore = create<DashboardState & DashboardActions>((set,
             let gridTeamData: { teamName?: string; region?: string; logoUrl?: string } = {};
             if (workspace.grid_team_id) {
                 try {
-                    const { data: gridRes, error: gridError } = await supabase.functions.invoke('grid-teams', {
+                    const invokePromise = supabase.functions.invoke('grid-teams', {
                         body: { teamId: workspace.grid_team_id }
                     });
+
+                    let timeoutId: any;
+                    const timeoutPromise = new Promise((_, reject) => {
+                        timeoutId = setTimeout(() => reject(new Error('GRID API Timeout')), 10000);
+                    });
+
+                    const { data: gridRes, error: gridError } = await Promise.race([invokePromise, timeoutPromise]) as any;
+                    clearTimeout(timeoutId);
 
                     if (!gridError && gridRes && gridRes.team) {
                         gridTeamData = {
@@ -277,9 +289,17 @@ export const useDashboardStore = create<DashboardState & DashboardActions>((set,
             // 5. Get Matches (Authentic GRID Data)
             if (workspace.grid_team_id) {
                 try {
-                    const { data: matchesData, error: matchError } = await supabase.functions.invoke('team-matches', {
+                    const invokePromise = supabase.functions.invoke('team-matches', {
                         body: { teamId: workspace.grid_team_id }
                     });
+
+                    let timeoutId: any;
+                    const timeoutPromise = new Promise((_, reject) => {
+                        timeoutId = setTimeout(() => reject(new Error('GRID API Timeout')), 10000);
+                    });
+
+                    const { data: matchesData, error: matchError } = await Promise.race([invokePromise, timeoutPromise]) as any;
+                    clearTimeout(timeoutId);
 
                     if (!matchError && matchesData && matchesData.matches) {
                         const mappedMatches: Match[] = matchesData.matches.map((m: any) => ({
@@ -307,11 +327,13 @@ export const useDashboardStore = create<DashboardState & DashboardActions>((set,
                 }
             }
 
-            set({ isLoading: false });
+            console.log("fetchDashboardData: Completed successfully");
 
         } catch (err: any) {
             console.error("Dashboard fetch error:", err);
-            set({ isLoading: false, error: err.message });
+            set({ error: err.message });
+        } finally {
+            set({ isLoading: false });
         }
     },
 
