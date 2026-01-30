@@ -1,7 +1,7 @@
 # MetaCoach - Professional Esports Analytics Platform
 
 <div align="center">
-  <img src="https://fonts.gstatic.com/s/i/materialicons/auto_graph/v6/24px.svg" alt="MetaCoach Logo" width="80" height="80" />
+  <img src="docs/images/logo-banner.svg" alt="MetaCoach Logo" width="300" />
   <h3 style="color: #D2F96F;">Next-Generation Tactical Intelligence</h3>
 </div>
 
