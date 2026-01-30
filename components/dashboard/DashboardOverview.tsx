@@ -28,7 +28,7 @@ const DashboardOverview: React.FC = () => {
     }
 
     return (
-        <>
+        <div className="pb-10">
             <header className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
                 <div>
                     <h1 className="text-3xl font-bold mb-1 text-white">Live Operations</h1>
@@ -58,8 +58,12 @@ const DashboardOverview: React.FC = () => {
                         </div>
                         <div className="flex items-center justify-between mb-6 relative z-10">
                             <div className="text-center group-hover:scale-105 transition-transform duration-300">
-                                <div className="w-12 h-12 bg-blue-900/20 border border-blue-500/30 rounded-full flex items-center justify-center mb-2 mx-auto">
-                                    <span className="font-bold text-blue-400">{teamProfile?.teamName?.substring(0, 2).toUpperCase() || 'YOU'}</span>
+                                <div className="w-12 h-12 bg-blue-900/20 border border-blue-500/30 rounded-full flex items-center justify-center mb-2 mx-auto overflow-hidden">
+                                    {teamProfile?.logoUrl ? (
+                                        <img src={teamProfile.logoUrl} alt={teamProfile.teamName} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <span className="font-bold text-blue-400">{teamProfile?.teamName?.substring(0, 2).toUpperCase() || 'YOU'}</span>
+                                    )}
                                 </div>
                                 <span className="text-lg font-bold text-white">{teamProfile?.teamName || 'Your Team'}</span>
                             </div>
@@ -301,7 +305,7 @@ const DashboardOverview: React.FC = () => {
 
             {/* Strategy Brief Modal */}
             <StrategyBriefModal isOpen={strategyBriefOpen} onClose={closeStrategyBrief} />
-        </>
+        </div>
     );
 };
 
