@@ -39,6 +39,12 @@ const ChooseGame: React.FC = () => {
   const [teams, setTeams] = useState<{ id: string; name: string }[]>([]);
   const [isLoadingTeams, setIsLoadingTeams] = useState(false);
   const [teamsError, setTeamsError] = useState<string | null>(null);
+  const [teamSearchQuery, setTeamSearchQuery] = useState('');
+
+  // Filter teams based on search query
+  const filteredTeams = teams.filter(team =>
+    team.name.toLowerCase().includes(teamSearchQuery.toLowerCase())
+  );
 
   // Fetch teams when a game is selected
   useEffect(() => {
@@ -164,8 +170,32 @@ const ChooseGame: React.FC = () => {
         {/* Team Selection Panel */}
         {selectedGame && (
           <div className="bg-surface-darker/80 backdrop-blur-sm border border-white/10 rounded-xl p-6 mb-8 animate-fade-in">
-            <h3 className="text-lg font-bold text-white mb-2">Select Your Team <span className="text-gray-500 font-normal text-sm ml-2">(from GRID Global Database)</span></h3>
-            <p className="text-xs text-gray-500 mb-6">This scopes all match history and analytics to your selected team.</p>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+              <div>
+                <h3 className="text-lg font-bold text-white mb-1">Select Your Team <span className="text-gray-500 font-normal text-sm ml-2">(from GRID Global Database)</span></h3>
+                <p className="text-xs text-gray-500">This scopes all match history and analytics to your selected team.</p>
+              </div>
+              {teams.length > 0 && (
+                <div className="relative">
+                  <span className="material-icons absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-lg">search</span>
+                  <input
+                    type="text"
+                    placeholder="Search teams..."
+                    value={teamSearchQuery}
+                    onChange={(e) => setTeamSearchQuery(e.target.value)}
+                    className="pl-10 pr-4 py-2 bg-surface-dark border border-white/10 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all w-full sm:w-64"
+                  />
+                  {teamSearchQuery && (
+                    <button
+                      onClick={() => setTeamSearchQuery('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+                    >
+                      <span className="material-icons text-sm">close</span>
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
 
             {isLoadingTeams ? (
               <div className="flex items-center justify-center py-12">
@@ -188,9 +218,20 @@ const ChooseGame: React.FC = () => {
                 <span className="material-icons text-gray-600 text-3xl mb-2">groups_off</span>
                 <p className="text-gray-500 text-sm">No teams found in GRID database.</p>
               </div>
+            ) : filteredTeams.length === 0 && teamSearchQuery ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <span className="material-icons text-gray-600 text-3xl mb-2">search_off</span>
+                <p className="text-gray-500 text-sm">No teams found matching "{teamSearchQuery}"</p>
+                <button
+                  onClick={() => setTeamSearchQuery('')}
+                  className="mt-4 px-4 py-2 text-xs border border-white/20 rounded-lg text-gray-300 hover:text-white hover:border-primary transition"
+                >
+                  Clear Search
+                </button>
+              </div>
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                {teams.map((team: any) => {
+                {filteredTeams.map((team: any) => {
                   const isSelected = selectedTeam?.id === team.id;
                   const primaryColor = team.colorPrimary || '#D2F96F'; // Default to neon green
 
