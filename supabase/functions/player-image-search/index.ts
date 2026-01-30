@@ -73,9 +73,10 @@ Return a JSON array with this exact structure for each player:
 ]
 
 IMPORTANT: 
-- Search for the player's **VLR.gg** profile. This is the BEST source.
-- Images often look like 'https://owcdn.net/img/628750273574d.png'.
-- If VLR fails, try Liquipedia(but do not guess the hash) or official sites.
+- Do NOT use images from **vlr.gg** or **owcdn.net** (hotlink protected).
+- Search for the player's **Liquipedia** profile. This is the BEST source.
+- Use the main infobox image from Liquipedia.
+- If Liquipedia fails, try Fandom or official sites.
 - Return null ONLY if absolutely no image can be found after searching.
 - Return ONLY the JSON array, no other text`
 

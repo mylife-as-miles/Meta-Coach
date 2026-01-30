@@ -49,9 +49,10 @@ Return ONLY a JSON array like this:
 [{"nickname": "player_name", "imageUrl": "https://direct-image-url.jpg"}]
 
 Rules:
-- Search for the player's **VLR.gg** profile. The image URL usually looks like 'https://owcdn.net/img/...' or 'https://img.vlr.gg/...'.
-- Search for the player's **Liquipedia** profile. Use the main infobox image if a direct link is found in search results.
-            - If no VLR or Liquipedia image is found, try official team sites.
+- Do NOT use images from **vlr.gg** or **owcdn.net** (they are hotlink protected and will fail).
+- Search for the player's **Liquipedia** profile. This is the PRIMARY source.
+- Use the main infobox image from Liquipedia.
+- If Liquipedia fails, try Fandom or official team sites.
 - Return null ONLY if absolutely no image can be found.
 - No explanations, just the JSON array`
 
