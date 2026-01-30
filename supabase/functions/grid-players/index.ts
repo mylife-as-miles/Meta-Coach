@@ -49,10 +49,10 @@ Return ONLY a JSON array like this:
 [{"nickname": "player_name", "imageUrl": "https://direct-image-url.jpg"}]
 
 Rules:
-- Only return direct image URLs found in the search results.
-- DO NOT guess Liquipedia file paths (e.g. /images/6/6f/...). These use MD5 hashes and cannot be predicted.
-- Prioritize VLR.gg, Fandom, or team site URLs over Liquipedia if uncertain.
-- If no image found, set imageUrl to null
+- Search for the player's **VLR.gg** profile. The image URL usually looks like 'https://owcdn.net/img/...' or 'https://img.vlr.gg/...'.
+- Search for the player's **Liquipedia** profile. Use the main infobox image if a direct link is found in search results.
+            - If no VLR or Liquipedia image is found, try official team sites.
+- Return null ONLY if absolutely no image can be found.
 - No explanations, just the JSON array`
 
         const response = await ai.models.generateContent({
@@ -143,26 +143,26 @@ serve(async (req) => {
         // Query players AND team details
         const playersQuery = `
       query GetPlayersForTeam($teamId: ID!) {
-        team(id: $teamId) {
-            name
-        }
-        players(
-          filter: { teamIdFilter: { id: $teamId } }
+            team(id: $teamId) {
+                name
+            }
+            players(
+                filter: { teamIdFilter: { id: $teamId } }
           first: 20
-        ) {
+            ) {
           edges {
             node {
-              id
-              nickname
+                        id
+                        nickname
               externalLinks {
                 dataProvider { name }
                 externalEntity { id }
-              }
+                        }
+                    }
+                }
             }
-          }
         }
-      }
-    `
+        `
 
         console.log('Calling GRID API with teamId:', teamId)
 
@@ -183,7 +183,7 @@ serve(async (req) => {
         if (!playersRes.ok) {
             const errorText = await playersRes.text()
             console.error('GRID API error body:', errorText)
-            throw new Error(`GRID API error: ${playersRes.status} - ${errorText}`)
+            throw new Error(`GRID API error: ${playersRes.status} - ${errorText} `)
         }
 
         const playersData = await playersRes.json()
@@ -193,7 +193,7 @@ serve(async (req) => {
         if (!teamName) {
             const gridTeamName = playersData.data?.team?.name
             if (gridTeamName) {
-                console.log(`Using team name from GRID response: ${gridTeamName}`)
+                console.log(`Using team name from GRID response: ${gridTeamName} `)
                 teamName = gridTeamName
             }
         }
@@ -208,29 +208,7 @@ serve(async (req) => {
             imageUrl: null // Default null
         }))
 
-        // Helper to fetch Valorant image by ID
-        const fetchValorantImageById = async (externalId: string): Promise<string | null> => {
-            try {
-                const res = await fetch(`https://vlr.orlandomm.net/api/v1/players/${externalId}`)
-                if (!res.ok) return null
-                const data = await res.json()
-                return data.data?.info?.img || null
-            } catch (e) {
-                console.error(`Error fetching image for ${externalId}:`, e)
-                return null
-            }
-        }
-
-        // First try VLR API for Valorant players
-        if (titleId === '6' || titleId === '29') {
-            console.log('Fetching Valorant images using External IDs...')
-            const imagePromises = players.map(async (p: any) => {
-                const valLink = p.externalLinks?.find((l: any) => l.dataProvider.name === "VALORANT")
-                const img = valLink ? await fetchValorantImageById(valLink.externalEntity.id) : null
-                return { ...p, imageUrl: img }
-            })
-            players = await Promise.all(imagePromises)
-        }
+        // (Removed ID-based VLR fetch as it used Riot IDs instead of VLR IDs)
 
         // Determine game name for Gemini search
         const gameName = titleId === '3' ? 'League of Legends' :
@@ -239,15 +217,15 @@ serve(async (req) => {
 
         // Use Gemini + Google Search as fallback for players without images
         const playersWithMissingImages = players.filter((p: any) => !p.imageUrl)
-        console.log(`Team name received: ${teamName}`)
-        console.log(`Players with missing images: ${playersWithMissingImages.length}`)
-        console.log(`Player image status:`, players.map((p: any) => ({ nickname: p.nickname, hasImage: !!p.imageUrl })))
+        console.log(`Team name received: ${teamName} `)
+        console.log(`Players with missing images: ${playersWithMissingImages.length} `)
+        console.log(`Player image status: `, players.map((p: any) => ({ nickname: p.nickname, hasImage: !!p.imageUrl })))
 
         if (playersWithMissingImages.length > 0) {
             if (teamName) {
                 console.log(`Calling Gemini search for ${playersWithMissingImages.length} players from ${teamName}...`)
                 players = await searchPlayerImagesWithGemini(players, teamName, gameName)
-                console.log(`After Gemini search:`, players.map((p: any) => ({ nickname: p.nickname, imageUrl: p.imageUrl })))
+                console.log(`After Gemini search: `, players.map((p: any) => ({ nickname: p.nickname, imageUrl: p.imageUrl })))
             } else {
                 console.warn('teamName not provided, skipping Gemini image search')
             }

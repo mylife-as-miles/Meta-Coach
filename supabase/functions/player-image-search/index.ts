@@ -73,10 +73,10 @@ Return a JSON array with this exact structure for each player:
 ]
 
 IMPORTANT: 
-- Only return direct image URLs found in the search results.
-- DO NOT guess Liquipedia file paths.
-- Prioritize VLR.gg, Fandom, or official sites.
-- If no official image is found, set imageUrl to null
+- Search for the player's **VLR.gg** profile. This is the BEST source.
+- Images often look like 'https://owcdn.net/img/628750273574d.png'.
+- If VLR fails, try Liquipedia(but do not guess the hash) or official sites.
+- Return null ONLY if absolutely no image can be found after searching.
 - Return ONLY the JSON array, no other text`
 
         const config = {
