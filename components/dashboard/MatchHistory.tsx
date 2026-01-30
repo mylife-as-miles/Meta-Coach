@@ -55,18 +55,20 @@ const MatchHistory: React.FC = () => {
                             <div key={match.id} className="bg-surface-dark rounded-2xl p-0 border border-white/5 hover:border-primary/30 transition duration-300 shadow-lg group overflow-hidden">
                                 <div className="grid grid-cols-12 h-full">
                                     <div className="col-span-12 md:col-span-2 bg-surface-darker p-5 flex flex-row md:flex-col items-center justify-between md:justify-center border-b md:border-b-0 md:border-r border-white/5 relative overflow-hidden">
-                                        <div className={`absolute inset-0 hidden md:block ${match.result === 'WIN' ? 'bg-primary/5' : match.result === 'UPCOMING' ? 'bg-blue-500/5' : 'bg-red-500/5'}`}></div>
-                                        <div className={`absolute left-0 top-0 bottom-0 w-1 shadow-neon ${match.result === 'WIN' ? 'bg-primary' : match.result === 'UPCOMING' ? 'bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.4)]' : 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.4)]'}`}></div>
+                                        <div className={`absolute inset-0 hidden md:block ${match.result === 'WIN' ? 'bg-primary/5' : match.result === 'UPCOMING' ? 'bg-blue-500/5' : match.result === 'TBD' ? 'bg-gray-500/5' : 'bg-red-500/5'}`}></div>
+                                        <div className={`absolute left-0 top-0 bottom-0 w-1 shadow-neon ${match.result === 'WIN' ? 'bg-primary' : match.result === 'UPCOMING' ? 'bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.4)]' : match.result === 'TBD' ? 'bg-gray-500 shadow-[0_0_10px_rgba(107,114,128,0.4)]' : 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.4)]'}`}></div>
                                         <div className="flex flex-col items-center gap-1 z-10">
                                             <span className={`text-xl md:text-2xl font-bold tracking-widest shadow-neon-text ${match.result === 'WIN' ? 'text-primary drop-shadow-[0_0_8px_rgba(210,249,111,0.5)]' :
                                                 match.result === 'UPCOMING' ? 'text-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]' :
-                                                    'text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]'
+                                                    match.result === 'TBD' ? 'text-gray-400 drop-shadow-[0_0_8px_rgba(156,163,175,0.5)]' :
+                                                        'text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]'
                                                 }`}>
                                                 {match.result === 'UPCOMING' ? 'SOON' : match.result}
                                             </span>
                                             <span className={`text-[10px] uppercase font-mono tracking-wide px-1.5 rounded ${match.result === 'WIN' ? 'text-primary/80 bg-primary/10' :
                                                 match.result === 'UPCOMING' ? 'text-blue-400/80 bg-blue-500/10' :
-                                                    'text-red-400/80 bg-red-500/10'
+                                                    match.result === 'TBD' ? 'text-gray-400/80 bg-gray-500/10' :
+                                                        'text-red-400/80 bg-red-500/10'
                                                 }`}>
                                                 {match.type || 'Ranked'}
                                             </span>
@@ -79,10 +81,14 @@ const MatchHistory: React.FC = () => {
                                     <div className="col-span-12 md:col-span-5 p-5 flex items-center justify-center relative">
                                         <div className="flex items-center gap-6 w-full justify-center">
                                             <div className="flex flex-col items-center gap-2">
-                                                <div className="w-14 h-14 rounded-full bg-blue-900/20 border border-blue-500/30 flex items-center justify-center p-2 shadow-[0_0_15px_rgba(59,130,246,0.1)]">
-                                                    <span className="font-bold text-blue-400 text-lg">YOU</span>
+                                                <div className="w-14 h-14 rounded-full bg-blue-900/20 border border-blue-500/30 flex items-center justify-center p-2 shadow-[0_0_15px_rgba(59,130,246,0.1)] overflow-hidden">
+                                                    {teamProfile?.logoUrl ? (
+                                                        <img src={teamProfile.logoUrl} alt={teamProfile.teamName} className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <span className="font-bold text-blue-400 text-lg">{teamProfile?.teamName?.substring(0, 2).toUpperCase() || 'YOU'}</span>
+                                                    )}
                                                 </div>
-                                                <span className="text-xs font-bold text-gray-300">You</span>
+                                                <span className="text-xs font-bold text-gray-300">{teamProfile?.teamName || 'Your Team'}</span>
                                             </div>
                                             <div className="flex flex-col items-center">
                                                 <div className="text-2xl font-bold text-white font-mono bg-white/5 px-3 py-1 rounded-lg border border-white/10">
@@ -91,8 +97,12 @@ const MatchHistory: React.FC = () => {
                                                 <span className="text-[10px] text-gray-500 mt-1 uppercase tracking-wider">{match.format}</span>
                                             </div>
                                             <div className="flex flex-col items-center gap-2">
-                                                <div className={`w-14 h-14 rounded-full border flex items-center justify-center p-2 ${match.opponent.color === 'red' ? 'bg-red-900/20 border-red-500/30' : 'bg-orange-900/20 border-orange-500/30'}`}>
-                                                    <span className={`font-bold text-lg ${match.opponent.color === 'red' ? 'text-red-400' : 'text-orange-400'}`}>{match.opponent.abbreviation}</span>
+                                                <div className={`w-14 h-14 rounded-full border flex items-center justify-center p-2 overflow-hidden ${match.opponent.color === 'red' ? 'bg-red-900/20 border-red-500/30' : 'bg-orange-900/20 border-orange-500/30'}`}>
+                                                    {match.opponent.logoUrl ? (
+                                                        <img src={match.opponent.logoUrl} alt={match.opponent.name} className="w-full h-full object-contain" />
+                                                    ) : (
+                                                        <span className={`font-bold text-lg ${match.opponent.color === 'red' ? 'text-red-400' : 'text-orange-400'}`}>{match.opponent.abbreviation}</span>
+                                                    )}
                                                 </div>
                                                 <span className="text-xs font-bold text-gray-300">{match.opponent.name}</span>
                                             </div>
