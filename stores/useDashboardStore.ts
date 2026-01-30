@@ -230,6 +230,7 @@ export const useDashboardStore = create<DashboardState & DashboardActions>((set,
                             region: 'Global', // Default as region field removed
                             logoUrl: gridRes.team.logoUrl
                         };
+                        // Note: gridRes.team.nameShortened is available if needed for abbreviations
                     }
                 } catch (e) {
                     console.warn("Retrieved GRID Team Identity failed:", e);
