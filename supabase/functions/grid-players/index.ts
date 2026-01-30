@@ -227,13 +227,16 @@ serve(async (req) => {
         console.log(`Player image status: `, players.map((p: any) => ({ nickname: p.nickname, hasImage: !!p.imageUrl })))
 
         if (playersWithMissingImages.length > 0) {
-            if (teamName) {
-                console.log(`Calling Gemini search for ${playersWithMissingImages.length} players from ${teamName}...`)
-                players = await searchPlayerImagesWithGemini(players, teamName, gameName, liquipediaPath)
-                console.log(`After Gemini search: `, players.map((p: any) => ({ nickname: p.nickname, imageUrl: p.imageUrl })))
-            } else {
-                console.warn('teamName not provided, skipping Gemini image search')
-            }
+            console.log("Gemini image search disabled by user request.")
+            /*
+           if (teamName) {
+               console.log(`Calling Gemini search for ${playersWithMissingImages.length} players from ${teamName}...`)
+               players = await searchPlayerImagesWithGemini(players, teamName, gameName, liquipediaPath)
+               console.log(`After Gemini search: `, players.map((p: any) => ({ nickname: p.nickname, imageUrl: p.imageUrl })))
+           } else {
+               console.warn('teamName not provided, skipping Gemini image search')
+           }
+           */
         }
 
         return new Response(
