@@ -49,7 +49,9 @@ Return ONLY a JSON array like this:
 [{"nickname": "player_name", "imageUrl": "https://direct-image-url.jpg"}]
 
 Rules:
-- Only return direct image URLs (.jpg, .png, .webp)
+- Only return direct image URLs found in the search results.
+- DO NOT guess Liquipedia file paths (e.g. /images/6/6f/...). These use MD5 hashes and cannot be predicted.
+- Prioritize VLR.gg, Fandom, or team site URLs over Liquipedia if uncertain.
 - If no image found, set imageUrl to null
 - No explanations, just the JSON array`
 

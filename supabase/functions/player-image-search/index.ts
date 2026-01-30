@@ -73,7 +73,9 @@ Return a JSON array with this exact structure for each player:
 ]
 
 IMPORTANT: 
-- Only return direct image URLs (ending in .jpg, .png, .webp, etc.)
+- Only return direct image URLs found in the search results.
+- DO NOT guess Liquipedia file paths.
+- Prioritize VLR.gg, Fandom, or official sites.
 - If no official image is found, set imageUrl to null
 - Return ONLY the JSON array, no other text`
 
