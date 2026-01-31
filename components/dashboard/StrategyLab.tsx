@@ -47,16 +47,41 @@ const StrategyLab: React.FC = () => {
     const [objectivePriority, setObjectivePriority] = useState(true);
 
     // Build scenario for prediction
-    const scenarioInput: ScenarioInput = useMemo(() => ({
-        gamePhase,
-        goldAdvantage,
-        playerFatigue,
-        draftAdvantage: 0.55, // Slight blue advantage from draft
-        towerCount: { blue: 3, red: 2 },
-        dragonCount: { blue: 2, red: 1 },
-        baronSecured: { blue: false, red: false },
-        teamKills: { blue: 8, red: 6 }
-    }), [gamePhase, goldAdvantage, playerFatigue]);
+    // Build scenario for prediction
+    const scenarioInput: ScenarioInput = useMemo(() => {
+        let baseInput: ScenarioInput = {
+            gamePhase,
+            goldAdvantage,
+            playerFatigue,
+            draftAdvantage: 0.55,
+            towerCount: { blue: 3, red: 2 },
+            dragonCount: { blue: 2, red: 1 },
+            baronSecured: { blue: false, red: false },
+            teamKills: { blue: 8, red: 6 },
+            teamDeaths: { blue: 6, red: 8 },
+            objectivesSecured: ['DRAGON', 'RIFT_HERALD']
+        };
+
+        if (matchTimeline) {
+            // Calculate kills/deaths from live player data
+            const blueKills = matchTimeline.players.filter(p => p.teamId === matchTimeline.teams.blue.id).reduce((acc, p) => acc + p.kills, 0);
+            const redKills = matchTimeline.players.filter(p => p.teamId === matchTimeline.teams.red.id).reduce((acc, p) => acc + p.kills, 0);
+
+            baseInput = {
+                ...baseInput,
+                gamePhase: matchTimeline.gameState.phase,
+                goldAdvantage: matchTimeline.gameState.goldAdvantage.amount,
+                teamKills: { blue: blueKills, red: redKills },
+                teamDeaths: { blue: redKills, red: blueKills }, // Kills for one are deaths for other
+                dragonCount: {
+                    blue: matchTimeline.gameState.objectiveControl.teamId === matchTimeline.teams.blue.id ? matchTimeline.gameState.objectiveControl.dragonCount : 0,
+                    red: matchTimeline.gameState.objectiveControl.teamId === matchTimeline.teams.red.id ? matchTimeline.gameState.objectiveControl.dragonCount : 0
+                }
+            };
+        }
+
+        return baseInput;
+    }, [gamePhase, goldAdvantage, playerFatigue, matchTimeline]);
 
     // API Hooks
     const { data: draftAnalysis, isLoading: draftLoading } = useDraftAnalysis({

@@ -759,11 +759,13 @@ export interface ScenarioInput {
     gamePhase: 'EARLY' | 'MID' | 'LATE';
     goldAdvantage: number;
     playerFatigue: boolean;
+    objectivesSecured?: string[];
     draftAdvantage?: number;
     towerCount?: { blue: number; red: number };
     dragonCount?: { blue: number; red: number };
     baronSecured?: { blue: boolean; red: boolean };
     teamKills?: { blue: number; red: number };
+    teamDeaths?: { blue: number; red: number };
 }
 
 export function useScenarioPrediction(scenario: ScenarioInput) {
