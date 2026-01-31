@@ -534,3 +534,331 @@ export function usePlayerStatistics(playerId: string | undefined | null, matchLi
         retry: 1,
     });
 }
+
+// ============================================
+// STRATEGY LAB HOOKS
+// ============================================
+
+// Draft Analysis Types
+export interface DraftPick {
+    heroId: string;
+    heroName: string;
+    teamId: string;
+    playerId?: string;
+    playerName?: string;
+    order: number;
+    role?: string;
+}
+
+export interface DraftBan {
+    heroId: string;
+    heroName: string;
+    teamId: string;
+    order: number;
+}
+
+export interface DraftAnalysisData {
+    seriesId: string | null;
+    titleId: number;
+    blueSide: {
+        teamId: string;
+        teamName: string;
+        picks: DraftPick[];
+        bans: DraftBan[];
+    };
+    redSide: {
+        teamId: string;
+        teamName: string;
+        picks: DraftPick[];
+        bans: DraftBan[];
+    };
+    winProbability: {
+        blueWinRate: number;
+        redWinRate: number;
+        confidence: number;
+    };
+    draftAdvantage: {
+        advantageTeam: 'blue' | 'red' | 'even';
+        delta: number;
+        reasoning: string;
+    };
+    recommendedPicks: {
+        heroId: string;
+        heroName: string;
+        role: string;
+        winRateVsComp: number;
+        counterScore: number;
+        reasoning: string;
+    }[];
+    compositionAnalysis: {
+        blueArchetype: string;
+        redArchetype: string;
+        matchupNotes: string[];
+    };
+    source: string;
+}
+
+export function useDraftAnalysis(params: {
+    titleId?: number;
+    seriesId?: string;
+    bluePicks?: { id?: string; name: string }[];
+    redPicks?: { id?: string; name: string }[];
+}) {
+    return useQuery({
+        queryKey: ['draftAnalysis', params],
+        queryFn: async (): Promise<DraftAnalysisData | null> => {
+            console.log('[useDraftAnalysis] Fetching draft analysis');
+
+            const { data, error } = await invokeWithTimeout<DraftAnalysisData>(
+                'draft-analysis',
+                {
+                    titleId: params.titleId ?? 3,
+                    seriesId: params.seriesId,
+                    bluePicks: params.bluePicks || [],
+                    redPicks: params.redPicks || []
+                },
+                10000
+            );
+
+            if (error) {
+                console.error('[useDraftAnalysis] Error:', error);
+                throw error;
+            }
+
+            return data || null;
+        },
+        enabled: true,
+        staleTime: 1000 * 60 * 2,
+        retry: 1,
+    });
+}
+
+// Match Timeline Types
+export interface Position {
+    x: number;
+    y: number;
+}
+
+export interface TimelineEvent {
+    id: string;
+    timestamp: number;
+    type: 'KILL' | 'OBJECTIVE' | 'TOWER' | 'DRAGON' | 'BARON' | 'RIFT_HERALD' | 'WARD' | 'TEAM_FIGHT';
+    position: Position;
+    teamId: string;
+    playerId?: string;
+    objectiveType?: string;
+    goldValue?: number;
+}
+
+export interface PlayerState {
+    id: string;
+    name: string;
+    teamId: string;
+    role: string;
+    position: Position;
+    kills: number;
+    deaths: number;
+    assists: number;
+    gold: number;
+    level: number;
+    creepScore: number;
+    alive: boolean;
+}
+
+export interface MatchTimelineData {
+    seriesId: string;
+    gameNumber: number;
+    status: 'LIVE' | 'PAUSED' | 'ENDED' | 'SCHEDULED';
+    teams: {
+        blue: { id: string; name: string; score: number; logoUrl?: string };
+        red: { id: string; name: string; score: number; logoUrl?: string };
+    };
+    gameState: {
+        gameTime: number;
+        phase: 'EARLY' | 'MID' | 'LATE';
+        goldAdvantage: { teamId: string; amount: number };
+        objectiveControl: {
+            teamId: string;
+            dragonCount: number;
+            baronCount: number;
+            riftHeraldCount: number;
+            towerCount: number;
+        };
+        visionScore: { blueTeam: number; redTeam: number };
+    };
+    players: PlayerState[];
+    recentEvents: TimelineEvent[];
+    hotspots: Position[];
+    source: string;
+}
+
+export function useMatchTimeline(seriesId?: string, gameNumber: number = 1, simulate: boolean = false) {
+    return useQuery({
+        queryKey: ['matchTimeline', seriesId, gameNumber, simulate],
+        queryFn: async (): Promise<MatchTimelineData | null> => {
+            console.log('[useMatchTimeline] Fetching timeline data');
+
+            const { data, error } = await invokeWithTimeout<MatchTimelineData>(
+                'match-timeline',
+                { seriesId, gameNumber, simulate },
+                10000
+            );
+
+            if (error) {
+                console.error('[useMatchTimeline] Error:', error);
+                throw error;
+            }
+
+            return data || null;
+        },
+        enabled: !!seriesId || simulate,
+        staleTime: simulate ? 1000 * 60 * 5 : 1000 * 5, // Refresh live data every 5 seconds
+        refetchInterval: simulate ? undefined : 5000,
+        retry: 1,
+    });
+}
+
+// Scenario Prediction Types
+export interface ScenarioPredictionData {
+    winProbability: {
+        teamId: string;
+        probability: number;
+        confidenceInterval: { low: number; high: number };
+        factors: {
+            variable: string;
+            weight: number;
+            impact: number;
+            direction: 'positive' | 'negative' | 'neutral';
+        }[];
+    };
+    teamfightWinRate: {
+        probability: number;
+        rating: 'HIGH' | 'MEDIUM' | 'LOW';
+        conditions: {
+            goldDiff: number;
+            itemAdvantage: boolean;
+            positioning: string;
+        };
+    };
+    splitPushEfficiency: {
+        rating: 'HIGH' | 'MEDIUM' | 'LOW';
+        probability: number;
+        reasoning: string;
+    };
+    objectivePriority: {
+        nextObjective: string;
+        timing: string;
+        winRateIfSecured: number;
+        riskLevel: 'LOW' | 'MEDIUM' | 'HIGH';
+    };
+    strategicRecommendations: string[];
+    source: string;
+}
+
+export interface ScenarioInput {
+    gamePhase: 'EARLY' | 'MID' | 'LATE';
+    goldAdvantage: number;
+    playerFatigue: boolean;
+    draftAdvantage?: number;
+    towerCount?: { blue: number; red: number };
+    dragonCount?: { blue: number; red: number };
+    baronSecured?: { blue: boolean; red: boolean };
+    teamKills?: { blue: number; red: number };
+}
+
+export function useScenarioPrediction(scenario: ScenarioInput) {
+    return useQuery({
+        queryKey: ['scenarioPrediction', scenario],
+        queryFn: async (): Promise<ScenarioPredictionData | null> => {
+            console.log('[useScenarioPrediction] Running scenario prediction');
+
+            const { data, error } = await invokeWithTimeout<ScenarioPredictionData>(
+                'scenario-prediction',
+                scenario,
+                8000
+            );
+
+            if (error) {
+                console.error('[useScenarioPrediction] Error:', error);
+                throw error;
+            }
+
+            return data || null;
+        },
+        staleTime: 1000 * 30, // Cache for 30 seconds
+        retry: 1,
+    });
+}
+
+// Tactical Briefing Types
+export interface TacticalInsight {
+    type: 'critical' | 'warning' | 'recommendation' | 'observation';
+    title: string;
+    content: string;
+    timing?: string;
+    impact?: 'high' | 'medium' | 'low';
+}
+
+export interface TacticalBriefingData {
+    timestamp: string;
+    teamId: string | null;
+    opponentId: string | null;
+    briefingType: 'pre-game' | 'in-game' | 'post-game';
+    executiveSummary: string;
+    insights: TacticalInsight[];
+    keyMatchups: {
+        lane: string;
+        advantage: 'blue' | 'red' | 'even';
+        reasoning: string;
+    }[];
+    criticalTimings: {
+        timestamp: string;
+        event: string;
+        action: string;
+    }[];
+    riskAssessment: {
+        level: 'low' | 'medium' | 'high';
+        factors: string[];
+    };
+    source: string;
+}
+
+export function useTacticalBriefing(params: {
+    titleId?: number;
+    teamId?: string;
+    opponentId?: string;
+    draftData?: {
+        bluePicks: string[];
+        redPicks: string[];
+        blueBans: string[];
+        redBans: string[];
+    };
+    gameState?: {
+        gamePhase: string;
+        goldAdvantage: number;
+        objectives: string[];
+    };
+}) {
+    return useQuery({
+        queryKey: ['tacticalBriefing', params],
+        queryFn: async (): Promise<TacticalBriefingData | null> => {
+            console.log('[useTacticalBriefing] Generating tactical briefing');
+
+            const { data, error } = await invokeWithTimeout<TacticalBriefingData>(
+                'tactical-briefing',
+                params,
+                20000 // Longer timeout for AI generation
+            );
+
+            if (error) {
+                console.error('[useTacticalBriefing] Error:', error);
+                throw error;
+            }
+
+            return data || null;
+        },
+        enabled: !!(params.teamId || params.draftData || params.gameState),
+        staleTime: 1000 * 60 * 2, // Cache for 2 minutes
+        retry: 1,
+    });
+}

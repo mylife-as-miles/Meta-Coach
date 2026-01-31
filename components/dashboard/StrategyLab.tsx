@@ -1,5 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useDashboardStore } from '../../stores/useDashboardStore';
+import { useSession } from '../../hooks/useAuth';
+import {
+    useWorkspace,
+    useDraftAnalysis,
+    useScenarioPrediction,
+    useTacticalBriefing,
+    useMatchTimeline,
+    ScenarioInput
+} from '../../hooks/useDashboardQueries';
 import ChampionPickerModal from './modals/ChampionPickerModal';
 import SimulationResultModal from './modals/SimulationResultModal';
 import { Champion } from '../../lib/mockData';
@@ -14,13 +23,95 @@ const StrategyLab: React.FC = () => {
     const simulationResult = useDashboardStore((state) => state.simulationResult);
     const runSimulation = useDashboardStore((state) => state.runSimulation);
 
+    // Auth & Workspace
+    const { data: session } = useSession();
+    const userId = session?.user?.id;
+    const { data: workspace } = useWorkspace(userId);
+
+    // Draft State
+    const [bluePicks, setBluePicks] = useState<{ id: string; name: string; icon?: string }[]>([
+        { id: 'aatrox', name: 'Aatrox', icon: '⚔️' },
+        { id: 'sejuani', name: 'Sejuani', icon: '🐗' }
+    ]);
+    const [redPicks, setRedPicks] = useState<{ id: string; name: string; icon?: string }[]>([
+        { id: 'ksante', name: "K'Sante", icon: '🛡️' },
+        { id: 'leesin', name: 'Lee Sin', icon: '👊' }
+    ]);
     const [selectedMid, setSelectedMid] = useState<Champion | null>(null);
-    const [gamePhase, setGamePhase] = useState<'early' | 'mid' | 'late'>('mid');
-    const [agression, setAgression] = useState(65);
-    const [objectivePriority, setObjectivePriority] = useState(80);
+
+    // Scenario State
+    const [gamePhase, setGamePhase] = useState<'EARLY' | 'MID' | 'LATE'>('MID');
+    const [goldAdvantage, setGoldAdvantage] = useState(-2500);
+    const [playerFatigue, setPlayerFatigue] = useState(true);
+    const [objectivePriority, setObjectivePriority] = useState(true);
+
+    // Build scenario for prediction
+    const scenarioInput: ScenarioInput = useMemo(() => ({
+        gamePhase,
+        goldAdvantage,
+        playerFatigue,
+        draftAdvantage: 0.55, // Slight blue advantage from draft
+        towerCount: { blue: 3, red: 2 },
+        dragonCount: { blue: 2, red: 1 },
+        baronSecured: { blue: false, red: false },
+        teamKills: { blue: 8, red: 6 }
+    }), [gamePhase, goldAdvantage, playerFatigue]);
+
+    // API Hooks
+    const { data: draftAnalysis, isLoading: draftLoading } = useDraftAnalysis({
+        titleId: 3, // LoL
+        bluePicks,
+        redPicks: redPicks
+    });
+
+    const { data: scenarioPrediction, isLoading: scenarioLoading } = useScenarioPrediction(scenarioInput);
+
+    const { data: tacticalBriefing, isLoading: briefingLoading } = useTacticalBriefing({
+        titleId: 3,
+        teamId: workspace?.grid_team_id,
+        draftData: {
+            bluePicks: bluePicks.map(p => p.name),
+            redPicks: redPicks.map(p => p.name),
+            blueBans: [],
+            redBans: []
+        },
+        gameState: {
+            gamePhase,
+            goldAdvantage,
+            objectives: ['DRAGON', 'DRAGON', 'RIFT_HERALD']
+        }
+    });
+
+    // Match Timeline Hook
+    const { data: matchTimeline, isLoading: timelineLoading } = useMatchTimeline(undefined, 1, true);
+
+    // Update blue picks when mid is selected
+    useEffect(() => {
+        if (selectedMid) {
+            const existingPicks = bluePicks.filter(p => !p.id.includes('mid-'));
+            setBluePicks([...existingPicks, { id: `mid-${selectedMid.name}`, name: selectedMid.name, icon: selectedMid.icon }]);
+        }
+    }, [selectedMid]);
+
+    // Get win probability from draft analysis or fallback
+    const winProbability = draftAnalysis?.winProbability?.blueWinRate ?? 64.2;
+    const recommendedPick = draftAnalysis?.recommendedPicks?.[0];
+    const counterInsight = recommendedPick
+        ? `${recommendedPick.heroName} has a +${(recommendedPick.winRateVsComp - 50).toFixed(1)}% win rate delta against their comp. ${recommendedPick.reasoning}`
+        : 'Azir has a +4.2% win rate delta against their comp. Prioritize scaling.';
+
+    // Get scenario outcomes
+    const teamfightWR = scenarioPrediction?.teamfightWinRate?.probability ?? 42;
+    const splitPushRating = scenarioPrediction?.splitPushEfficiency?.rating ?? 'High';
+
+    // Get tactical insights for console
+    const tacticalInsights = tacticalBriefing?.insights || [];
+    const executiveSummary = tacticalBriefing?.executiveSummary || 'Analyzing composition matchup...';
+    const compositionAnalysis = draftAnalysis?.compositionAnalysis;
+
     return (
         <div className="flex flex-col h-auto lg:h-[calc(100vh-90px)] min-h-[800px]">
-            {/* Custom Styles for Map and Animations */}
+            {/* Custom Styles */}
             <style>{`
                 .grid-bg {
                     background-size: 40px 40px;
@@ -33,6 +124,14 @@ const StrategyLab: React.FC = () => {
                 @keyframes blink {
                     0%, 100% { opacity: 1; }
                     50% { opacity: 0; }
+                }
+                @keyframes pulse-ring {
+                    0% { transform: scale(0.33); opacity: 0; }
+                    50% { opacity: 0.5; }
+                    100% { transform: scale(2); opacity: 0; }
+                }
+                .map-player-icon {
+                    transition: all 1s cubic-bezier(0.4, 0, 0.2, 1);
                 }
                 .map-grid {
                     background-image: radial-gradient(circle, rgba(210, 249, 111, 0.1) 1px, transparent 1px);
@@ -50,81 +149,89 @@ const StrategyLab: React.FC = () => {
                 }
             `}</style>
 
-            <div className="grid grid-cols-12 gap-6 h-full">
-                {/* Draft Simulator (Left Sidebar) */}
-                <aside className="col-span-12 lg:col-span-3 flex flex-col gap-4 h-full overflow-hidden">
-                    <div className="flex-1 bg-surface-dark rounded-2xl border border-white/10 p-5 flex flex-col shadow-lg relative overflow-hidden group">
-                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent"></div>
-                        <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-white font-bold flex items-center gap-2">
-                                <span className="material-icons-outlined text-primary text-sm">view_week</span>
-                                Draft Simulator
-                            </h2>
-                            <span className="text-[10px] font-mono text-gray-500 border border-white/10 px-2 py-0.5 rounded">PATCH 14.3</span>
-                        </div>
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6 px-4 pt-2">
+                <div>
+                    <h1 className="text-2xl font-bold text-white flex items-center gap-3">
+                        <span className="material-icons-outlined text-primary text-3xl">science</span>
+                        Strategy Lab
+                    </h1>
+                    <p className="text-gray-400 text-sm mt-1">AI-Powered Draft Analysis & Scenario Modeling</p>
+                </div>
+                <div className="flex items-center gap-4">
+                    <div className="bg-surface-dark px-3 py-1.5 rounded-lg border border-white/10 flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                        <span className="text-xs font-mono text-gray-300">GRID LIVE DATA</span>
+                    </div>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-12 gap-6 px-4 pb-6 flex-1 overflow-hidden">
+
+                {/* LEFT COLUMN: Draft Simulator */}
+                <aside className="col-span-12 lg:col-span-3 flex flex-col h-full overflow-hidden">
+                    <div className="bg-surface-card rounded-2xl border border-white/5 p-5 h-full flex flex-col shadow-xl">
+                        <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2 uppercase tracking-wider">
+                            <span className="material-icons-outlined text-primary text-base">psychology</span>
+                            Draft Simulator
+                        </h2>
+
                         <div className="bg-surface-darker/50 rounded-xl p-4 border border-white/5 mb-6 relative">
                             <p className="text-xs text-gray-400 mb-1 font-mono uppercase tracking-wider">Draft Advantage</p>
                             <div className="flex items-end gap-2">
-                                <span className="text-4xl font-bold text-primary font-mono shadow-neon-text">64.2%</span>
+                                <span className="text-4xl font-bold text-primary font-mono shadow-neon-text">{winProbability}%</span>
                                 <span className="text-xs text-primary mb-1.5">WIN PROB</span>
                             </div>
                             <div className="w-full h-1.5 bg-gray-800 rounded-full mt-3 flex overflow-hidden">
-                                <div className="w-[64%] h-full bg-primary shadow-[0_0_10px_#D2F96F]"></div>
+                                <div
+                                    className="h-full bg-primary shadow-[0_0_10px_#D2F96F] transition-all duration-500"
+                                    style={{ width: `${winProbability}%` }}
+                                ></div>
                             </div>
-                            <div className="absolute -right-2 top-4 w-16 h-16 opacity-10">
-                                <svg className="animate-spin-slow" viewBox="0 0 100 100">
-                                    <circle cx="50" cy="50" fill="none" r="40" stroke="white" strokeDasharray="10 5" strokeWidth="2"></circle>
-                                </svg>
-                            </div>
+                            {draftLoading && (
+                                <div className="absolute -right-2 top-4 w-16 h-16 opacity-30">
+                                    <svg className="animate-spin-slow" viewBox="0 0 100 100">
+                                        <circle cx="50" cy="50" fill="none" r="40" stroke="white" strokeDasharray="10 5" strokeWidth="2"></circle>
+                                    </svg>
+                                </div>
+                            )}
                         </div>
                         <div className="space-y-4 flex-1 overflow-y-auto pr-1 custom-scrollbar">
                             <div>
                                 <div className="flex justify-between text-xs text-gray-400 mb-2 font-mono">
                                     <span>BLUE SIDE (YOU)</span>
-                                    <span className="text-blue-400">PICKING...</span>
+                                    <span className="text-blue-400">{bluePicks.length < 5 ? 'PICKING...' : 'LOCKED'}</span>
                                 </div>
                                 <div className="space-y-2">
-                                    <div className="flex items-center gap-3 bg-surface-darker p-2 rounded-lg border-l-2 border-blue-500">
-                                        <div className="w-8 h-8 bg-gray-800 rounded bg-cover bg-center" style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuDUv0EoPfymbvrCgDYdsD31bSWrNzEVXCk5wkJoNj1AnnDXlONQkUrYTdVksLJLISnv6X7E0q0CcMQ8kLjZb3iVARUvEPbv34hk9NpdQXP6mtcz7ISM62INTfjeTHjhSeNyHnMHFSsrzqjjTFLszPabgYtWd_VIpQW53MxAJeawFQzNG4tSBL943s4uUZi4IxvbbrSGfhcuReaOevVHAPbqgOdgzNLNBIfsg0I7nyCBNFB6kP_VqaS8shbxZuliL1xLpZC0Z7s-mc8')" }}></div>
-                                        <div className="flex-1">
-                                            <p className="text-sm font-bold text-white">Aatrox</p>
-                                            <p className="text-[10px] text-gray-500">Top Lane</p>
+                                    {bluePicks.map((pick, i) => (
+                                        <div key={i} className="flex items-center gap-3 bg-surface-darker p-2 rounded-lg border-l-2 border-blue-500">
+                                            <div className="w-8 h-8 bg-gray-800 rounded flex items-center justify-center text-lg">
+                                                {pick.icon || '👤'}
+                                            </div>
+                                            <div className="flex-1">
+                                                <p className="text-sm font-bold text-white">{pick.name}</p>
+                                                <p className="text-[10px] text-gray-500">Pick {i + 1}</p>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div className="flex items-center gap-3 bg-surface-darker p-2 rounded-lg border-l-2 border-blue-500">
-                                        <div className="w-8 h-8 bg-gray-800 rounded bg-cover bg-center" style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuCf7_StFKf6adKA3b0kBUAG1PbdtJXK1Rgj1n7FwVTKATBkYh6vsB7nLQ-A-g76LfGNX8mx9U4q1FRlrc3Tn1oI1Hz_YLB9jgPN3Kkj4vZlXwDkqCkAchQsCXpZPbYdt7ZXMs_-sveDiSW_tA3xp0r7YfmM_F6DVr4Ex3LDVeAVazboGbpA_2CNxRUZ5rUVTxkqP_KljondHDk1p4e6eVzGM045HTIgJ51qcHOviBpDPuxxXd_OIdiVBw4h7PwwuoTWZWRTmgq3ktg')" }}></div>
-                                        <div className="flex-1">
-                                            <p className="text-sm font-bold text-white">Sejuani</p>
-                                            <p className="text-[10px] text-gray-500">Jungle</p>
+                                    ))}
+
+                                    {bluePicks.length < 5 && (
+                                        <div
+                                            onClick={openChampionPicker}
+                                            className="flex items-center gap-3 bg-primary/10 p-2 rounded-lg border border-primary/30 relative overflow-hidden cursor-pointer hover:bg-primary/20 transition"
+                                        >
+                                            <div className="absolute inset-0 bg-primary/5 animate-pulse"></div>
+                                            <div className="w-8 h-8 bg-gray-800 rounded border border-primary/50 flex items-center justify-center relative z-10">
+                                                <span className="material-icons-outlined text-primary text-sm">add</span>
+                                            </div>
+                                            <div className="flex-1 relative z-10">
+                                                <p className="text-sm font-bold text-primary">Select Champion</p>
+                                                <p className="text-[10px] text-primary/70">
+                                                    Recommended: {recommendedPick?.heroName || 'Loading...'}
+                                                </p>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div
-                                        onClick={openChampionPicker}
-                                        className="flex items-center gap-3 bg-primary/10 p-2 rounded-lg border border-primary/30 relative overflow-hidden cursor-pointer hover:bg-primary/20 transition"
-                                    >
-                                        <div className="absolute inset-0 bg-primary/5 animate-pulse"></div>
-                                        {selectedMid ? (
-                                            <>
-                                                <div className="w-8 h-8 bg-gray-800 rounded flex items-center justify-center text-xl relative z-10">
-                                                    {selectedMid.icon}
-                                                </div>
-                                                <div className="flex-1 relative z-10">
-                                                    <p className="text-sm font-bold text-white">{selectedMid.name}</p>
-                                                    <p className="text-[10px] text-primary/70">Mid Lane</p>
-                                                </div>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <div className="w-8 h-8 bg-gray-800 rounded border border-primary/50 flex items-center justify-center relative z-10">
-                                                    <span className="material-icons-outlined text-primary text-sm">add</span>
-                                                </div>
-                                                <div className="flex-1 relative z-10">
-                                                    <p className="text-sm font-bold text-primary">Select Mid</p>
-                                                    <p className="text-[10px] text-primary/70">Recommended: Azir</p>
-                                                </div>
-                                            </>
-                                        )}
-                                    </div>
+                                    )}
                                 </div>
                             </div>
                             <div className="pt-2 border-t border-white/5">
@@ -132,20 +239,17 @@ const StrategyLab: React.FC = () => {
                                     <span>RED SIDE</span>
                                 </div>
                                 <div className="space-y-2 opacity-80">
-                                    <div className="flex items-center gap-3 bg-surface-darker p-2 rounded-lg border-r-2 border-red-500 flex-row-reverse text-right">
-                                        <div className="w-8 h-8 bg-gray-800 rounded bg-cover bg-center" style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuBJiC8BArHHIDzl16eJthLgWl9fHrH2CsL-t88YV3uNzDyR-mh9ACaRhe-pOVgdTYpmVelcOluamicEtsTJDhQgY4CTvEiHb8r74RF5Oy2H3esmhIlBOp69pRQVaNjEMSiQmeHsdiH8yilYWdpqRzSCz1LP_4tRQyNk_4j7G5wOhZBP1XI7AYtcYJ_ZrbOEEFKxbK1YfgBIfBuHiU3LVoOdQ3lUNPKJ07pYNfeveXEUIAJhlsNYBoyip5P4KOogPHH4goPXwMw0yqo')" }}></div>
-                                        <div className="flex-1">
-                                            <p className="text-sm font-bold text-white">K'Sante</p>
-                                            <p className="text-[10px] text-gray-500">Top Lane</p>
+                                    {redPicks.map((pick, i) => (
+                                        <div key={i} className="flex items-center gap-3 bg-surface-darker p-2 rounded-lg border-r-2 border-red-500 flex-row-reverse text-right">
+                                            <div className="w-8 h-8 bg-gray-800 rounded flex items-center justify-center text-lg">
+                                                {pick.icon || '🛡️'}
+                                            </div>
+                                            <div className="flex-1">
+                                                <p className="text-sm font-bold text-white">{pick.name}</p>
+                                                <p className="text-[10px] text-gray-500">Pick {i + 1}</p>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div className="flex items-center gap-3 bg-surface-darker p-2 rounded-lg border-r-2 border-red-500 flex-row-reverse text-right">
-                                        <div className="w-8 h-8 bg-gray-800 rounded bg-cover bg-center" style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuDsZzGPfU3RznSje50p5_wX9EQFkRxjHi2qHqevqimExZ9XlHNfn8Uz2kBKlx0flhK8VVsxSp6_UsXzMH-Ayjn1S--jfZGlGRs5HaVqj1M4arE3q5iL6j2qd4SXtHmSGAe4hUnRtwC8rTxFTEfwxE3YfA9ojUAG2Xx6KLZaRlJl3zAv8TW93VuG7WYCF96Lt18_yWYRyt2QSyDQQopAXXSEIewI7Gdh3BJMSU62nczXwEbL_5UmkavKbqNdwfLQSfJEAaIDA8dY-R4')" }}></div>
-                                        <div className="flex-1">
-                                            <p className="text-sm font-bold text-white">Lee Sin</p>
-                                            <p className="text-[10px] text-gray-500">Jungle</p>
-                                        </div>
-                                    </div>
+                                    ))}
                                 </div>
                             </div>
                         </div>
@@ -154,8 +258,8 @@ const StrategyLab: React.FC = () => {
                                 <span className="material-symbols-outlined text-primary text-lg mt-0.5">auto_awesome</span>
                                 <div>
                                     <p className="text-xs text-gray-300 leading-snug">
-                                        <span className="text-primary font-bold">Counter Pick:</span>
-                                        Azir has a <span className="text-white">+4.2%</span> win rate delta against their comp. Prioritize scaling.
+                                        <span className="text-primary font-bold">Counter Pick:</span>{' '}
+                                        {counterInsight}
                                     </p>
                                 </div>
                             </div>
@@ -163,67 +267,75 @@ const StrategyLab: React.FC = () => {
                     </div>
                 </aside>
 
-                {/* Map Simulation (Center) */}
+                {/* MIDDLE COLUMN: Map & Timeline */}
                 <section className="col-span-12 lg:col-span-6 flex flex-col gap-4 h-full">
-                    <div className="flex-grow bg-surface-darker rounded-2xl border border-white/10 relative overflow-hidden group shadow-2xl">
-                        <div className="absolute top-4 left-4 z-20 flex items-center gap-4">
-                            <h3 className="text-lg font-bold text-white tracking-tight backdrop-blur-md bg-surface-dark/50 px-3 py-1 rounded-lg border border-white/5">Summoner's Rift</h3>
-                            <div className="flex gap-2">
-                                <button className="p-1.5 rounded bg-surface-dark hover:bg-white/10 border border-white/10 text-gray-400 hover:text-white transition" title="Toggle Vision">
-                                    <span className="material-icons-outlined text-sm">visibility</span>
-                                </button>
-                                <button className="p-1.5 rounded bg-surface-dark hover:bg-white/10 border border-white/10 text-primary hover:text-white transition shadow-neon" title="Heatmap">
-                                    <span className="material-icons-outlined text-sm">layers</span>
-                                </button>
-                            </div>
-                        </div>
-                        <div className="absolute inset-0 p-8 flex items-center justify-center map-grid">
-                            <svg className="w-full h-full max-w-[600px] max-h-[600px] drop-shadow-[0_0_15px_rgba(210,249,111,0.1)]" viewBox="0 0 500 500">
-                                <defs>
-                                    <linearGradient id="laneGradient" x1="0%" x2="100%" y1="0%" y2="100%">
-                                        <stop offset="0%" style={{ stopColor: '#333', stopOpacity: 1 }}></stop>
-                                        <stop offset="100%" style={{ stopColor: '#222', stopOpacity: 1 }}></stop>
-                                    </linearGradient>
-                                    <radialGradient cx="50%" cy="50%" fx="50%" fy="50%" id="midHeat" r="50%">
-                                        <stop offset="0%" style={{ stopColor: 'rgba(210, 249, 111, 0.3)' }}></stop>
-                                        <stop offset="100%" style={{ stopColor: 'rgba(210, 249, 111, 0)' }}></stop>
-                                    </radialGradient>
-                                    <pattern height="20" id="grid" patternUnits="userSpaceOnUse" width="20">
-                                        <path d="M 20 0 L 0 0 0 20" fill="none" stroke="rgba(255,255,255,0.03)" strokeWidth="1"></path>
-                                    </pattern>
-                                </defs>
-                                <path d="M 50,450 L 50,50 L 450,50 L 450,450 Z" fill="#141610" stroke="#333" strokeWidth="2"></path>
-                                <rect fill="url(#grid)" height="400" width="400" x="50" y="50"></rect>
-                                <path d="M 50,450 C 150,350 350,150 450,50" fill="none" stroke="#1e293b" strokeOpacity="0.5" strokeWidth="40"></path>
-                                <path d="M 60,440 L 60,60 L 440,60" fill="none" stroke="#333" strokeLinecap="round" strokeWidth="12"></path>
-                                <path d="M 60,440 L 440,440 L 440,60" fill="none" stroke="#333" strokeLinecap="round" strokeWidth="12"></path>
-                                <path d="M 60,440 L 440,60" fill="none" stroke="#333" strokeLinecap="round" strokeWidth="12"></path>
-                                <circle cx="60" cy="440" fill="#1e3a8a" fillOpacity="0.2" r="25" stroke="#3b82f6" strokeWidth="1"></circle>
-                                <circle cx="440" cy="60" fill="#7f1d1d" fillOpacity="0.2" r="25" stroke="#ef4444" strokeWidth="1"></circle>
-                                <circle className="animate-pulse" cx="150" cy="350" fill="url(#midHeat)" r="40" style={{ animationDuration: '3s' }}></circle>
-                                <g className="cursor-pointer hover:scale-110 transition-transform duration-200" transform="translate(250, 250)">
-                                    <circle className="shadow-neon" fill="#1A1C14" r="12" stroke="#D2F96F" strokeWidth="2"></circle>
-                                    <path d="M -5,-5 L 5,5 M 5,-5 L -5,5" stroke="#D2F96F" strokeWidth="2"></path>
-                                </g>
-                                <g className="cursor-pointer hover:scale-110 transition-transform duration-200" transform="translate(150, 350)">
-                                    <circle fill="#1A1C14" r="12" stroke="#D2F96F" strokeWidth="2"></circle>
-                                    <path d="M 0,-6 L 0,6 M -4,-2 L 0,6 L 4,-2" fill="none" stroke="#D2F96F" strokeWidth="2"></path>
-                                </g>
-                                <g className="cursor-pointer hover:scale-110 transition-transform duration-200 opacity-80" transform="translate(280, 220)">
-                                    <circle fill="#1A1C14" r="12" stroke="#ef4444" strokeWidth="2"></circle>
-                                    <text fill="#ef4444" fontSize="10" fontWeight="bold" textAnchor="middle" x="0" y="4">?</text>
-                                </g>
+                    {/* Live Map */}
+                    <div className="flex-1 bg-[#0f1115] rounded-2xl border border-white/5 relative overflow-hidden shadow-2xl group">
+                        <div className="absolute inset-0 map-grid opacity-20"></div>
+
+                        {/* Map Background (SVG Representation) */}
+                        <div className="absolute inset-4 opacity-30">
+                            <svg viewBox="0 0 500 500" className="w-full h-full drop-shadow-[0_0_15px_rgba(210,249,111,0.1)]">
+                                <path d="M50,450 L150,350 L350,150 L450,50" stroke="#333" strokeWidth="40" fill="none" strokeLinecap="round" />
+                                <path d="M50,50 L50,450 L450,450" stroke="#222" strokeWidth="20" fill="none" />
+                                <path d="M50,50 L450,50 L450,450" stroke="#222" strokeWidth="20" fill="none" />
+                                <circle cx="250" cy="250" r="40" stroke="#444" strokeWidth="4" fill="none" />
                             </svg>
-                            <div className="absolute bottom-6 right-6 flex flex-col items-end gap-1">
-                                <div className="bg-black/60 backdrop-blur px-3 py-1.5 rounded border border-white/10 text-xs font-mono text-primary">
-                                    OBJ CONTROL: 62%
+                        </div>
+
+                        {/* Live Players from Timeline Hook */}
+                        {matchTimeline?.players.map((player) => (
+                            <div
+                                key={player.id}
+                                className="absolute w-8 h-8 -ml-4 -mt-4 rounded-full border-2 bg-gray-900 flex items-center justify-center text-xs font-bold text-white shadow-lg map-player-icon z-10"
+                                style={{
+                                    left: `${(player.position.x / 500) * 100}%`,
+                                    top: `${(player.position.y / 500) * 100}%`,
+                                    borderColor: player.teamId === matchTimeline.teams.blue.id ? '#3b82f6' : '#ef4444'
+                                }}
+                            >
+                                {player.role.substring(0, 1)}
+                                <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 bg-black/80 text-[8px] px-1.5 py-0.5 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
+                                    {player.name}
                                 </div>
-                                <div className="bg-black/60 backdrop-blur px-3 py-1.5 rounded border border-white/10 text-xs font-mono text-gray-400">
-                                    VISION SCORE: 24
+                            </div>
+                        ))}
+
+                        {/* Objective Status */}
+                        <div className="absolute top-4 left-4 flex flex-col gap-2">
+                            <div className="bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-white/10 flex items-center gap-3">
+                                <span className="text-xs font-bold text-blue-400 font-mono">BLUE</span>
+                                <div className="flex gap-1">
+                                    {[...Array(matchTimeline?.gameState.objectiveControl.dragonCount || 0)].map((_, i) => (
+                                        <span key={i} className="material-icons text-orange-400 text-xs">whatshot</span>
+                                    ))}
                                 </div>
                             </div>
                         </div>
+
+                        <div className="absolute top-4 right-4 flex flex-col gap-2">
+                            <div className="bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-white/10 flex items-center gap-3">
+                                <div className="flex gap-1">
+                                    {[...Array(matchTimeline?.gameState.objectiveControl.riftHeraldCount || 0)].map((_, i) => (
+                                        <span key={i} className="material-icons text-purple-400 text-xs">visibility</span>
+                                    ))}
+                                </div>
+                                <span className="text-xs font-bold text-red-400 font-mono">RED</span>
+                            </div>
+                        </div>
+
+                        {/* Recent Event Popup */}
+                        {matchTimeline?.recentEvents[0] && (
+                            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur border border-white/10 px-4 py-2 rounded-full flex items-center gap-3 shadow-lg animate-fade-in-up">
+                                <span className="material-icons text-red-500 animate-pulse">my_location</span>
+                                <span className="text-xs font-mono text-white">
+                                    <span className="text-primary font-bold">{Math.floor(matchTimeline.recentEvents[0].timestamp / 60)}:{(matchTimeline.recentEvents[0].timestamp % 60).toString().padStart(2, '0')}</span>{' '}
+                                    {matchTimeline.recentEvents[0].type} at River
+                                </span>
+                            </div>
+                        )}
                     </div>
+
                     {/* Console / Briefing */}
                     <div className="h-48 bg-[#0a0c08] rounded-xl border border-white/10 p-4 font-mono text-sm relative overflow-hidden shadow-lg flex flex-col">
                         <div className="flex items-center justify-between mb-2 pb-2 border-b border-white/5">
@@ -236,24 +348,36 @@ const StrategyLab: React.FC = () => {
                         <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2">
                             <div className="flex gap-2 text-gray-400">
                                 <span className="text-gray-600 select-none">$</span>
-                                <span>Initializing strategic simulation module...</span>
+                                <span>{executiveSummary}</span>
                             </div>
-                            <div className="flex gap-2 text-gray-400">
-                                <span className="text-gray-600 select-none">$</span>
-                                <span>Analyzing composition matchup: <span className="text-blue-400">Dive Heavy</span> vs <span className="text-red-400">Disengage</span></span>
-                            </div>
-                            <div className="flex gap-2 text-white mt-2">
-                                <span className="text-primary select-none">&gt;</span>
-                                <span className="typing-effect">
-                                    <span className="text-primary font-bold">CRITICAL INSIGHT:</span> If T1 picks Azir, prioritize early dive on mid-lane (lvl 3) to disrupt their late-game macro control. Your Sejuani pathing should start Red to pressure mid early.
-                                </span>
-                            </div>
-                            <div className="flex gap-2 text-white mt-1 opacity-80">
-                                <span className="text-primary select-none">&gt;</span>
-                                <span>
-                                    Suggest warding enemy Raptors at 1:20 to track Lee Sin. High probability of lvl 2 invade.
-                                </span>
-                            </div>
+
+                            {!briefingLoading && compositionAnalysis && (
+                                <div className="flex gap-2 text-gray-400">
+                                    <span className="text-gray-600 select-none">$</span>
+                                    <span>Analyzing composition matchup: <span className="text-blue-400">{compositionAnalysis.blueArchetype}</span> vs <span className="text-red-400">{compositionAnalysis.redArchetype}</span></span>
+                                </div>
+                            )}
+
+                            {tacticalInsights.map((insight, idx) => (
+                                <div key={idx} className={`flex gap-2 ${insight.type === 'critical' ? 'text-red-300' :
+                                        insight.type === 'warning' ? 'text-orange-300' :
+                                            insight.type === 'recommendation' ? 'text-primary' : 'text-gray-300'
+                                    } mt-1`}>
+                                    <span className="text-primary select-none">&gt;</span>
+                                    <span className="typing-effect">
+                                        {insight.title && <span className="font-bold mr-1">{insight.title}:</span>}
+                                        {insight.content}
+                                    </span>
+                                </div>
+                            ))}
+
+                            {briefingLoading && (
+                                <div className="flex gap-2 text-primary/50 mt-1">
+                                    <span className="text-gray-600 select-none">$</span>
+                                    <span className="animate-pulse">Generating strategic analysis...</span>
+                                </div>
+                            )}
+
                             <div className="flex gap-2 text-white mt-1">
                                 <span className="text-primary select-none animate-blink">_</span>
                             </div>
@@ -276,9 +400,16 @@ const StrategyLab: React.FC = () => {
                             <div>
                                 <div className="flex justify-between items-center mb-2">
                                     <label className="text-xs text-gray-300 font-medium">Gold Advantage</label>
-                                    <span className="text-xs font-mono text-red-400">-2.5k</span>
+                                    <span className="text-xs font-mono text-red-400">{goldAdvantage}</span>
                                 </div>
-                                <input className="w-full h-1.5 bg-surface-darker rounded-lg appearance-none cursor-pointer accent-primary [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:shadow-neon" max="5000" min="-5000" type="range" defaultValue="-2500" />
+                                <input
+                                    className="w-full h-1.5 bg-surface-darker rounded-lg appearance-none cursor-pointer accent-primary [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:shadow-neon"
+                                    max="5000"
+                                    min="-5000"
+                                    type="range"
+                                    value={goldAdvantage}
+                                    onChange={(e) => setGoldAdvantage(parseInt(e.target.value))}
+                                />
                                 <div className="flex justify-between text-[10px] text-gray-600 mt-1 font-mono">
                                     <span>-5k</span>
                                     <span>0</span>
@@ -288,9 +419,24 @@ const StrategyLab: React.FC = () => {
                             <div className="bg-surface-darker/50 p-3 rounded-xl border border-white/5">
                                 <label className="text-xs text-gray-400 block mb-2">Game Phase</label>
                                 <div className="flex gap-2">
-                                    <button className="flex-1 py-1.5 text-xs rounded border border-white/10 bg-surface-dark text-gray-400 hover:text-white hover:border-white/30 transition cursor-pointer">Early</button>
-                                    <button className="flex-1 py-1.5 text-xs rounded border border-primary/30 bg-primary/10 text-primary font-bold shadow-neon transition cursor-pointer">Mid</button>
-                                    <button className="flex-1 py-1.5 text-xs rounded border border-white/10 bg-surface-dark text-gray-400 hover:text-white hover:border-white/30 transition cursor-pointer">Late</button>
+                                    <button
+                                        onClick={() => setGamePhase('EARLY')}
+                                        className={`flex-1 py-1.5 text-xs rounded border transition cursor-pointer ${gamePhase === 'EARLY' ? 'border-primary/30 bg-primary/10 text-primary font-bold shadow-neon' : 'border-white/10 bg-surface-dark text-gray-400 hover:text-white hover:border-white/30'}`}
+                                    >
+                                        Early
+                                    </button>
+                                    <button
+                                        onClick={() => setGamePhase('MID')}
+                                        className={`flex-1 py-1.5 text-xs rounded border transition cursor-pointer ${gamePhase === 'MID' ? 'border-primary/30 bg-primary/10 text-primary font-bold shadow-neon' : 'border-white/10 bg-surface-dark text-gray-400 hover:text-white hover:border-white/30'}`}
+                                    >
+                                        Mid
+                                    </button>
+                                    <button
+                                        onClick={() => setGamePhase('LATE')}
+                                        className={`flex-1 py-1.5 text-xs rounded border transition cursor-pointer ${gamePhase === 'LATE' ? 'border-primary/30 bg-primary/10 text-primary font-bold shadow-neon' : 'border-white/10 bg-surface-dark text-gray-400 hover:text-white hover:border-white/30'}`}
+                                    >
+                                        Late
+                                    </button>
                                 </div>
                             </div>
                             <div className="space-y-3">
@@ -300,7 +446,12 @@ const StrategyLab: React.FC = () => {
                                         <span className="text-xs text-gray-300">Player Fatigue</span>
                                     </div>
                                     <label className="relative inline-flex items-center cursor-pointer">
-                                        <input defaultChecked className="sr-only peer" type="checkbox" />
+                                        <input
+                                            checked={playerFatigue}
+                                            onChange={(e) => setPlayerFatigue(e.target.checked)}
+                                            className="sr-only peer"
+                                            type="checkbox"
+                                        />
                                         <div className="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
                                     </label>
                                 </div>
@@ -320,11 +471,15 @@ const StrategyLab: React.FC = () => {
                                 <div className="grid grid-cols-2 gap-3">
                                     <div className="bg-surface-darker p-3 rounded-lg border border-white/5 text-center">
                                         <div className="text-[10px] text-gray-500 mb-1">TEAMFIGHT WR</div>
-                                        <div className="text-xl font-mono text-white font-bold">42%</div>
+                                        <div className={`text-xl font-mono ${scenarioLoading ? 'text-gray-500' : 'text-white'} font-bold`}>
+                                            {scenarioLoading ? '...' : `${teamfightWR}%`}
+                                        </div>
                                     </div>
                                     <div className="bg-surface-darker p-3 rounded-lg border border-white/5 text-center">
                                         <div className="text-[10px] text-gray-500 mb-1">SPLIT PUSH</div>
-                                        <div className="text-xl font-mono text-primary font-bold shadow-neon-text">High</div>
+                                        <div className={`text-xl font-mono ${scenarioLoading ? 'text-gray-500' : 'text-primary'} font-bold shadow-neon-text`}>
+                                            {scenarioLoading ? '...' : splitPushRating}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -334,8 +489,8 @@ const StrategyLab: React.FC = () => {
                                 onClick={runSimulation}
                                 disabled={simulationRunning}
                                 className={`w-full py-3 rounded-xl text-black font-bold text-sm transition shadow-neon flex items-center justify-center gap-2 cursor-pointer ${simulationRunning
-                                    ? 'bg-gray-500 cursor-not-allowed opacity-75'
-                                    : 'bg-primary hover:bg-primary-dark'
+                                        ? 'bg-gray-500 cursor-not-allowed opacity-75'
+                                        : 'bg-primary hover:bg-primary-dark'
                                     }`}
                             >
                                 {simulationRunning ? (
