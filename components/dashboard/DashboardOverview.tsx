@@ -244,10 +244,10 @@ const DashboardOverview: React.FC = () => {
                             <h2 className="text-lg font-bold">Active Roster</h2>
                             <span className="material-icons-outlined text-gray-500 hover:text-white transition text-sm cursor-pointer">info</span>
                         </div>
-                        <div className="flex-1 overflow-y-auto space-y-4 mb-4 custom-scrollbar relative z-10 pr-2">
+                        <div className="flex-1 space-y-4 mb-4 relative z-10 pr-2">
                             <div className="absolute top-10 left-0 w-full h-full border-t border-white/5 rounded-full scale-150 pointer-events-none"></div>
 
-                            {allPlayers.map((player) => (
+                            {allPlayers.slice(0, 10).map((player) => (
                                 <Link
                                     key={player.id}
                                     to={`/dashboard/player-hub?player=${player.id}`}
