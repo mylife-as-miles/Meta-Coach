@@ -2,7 +2,8 @@ import React, { useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useDashboardStore } from '../../stores/useDashboardStore';
 import { useSession } from '../../hooks/useAuth';
-import { useWorkspace, usePlayers, usePlayerStats, usePlayerStatistics } from '../../hooks/useDashboardQueries';
+import { useWorkspace, usePlayerStats, usePlayerStatistics } from '../../hooks/useDashboardQueries';
+import { useGridPlayers, useGridPlayer, useGridCreatePlayer, useGridDeletePlayer } from '../../hooks/useGridQueries';
 import { getProxiedImageUrl } from '../../lib/imageProxy';
 import ComparePlayersModal from './modals/ComparePlayersModal';
 import EditAttributesModal from './modals/EditAttributesModal';
@@ -24,7 +25,26 @@ const PlayerHub: React.FC = () => {
     const { data: session } = useSession();
     const userId = session?.user?.id;
     const { data: workspace } = useWorkspace(userId);
-    const { data: allPlayers = [] } = usePlayers(workspace?.id);
+
+    // GRID Players Data
+    // We assume the workspace has a link to a GRID Team ID, or we default to a known ID for demo
+    const teamId = "1"; // Defaulting to 1 for demo (T1 usually or generic)
+    const { data: gridPlayersData, isLoading: playersLoading } = useGridPlayers({ teamIdFilter: { id: teamId } });
+    const { mutate: createPlayer } = useGridCreatePlayer();
+    const { mutate: deletePlayer } = useGridDeletePlayer();
+
+    const allPlayers = React.useMemo(() => {
+        if (!gridPlayersData?.players?.edges) return [];
+        return gridPlayersData.players.edges.map((edge: any) => ({
+            id: edge.node.id,
+            name: edge.node.nickname,
+            role: 'N/A', // Role not always in basic player object, might need separate query or expansion
+            overall: 85, // Placeholder until stats are ready
+            stats: { mechanics: 80, objectives: 80, macro: 80, vision: 80, teamwork: 80, mental: 80 }, // Defaults
+            gridId: edge.node.id,
+            ...edge.node
+        }));
+    }, [gridPlayersData]);
 
     // Fetch player micro-level stats from GRID (uses gridId if available)
     const { data: playerStats, isLoading: statsLoading } = usePlayerStats(
@@ -78,7 +98,7 @@ const PlayerHub: React.FC = () => {
                         <span className="w-1 h-1 rounded-full bg-gray-500"></span>
                         <span className="text-gray-400 text-xs">Season 14</span>
                     </div>
-                    <h1 className="text-4xl font-bold text-white tracking-tight">C9 <span className="text-gray-500">{selectedPlayer.name}</span></h1>
+                    <h1 className="text-4xl font-bold text-white tracking-tight">{selectedPlayer.name}</h1>
                 </div>
                 <div className="flex items-center gap-3 w-full md:w-auto">
                     <button
@@ -515,6 +535,18 @@ const PlayerHub: React.FC = () => {
                 <div className="flex items-center justify-between mb-6">
                     <h3 className="text-xl font-bold text-white">Active Roster</h3>
                     <div className="flex gap-2">
+                        <button
+                            onClick={async () => {
+                                const nickname = prompt("Enter player nickname:");
+                                if (nickname) {
+                                    // Hardcoding Title ID 3 (LoL) and current Team ID for demo
+                                    createPlayer({ createPlayerInput: { nickname, teamId: "1", titleId: "3" } });
+                                }
+                            }}
+                            className="px-3 py-1 rounded bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 text-xs font-bold transition flex items-center gap-1"
+                        >
+                            <span className="material-icons-outlined text-sm">add</span> Add Player
+                        </button>
                         <button className="w-8 h-8 rounded-full bg-surface-dark border border-white/10 flex items-center justify-center hover:bg-white/10 transition cursor-pointer">
                             <span className="material-icons-outlined text-sm">chevron_left</span>
                         </button>
@@ -528,7 +560,7 @@ const PlayerHub: React.FC = () => {
                         <div
                             key={player.id}
                             onClick={() => selectPlayer(player)}
-                            className={`snap-start shrink-0 transition-opacity ${selectedPlayer.id === player.id ? 'opacity-100 scale-105' : 'opacity-70 hover:opacity-100'}`}
+                            className={`snap-start shrink-0 transition-opacity ${selectedPlayer.id === player.id ? 'opacity-100 scale-105' : 'opacity-70 hover:opacity-100'} relative group`}
                         >
                             <div className={`w-48 h-72 relative rounded-2xl border overflow-hidden cursor-pointer transition-all ${selectedPlayer.id === player.id
                                 ? 'border-2 border-primary shadow-[0_0_5px_rgba(210,249,111,0.3),0_0_15px_rgba(210,249,111,0.1)]'
@@ -550,6 +582,19 @@ const PlayerHub: React.FC = () => {
                                         <span>{player.stats.objectives} OB</span>
                                     </div>
                                 </div>
+
+                                {/* Delete Button */}
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (confirm(`Delete ${player.name}?`)) {
+                                            deletePlayer({ deletePlayerInput: { id: player.id } });
+                                        }
+                                    }}
+                                    className="absolute top-2 right-2 w-6 h-6 rounded-full bg-red-500/20 text-red-400 border border-red-500/30 flex items-center justify-center hover:bg-red-500 hover:text-white transition opacity-0 group-hover:opacity-100"
+                                >
+                                    <span className="material-icons-outlined text-xs">close</span>
+                                </button>
                             </div>
                         </div>
                     ))}

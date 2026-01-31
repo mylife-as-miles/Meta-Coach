@@ -1,101 +1,12 @@
 // supabase/functions/grid-players/index.ts
-// Fetch players by teamId from GRID with AI-powered image search
+// Comprehensive GRID Player API Proxy
+// Supports Queries: players, player, playerIdByExternalId, playerRoles, playerRole
+// Supports Mutations: createPlayer, updatePlayer, deletePlayer, createPlayerRole, updatePlayerRole, deletePlayerRole
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { corsHeaders } from '../_shared/cors.ts'
-import { GoogleGenAI } from 'npm:@google/genai@^1.0.0'
 
 const GRID_API_URL = 'https://api-op.grid.gg/central-data/graphql'
-
-// Gemini-powered image search for players without images
-async function searchPlayerImagesWithGemini(
-    players: { id: string; nickname: string; imageUrl: string | null }[],
-    teamName: string,
-    game: string,
-    liquipediaPath: string
-): Promise<{ id: string; nickname: string; imageUrl: string | null }[]> {
-    const geminiApiKey = Deno.env.get('GEMINI_API_KEY')
-
-    if (!geminiApiKey) {
-        console.warn('GEMINI_API_KEY not configured, skipping AI image search')
-        return players
-    }
-
-    // Filter players that need images
-    const playersNeedingImages = players.filter(p => !p.imageUrl)
-
-    if (playersNeedingImages.length === 0) {
-        return players
-    }
-
-    console.log(`Using Gemini to search images for ${playersNeedingImages.length} players`)
-
-    try {
-        const ai = new GoogleGenAI({ apiKey: geminiApiKey })
-
-        const playerList = playersNeedingImages.map(p => p.nickname).join(', ')
-
-        const prompt = `Find official esports profile image URLs for these professional ${game} players from team "${teamName}":
-
-Players: ${playerList}
-
-Search these sources:
-- Liquipedia
-- vlr.gg (VALORANT)
-- lol.fandom.com (League of Legends)
-- Official team websites
-- Official tournament pages
-
-Return ONLY a JSON array like this:
-[{"nickname": "player_name", "imageUrl": "https://direct-image-url.jpg"}]
-
-Rules:
-- Do NOT use images from **vlr.gg** or **owcdn.net** (they are hotlink protected and will fail).
-- Search for the player's **Liquipedia** profile. This is the PRIMARY source.
-- USE THE GAME PATH: liquipedia.net/${liquipediaPath}/...
-- Use the main infobox image from Liquipedia.
-- If Liquipedia fails, try Fandom or official team sites.
-- Return null ONLY if absolutely no image can be found.
-- No explanations, just the JSON array`
-
-        const response = await ai.models.generateContent({
-            model: 'gemini-3-flash-preview',
-            config: {
-                tools: [{ googleSearch: {} }, { urlContext: {} }],
-                responseMimeType: 'application/json',
-                thinkingConfig: {
-                    thinkingLevel: 'HIGH',
-                },
-                mediaResolution: 'MEDIA_RESOLUTION_HIGH',
-            },
-            contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        })
-
-        const responseText = response.text || ''
-        console.log('Gemini image search response:', responseText)
-
-        const parsed = JSON.parse(responseText)
-
-        if (Array.isArray(parsed)) {
-            // Merge AI results back into players array
-            return players.map(player => {
-                if (player.imageUrl) return player // Already has image
-
-                const found = parsed.find((r: any) =>
-                    r.nickname?.toLowerCase() === player.nickname.toLowerCase()
-                )
-                return {
-                    ...player,
-                    imageUrl: found?.imageUrl || null
-                }
-            })
-        }
-    } catch (error) {
-        console.error('Gemini image search error:', error)
-    }
-
-    return players
-}
 
 serve(async (req) => {
     // Handle CORS preflight
@@ -105,150 +16,244 @@ serve(async (req) => {
 
     try {
         const gridApiKey = Deno.env.get('GRID_API_KEY')
-
-        console.log('GRID_API_KEY exists:', !!gridApiKey)
-
         if (!gridApiKey) {
-            throw new Error('GRID_API_KEY not configured in Supabase Edge Function secrets')
+            throw new Error('GRID_API_KEY not configured')
         }
 
-        // Parse inputs from Body (POST) or Query Params (GET)
-        let teamId: string | null = null
-        let titleId: string | null = null
-        let teamName: string | null = null
+        const { action, ...params } = await req.json();
+        console.log(`[grid-players] Action: ${action}`, params);
 
-        const url = new URL(req.url)
-        teamId = url.searchParams.get('teamId')
-        titleId = url.searchParams.get('titleId')
-        teamName = url.searchParams.get('teamName')
+        let query = '';
+        let variables = {};
 
-        if (req.method === 'POST') {
-            try {
-                const body = await req.json()
-                if (!teamId) teamId = body.teamId
-                if (!titleId) titleId = body.titleId
-                if (!teamName) teamName = body.teamName
-            } catch (e) {
-                console.warn('Failed to parse JSON body:', e)
-            }
-        }
-
-        console.log('Request params:', { teamId, titleId, teamName })
-
-        if (!teamId) {
-            return new Response(
-                JSON.stringify({ error: 'teamId is required' }),
-                { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-            )
-        }
-
-        // Query players for the specific team
-        // Query players AND team details
-        const playersQuery = `
-      query GetPlayersForTeam($teamId: ID!) {
-            team(id: $teamId) {
-                name
-            }
-            players(
-                filter: { teamIdFilter: { id: $teamId } }
-          first: 20
-            ) {
-          edges {
-            node {
-                        id
-                        nickname
-              externalLinks {
-                dataProvider { name }
-                externalEntity { id }
+        switch (action) {
+            // ==========================================
+            // QUERIES
+            // ==========================================
+            case 'players':
+                query = `
+                    query GetPlayers($filter: PlayerFilter, $first: Int) {
+                        players(filter: $filter, first: $first) {
+                            edges {
+                                node {
+                                    id
+                                    nickname
+                                    title { id name }
+                                    team { id name }
+                                    externalLinks {
+                                        dataProvider { name }
+                                        externalEntity { id }
+                                    }
+                                }
+                            }
                         }
                     }
+                `;
+                variables = {
+                    filter: params.filter || {},
+                    first: params.first || 20
+                };
+                break;
+
+            case 'player':
+                query = `
+                    query GetPlayer($id: ID!) {
+                        player(id: $id) {
+                            id
+                            nickname
+                            team { id name }
+                            title { id name }
+                            externalLinks {
+                                dataProvider { name }
+                                externalEntity { id }
+                            }
+                        }
+                    }
+                `;
+                variables = { id: params.id };
+                break;
+
+            case 'playerIdByExternalId':
+                query = `
+                    query GetPlayerIdByExternalId($dataProviderName: String!, $externalPlayerId: ID!, $titleId: ID) {
+                        playerIdByExternalId(dataProviderName: $dataProviderName, externalPlayerId: $externalPlayerId, titleId: $titleId)
+                    }
+                `;
+                variables = {
+                    dataProviderName: params.dataProviderName,
+                    externalPlayerId: params.externalPlayerId,
+                    titleId: params.titleId
+                };
+                break;
+
+            case 'playerRoles':
+                query = `
+                    query GetPlayerRoles($filter: PlayerRoleFilter) {
+                        playerRoles(filter: $filter) {
+                            id
+                            name
+                            title { id name }
+                        }
+                    }
+                `;
+                variables = { filter: params.filter };
+                break;
+
+            case 'playerRole':
+                query = `
+                    query GetPlayerRole($id: ID!) {
+                        playerRole(id: $id) {
+                            id
+                            name
+                            title { id name }
+                        }
+                    }
+                `;
+                variables = { id: params.id };
+                break;
+
+            // ==========================================
+            // MUTATIONS
+            // ==========================================
+            case 'createPlayer':
+                query = `
+                    mutation CreatePlayer($input: CreatePlayerInput!) {
+                        createPlayer(createPlayerInput: $input) {
+                            player {
+                                id
+                                nickname
+                            }
+                        }
+                    }
+                `;
+                variables = { input: params.input };
+                break;
+
+            case 'updatePlayer':
+                query = `
+                    mutation UpdatePlayer($input: UpdatePlayerInput!) {
+                        updatePlayer(updatePlayerInput: $input) {
+                            player {
+                                id
+                                nickname
+                                team { id name }
+                            }
+                        }
+                    }
+                `;
+                variables = { input: params.input };
+                break;
+
+            case 'deletePlayer':
+                query = `
+                    mutation DeletePlayer($input: DeletePlayerInput!) {
+                        deletePlayer(deletePlayerInput: $input) {
+                            deletedPlayerId
+                        }
+                    }
+                `;
+                variables = { input: params.input };
+                break;
+
+            case 'createPlayerRole':
+                query = `
+                    mutation CreatePlayerRole($input: CreatePlayerRoleInput!) {
+                        createPlayerRole(createPlayerRoleInput: $input) {
+                            playerRole {
+                                id
+                                name
+                            }
+                        }
+                    }
+                `;
+                variables = { input: params.input };
+                break;
+
+            case 'updatePlayerRole':
+                query = `
+                    mutation UpdatePlayerRole($input: UpdatePlayerRoleInput!) {
+                        updatePlayerRole(updatePlayerRoleInput: $input) {
+                            playerRole {
+                                id
+                                name
+                            }
+                        }
+                    }
+                `;
+                variables = { input: params.input };
+                break;
+
+            case 'deletePlayerRole':
+                query = `
+                    mutation DeletePlayerRole($input: DeletePlayerRoleInput!) {
+                        deletePlayerRole(deletePlayerRoleInput: $input) {
+                             deletedPlayerRoleId
+                        }
+                    }
+                `;
+                variables = { input: params.input };
+                break;
+
+            // Default fallback for original team-based query (backward compatibility if needed, though we should migrate)
+            default:
+                if (params.teamId) {
+                    // Legacy behavior for "list players by team"
+                    query = `
+                        query GetPlayersForTeam($teamId: ID!) {
+                            players(filter: { teamIdFilter: { id: $teamId } }, first: 20) {
+                                edges {
+                                    node {
+                                        id
+                                        nickname
+                                        externalLinks {
+                                            dataProvider { name }
+                                            externalEntity { id }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    `;
+                    variables = { teamId: params.teamId };
+                } else {
+                    throw new Error(`Unknown action: ${action}`);
                 }
-            }
         }
-        `
 
-        console.log('Calling GRID API with teamId:', teamId)
+        console.log(`Sending GRID Query for ${action || 'default'}`);
 
-        const playersRes = await fetch(GRID_API_URL, {
+        const response = await fetch(GRID_API_URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'x-api-key': gridApiKey,
             },
-            body: JSON.stringify({
-                query: playersQuery,
-                variables: { teamId }
-            }),
-        })
+            body: JSON.stringify({ query, variables }),
+        });
 
-        console.log('GRID API response status:', playersRes.status)
-
-        if (!playersRes.ok) {
-            const errorText = await playersRes.text()
-            console.error('GRID API error body:', errorText)
-            throw new Error(`GRID API error: ${playersRes.status} - ${errorText} `)
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`GRID API Error: ${response.status} - ${errorText}`);
         }
 
-        const playersData = await playersRes.json()
-        console.log('GRID API response data (partial):', JSON.stringify({ team: playersData.data?.team, playersCount: playersData.data?.players?.edges?.length }))
+        const data = await response.json();
 
-        // Extract team name from GRID if not provided in params
-        if (!teamName) {
-            const gridTeamName = playersData.data?.team?.name
-            if (gridTeamName) {
-                console.log(`Using team name from GRID response: ${gridTeamName} `)
-                teamName = gridTeamName
-            }
-        }
-
-        const playerEdges = playersData.data?.players?.edges || []
-        console.log('Player edges count:', playerEdges.length)
-
-        let players = playerEdges.map((edge: any) => ({
-            id: edge.node.id,
-            nickname: edge.node.nickname,
-            externalLinks: edge.node.externalLinks,
-            imageUrl: null // Default null
-        }))
-
-        // (Removed ID-based VLR fetch as it used Riot IDs instead of VLR IDs)
-
-        // Determine game name for Gemini search
-        const gameName = titleId === '3' ? 'League of Legends' :
-            (titleId === '6' || titleId === '29') ? 'VALORANT' :
-                'esports'
-
-        const liquipediaPath = titleId === '3' ? 'leagueoflegends' : 'valorant'
-
-        // Use Gemini + Google Search as fallback for players without images
-        const playersWithMissingImages = players.filter((p: any) => !p.imageUrl)
-        console.log(`Team name received: ${teamName} `)
-        console.log(`Players with missing images: ${playersWithMissingImages.length} `)
-        console.log(`Player image status: `, players.map((p: any) => ({ nickname: p.nickname, hasImage: !!p.imageUrl })))
-
-        if (playersWithMissingImages.length > 0) {
-            console.log("Gemini image search disabled by user request.")
-            /*
-           if (teamName) {
-               console.log(`Calling Gemini search for ${playersWithMissingImages.length} players from ${teamName}...`)
-               players = await searchPlayerImagesWithGemini(players, teamName, gameName, liquipediaPath)
-               console.log(`After Gemini search: `, players.map((p: any) => ({ nickname: p.nickname, imageUrl: p.imageUrl })))
-           } else {
-               console.warn('teamName not provided, skipping Gemini image search')
-           }
-           */
+        // Handle GraphQL errors
+        if (data.errors) {
+            console.error('GraphQL Errors:', data.errors);
+            throw new Error(data.errors[0].message);
         }
 
         return new Response(
-            JSON.stringify({ players }),
+            JSON.stringify(data.data),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-        )
+        );
 
     } catch (error) {
-        console.error('Error fetching players:', error)
+        console.error('Error:', error);
         return new Response(
             JSON.stringify({ error: error.message }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-        )
+        );
     }
-})
+});
