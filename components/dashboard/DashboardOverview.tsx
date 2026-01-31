@@ -247,46 +247,54 @@ const DashboardOverview: React.FC = () => {
                         <div className="flex-1 space-y-4 mb-4 relative z-10 pr-2">
                             <div className="absolute top-10 left-0 w-full h-full border-t border-white/5 rounded-full scale-150 pointer-events-none"></div>
 
-                            {allPlayers.slice(0, 10).map((player) => (
-                                <Link
-                                    key={player.id}
-                                    to={`/dashboard/player-hub?player=${player.id}`}
-                                    className="w-full flex items-center justify-between p-2 rounded-lg transition border group bg-surface-darker hover:bg-white/5 border-white/5 hover:border-white/20"
-                                >
-                                    <div className="flex items-center gap-3 relative z-10">
-                                        <div className="w-8 h-8 rounded bg-gray-800 relative overflow-hidden transition ring-1 ring-white/10 group-hover:ring-white/30">
-                                            {player.avatar ? (
-                                                <img className="w-full h-full object-cover" src={player.avatar} alt={player.name} />
-                                            ) : (
-                                                <div className="w-full h-full flex items-center justify-center bg-gray-700 text-xs font-bold text-gray-300">
-                                                    {player.name.substring(0, 2).toUpperCase()}
-                                                </div>
-                                            )}
+                            {allPlayers.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center h-full text-center py-12">
+                                    <span className="material-icons-outlined text-4xl text-gray-600 mb-3">group_off</span>
+                                    <span className="text-sm font-medium text-gray-400">No Players Added</span>
+                                    <p className="text-xs text-gray-500 mt-1">Add players to your roster to get started.</p>
+                                </div>
+                            ) : (
+                                allPlayers.slice(0, 10).map((player) => (
+                                    <Link
+                                        key={player.id}
+                                        to={`/dashboard/player-hub?player=${player.id}`}
+                                        className="w-full flex items-center justify-between p-2 rounded-lg transition border group bg-surface-darker hover:bg-white/5 border-white/5 hover:border-white/20"
+                                    >
+                                        <div className="flex items-center gap-3 relative z-10">
+                                            <div className="w-8 h-8 rounded bg-gray-800 relative overflow-hidden transition ring-1 ring-white/10 group-hover:ring-white/30">
+                                                {player.avatar ? (
+                                                    <img className="w-full h-full object-cover" src={player.avatar} alt={player.name} />
+                                                ) : (
+                                                    <div className="w-full h-full flex items-center justify-center bg-gray-700 text-xs font-bold text-gray-300">
+                                                        {player.name.substring(0, 2).toUpperCase()}
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="flex flex-col">
+                                                <span className="text-xs font-bold text-gray-200 group-hover:text-white">{player.name}</span>
+                                                <span className="text-[9px] uppercase text-gray-500">{player.role}</span>
+                                            </div>
                                         </div>
-                                        <div className="flex flex-col">
-                                            <span className="text-xs font-bold text-gray-200 group-hover:text-white">{player.name}</span>
-                                            <span className="text-[9px] uppercase text-gray-500">{player.role}</span>
+                                        <div className="flex flex-col items-end">
+                                            <div className="w-16 h-1 bg-gray-800 rounded-full mb-1 overflow-hidden">
+                                                <div
+                                                    className={`h-full rounded-full ${player.synergy >= 90 ? 'bg-primary shadow-neon' :
+                                                        player.synergy >= 80 ? 'bg-green-400 shadow-[0_0_5px_rgba(74,222,128,0.5)]' :
+                                                            player.synergy >= 75 ? 'bg-yellow-400 shadow-[0_0_5px_rgba(250,204,21,0.5)]' :
+                                                                'bg-orange-500 shadow-[0_0_5px_rgba(249,115,22,0.5)]'
+                                                        }`}
+                                                    style={{ width: `${player.synergy}%` }}
+                                                ></div>
+                                            </div>
+                                            <span className={`text-[9px] font-mono ${player.synergy >= 90 ? 'text-primary font-bold' :
+                                                player.synergy >= 80 ? 'text-green-400' :
+                                                    player.synergy >= 75 ? 'text-yellow-400' :
+                                                        'text-orange-400'
+                                                }`}>Syn: {player.synergy}%</span>
                                         </div>
-                                    </div>
-                                    <div className="flex flex-col items-end">
-                                        <div className="w-16 h-1 bg-gray-800 rounded-full mb-1 overflow-hidden">
-                                            <div
-                                                className={`h-full rounded-full ${player.synergy >= 90 ? 'bg-primary shadow-neon' :
-                                                    player.synergy >= 80 ? 'bg-green-400 shadow-[0_0_5px_rgba(74,222,128,0.5)]' :
-                                                        player.synergy >= 75 ? 'bg-yellow-400 shadow-[0_0_5px_rgba(250,204,21,0.5)]' :
-                                                            'bg-orange-500 shadow-[0_0_5px_rgba(249,115,22,0.5)]'
-                                                    }`}
-                                                style={{ width: `${player.synergy}%` }}
-                                            ></div>
-                                        </div>
-                                        <span className={`text-[9px] font-mono ${player.synergy >= 90 ? 'text-primary font-bold' :
-                                            player.synergy >= 80 ? 'text-green-400' :
-                                                player.synergy >= 75 ? 'text-yellow-400' :
-                                                    'text-orange-400'
-                                            }`}>Syn: {player.synergy}%</span>
-                                    </div>
-                                </Link>
-                            ))}
+                                    </Link>
+                                ))
+                            )}
                         </div>
 
                         {/* Roster Footer Stats */}

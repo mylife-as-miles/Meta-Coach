@@ -3,7 +3,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
-import { Player, Match, matches as mockMatches, players as mockPlayers } from '../lib/mockData';
+import { Player, Match } from '../lib/mockData';
 
 // ============================================
 // Query Keys
@@ -159,7 +159,7 @@ export function usePlayers(workspaceId: string | undefined) {
     return useQuery({
         queryKey: dashboardKeys.players(workspaceId),
         queryFn: async (): Promise<Player[]> => {
-            if (!workspaceId) return mockPlayers;
+            if (!workspaceId) return [];
 
             const { data: roster, error } = await supabase
                 .from('roster')
@@ -167,8 +167,8 @@ export function usePlayers(workspaceId: string | undefined) {
                 .eq('workspace_id', workspaceId);
 
             if (error || !roster || roster.length === 0) {
-                console.log('No roster found, using mock data');
-                return mockPlayers;
+                console.log('No roster found, returning empty array');
+                return [];
             }
 
             return roster.map((p, index) => {
@@ -188,7 +188,6 @@ export function usePlayers(workspaceId: string | undefined) {
         },
         enabled: !!workspaceId,
         staleTime: 1000 * 60 * 5, // 5 minutes
-        placeholderData: mockPlayers, // Show mock data while loading
     });
 }
 
@@ -200,8 +199,8 @@ export function useMatches(gridTeamId: string | undefined, gameTitle: string = '
         queryKey: dashboardKeys.matches(gridTeamId),
         queryFn: async (): Promise<Match[]> => {
             if (!gridTeamId) {
-                console.log('No grid team ID, using mock matches');
-                return mockMatches;
+                console.log('No grid team ID, returning empty matches');
+                return [];
             }
 
             const { data: matchesData, error } = await invokeWithTimeout<any>('team-matches', {
@@ -211,8 +210,8 @@ export function useMatches(gridTeamId: string | undefined, gameTitle: string = '
             });
 
             if (error || !matchesData?.matches) {
-                console.warn('Matches fetch failed, using mock data');
-                return mockMatches;
+                console.warn('Matches fetch failed, returning empty array');
+                return [];
             }
 
             return matchesData.matches.map((m: any) => ({
@@ -231,9 +230,8 @@ export function useMatches(gridTeamId: string | undefined, gameTitle: string = '
                 performance: { macroControl: 50, microErrorRate: 'MED' },
             }));
         },
-        enabled: true, // Always enabled, will use mock if no gridTeamId
+        enabled: !!gridTeamId,
         staleTime: 1000 * 60 * 5, // 5 minutes
-        placeholderData: mockMatches,
     });
 }
 

@@ -45,7 +45,26 @@ const PlayerHub: React.FC = () => {
         }
     }, [searchParams, allPlayers, selectPlayer, selectedPlayer]);
 
-    if (!selectedPlayer) return null; // Or a loading state
+    if (!selectedPlayer) {
+        // Empty state when no players in roster
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center">
+                <span className="material-icons-outlined text-6xl text-gray-600 mb-4">group_off</span>
+                <h2 className="text-2xl font-bold text-white mb-2">No Players in Roster</h2>
+                <p className="text-gray-400 mb-6 max-w-md">
+                    Add players to your roster during onboarding or through the settings to start tracking performance.
+                </p>
+                <div className="flex gap-3">
+                    <button
+                        onClick={() => window.location.href = '/onboarding'}
+                        className="px-6 py-3 bg-primary text-black font-bold rounded-xl hover:bg-primary-dark transition shadow-neon"
+                    >
+                        Complete Onboarding
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="flex flex-col min-h-[calc(100vh-90px)]">
@@ -298,8 +317,8 @@ const PlayerHub: React.FC = () => {
                         )}
                         {playerStats?.aggregated?.form && (
                             <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${playerStats.aggregated.form === 'HOT' ? 'bg-green-500/20 text-green-400' :
-                                    playerStats.aggregated.form === 'COLD' ? 'bg-red-500/20 text-red-400' :
-                                        'bg-yellow-500/20 text-yellow-400'
+                                playerStats.aggregated.form === 'COLD' ? 'bg-red-500/20 text-red-400' :
+                                    'bg-yellow-500/20 text-yellow-400'
                                 }`}>
                                 {playerStats.aggregated.form === 'HOT' ? '🔥 Hot Streak' :
                                     playerStats.aggregated.form === 'COLD' ? '❄️ Cold' : '⚖️ Stable'}
@@ -383,7 +402,7 @@ const PlayerHub: React.FC = () => {
                                     <tr key={match.matchId} className="border-b border-white/5 hover:bg-white/5">
                                         <td className="py-3 px-4">
                                             <span className={`font-bold ${match.result === 'WIN' ? 'text-primary' :
-                                                    match.result === 'LOSS' ? 'text-red-400' : 'text-gray-400'
+                                                match.result === 'LOSS' ? 'text-red-400' : 'text-gray-400'
                                                 }`}>{match.result}</span>
                                             <span className="text-gray-500 ml-2 text-xs">{match.score}</span>
                                         </td>

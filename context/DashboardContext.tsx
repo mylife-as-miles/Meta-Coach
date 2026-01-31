@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
-import { Player, Match, players as mockPlayers, matches as mockMatches } from '../lib/mockData';
+import { Player, Match } from '../lib/mockData';
 
 interface DashboardState {
     // Selected items
@@ -75,8 +75,8 @@ export const DashboardProvider: React.FC<{ children: ReactNode }> = ({ children 
         teamProfile: null
     });
 
-    const [allPlayers, setAllPlayers] = useState<Player[]>(mockPlayers);
-    const [allMatches, setAllMatches] = useState<Match[]>(mockMatches);
+    const [allPlayers, setAllPlayers] = useState<Player[]>([]);
+    const [allMatches, setAllMatches] = useState<Match[]>([]);
 
     // Initial Data Fetch
     useEffect(() => {
@@ -109,19 +109,19 @@ export const DashboardProvider: React.FC<{ children: ReactNode }> = ({ children 
 
                 if (!rosterError && roster && roster.length > 0) {
                     // Map DB roster to UI Player objects
-                    // Note: In a real app we'd fetch stats for each player. 
-                    // Here we'll merge DB data with mock stats for visual completeness.
+                    const defaultStats = { mechanics: 80, objectives: 80, macro: 80, vision: 80, teamwork: 80, mental: 80 };
                     const mappedPlayers: Player[] = roster.map((p, index) => {
-                        // Find a mock player to steal stats/avatar from based on role/index to keep UI pretty
-                        const mockTemplate = mockPlayers.find(mp => mp.role === p.role) || mockPlayers[index % mockPlayers.length];
                         return {
                             id: p.id,
                             name: p.ign || `Player ${index + 1}`,
                             role: p.role as any,
-                            overall: mockTemplate.overall, // Placeholder stat
-                            stats: mockTemplate.stats,
-                            synergy: Math.floor(Math.random() * 20) + 80, // Random 80-100
-                            avatar: mockTemplate.avatar // Use mock avatars for now
+                            overall: Math.floor((p.readiness_score + p.synergy_score) / 2) || 85,
+                            stats: defaultStats,
+                            synergy: p.synergy_score ?? 85,
+                            readiness: p.readiness_score ?? 90,
+                            avatar: p.metadata?.imageUrl || null,
+                            isActive: p.is_active ?? true,
+                            gridId: p.grid_player_id || null
                         };
                     });
                     setAllPlayers(mappedPlayers);
