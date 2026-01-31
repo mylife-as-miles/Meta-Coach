@@ -11,7 +11,7 @@ import {
 } from '../../hooks/useDashboardQueries';
 import ChampionPickerModal from './modals/ChampionPickerModal';
 import SimulationResultModal from './modals/SimulationResultModal';
-import TacticalMap3D from './map/TacticalMap3D';
+import TeamInsightPanel from './TeamInsightPanel';
 import { Champion } from '../../lib/mockData';
 
 const StrategyLab: React.FC = () => {
@@ -45,6 +45,9 @@ const StrategyLab: React.FC = () => {
     const [goldAdvantage, setGoldAdvantage] = useState(-2500);
     const [playerFatigue, setPlayerFatigue] = useState(true);
     const [objectivePriority, setObjectivePriority] = useState(true);
+
+    // Match Timeline Hook (Moved up to be available for scenarioInput)
+    const { data: matchTimeline, isLoading: timelineLoading } = useMatchTimeline(undefined, 1, true);
 
     // Build scenario for prediction
     // Build scenario for prediction
@@ -108,8 +111,7 @@ const StrategyLab: React.FC = () => {
         }
     });
 
-    // Match Timeline Hook
-    const { data: matchTimeline, isLoading: timelineLoading } = useMatchTimeline(undefined, 1, true);
+
 
     // Update blue picks when mid is selected
     useEffect(() => {
@@ -293,50 +295,14 @@ const StrategyLab: React.FC = () => {
                     </div>
                 </aside>
 
-                {/* MIDDLE COLUMN: Map & Timeline */}
+                {/* MIDDLE COLUMN: Team Insight Panel */}
                 <section className="col-span-12 lg:col-span-6 flex flex-col gap-4 h-full">
-                    {/* Live Map */}
+                    {/* Team Insight Panel (Moneyball Dashboard) */}
                     <div className="flex-1 bg-[#0f1115] rounded-2xl border border-white/5 relative overflow-hidden shadow-2xl group min-h-[500px]">
-                        <TacticalMap3D
-                            players={matchTimeline?.players || []}
-                            events={matchTimeline?.recentEvents || []}
-                            hotspots={matchTimeline?.hotspots || []}
-                            objectiveControl={matchTimeline?.gameState?.objectiveControl}
+                        <TeamInsightPanel
+                            teamName={matchTimeline?.teams.red.name || "T1"}
+
                         />
-
-                        {/* Objective Status */}
-                        <div className="absolute top-4 left-4 flex flex-col gap-2">
-                            <div className="bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-white/10 flex items-center gap-3">
-                                <span className="text-xs font-bold text-blue-400 font-mono">BLUE</span>
-                                <div className="flex gap-1">
-                                    {[...Array(matchTimeline?.gameState.objectiveControl.dragonCount || 0)].map((_, i) => (
-                                        <span key={i} className="material-icons text-orange-400 text-xs">whatshot</span>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="absolute top-4 right-4 flex flex-col gap-2">
-                            <div className="bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-white/10 flex items-center gap-3">
-                                <div className="flex gap-1">
-                                    {[...Array(matchTimeline?.gameState.objectiveControl.riftHeraldCount || 0)].map((_, i) => (
-                                        <span key={i} className="material-icons text-purple-400 text-xs">visibility</span>
-                                    ))}
-                                </div>
-                                <span className="text-xs font-bold text-red-400 font-mono">RED</span>
-                            </div>
-                        </div>
-
-                        {/* Recent Event Popup */}
-                        {matchTimeline?.recentEvents[0] && (
-                            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur border border-white/10 px-4 py-2 rounded-full flex items-center gap-3 shadow-lg animate-fade-in-up">
-                                <span className="material-icons text-red-500 animate-pulse">my_location</span>
-                                <span className="text-xs font-mono text-white">
-                                    <span className="text-primary font-bold">{Math.floor(matchTimeline.recentEvents[0].timestamp / 60)}:{(matchTimeline.recentEvents[0].timestamp % 60).toString().padStart(2, '0')}</span>{' '}
-                                    {matchTimeline.recentEvents[0].type} at River
-                                </span>
-                            </div>
-                        )}
                     </div>
 
                     {/* Console / Briefing */}
