@@ -28,7 +28,7 @@ const PlayerHub: React.FC = () => {
 
     // GRID Players Data
     // We assume the workspace has a link to a GRID Team ID, or we default to a known ID for demo
-    const teamId = "1"; // Defaulting to 1 for demo (T1 usually or generic)
+    const teamId = workspace?.grid_team_id || "1"; // Defaulting to 1 for demo if no team linked
     const { data: gridPlayersData, isLoading: playersLoading } = useGridPlayers({ teamIdFilter: { id: teamId } });
     const { mutate: createPlayer } = useGridCreatePlayer();
     const { mutate: deletePlayer } = useGridDeletePlayer();
@@ -540,7 +540,7 @@ const PlayerHub: React.FC = () => {
                                 const nickname = prompt("Enter player nickname:");
                                 if (nickname) {
                                     // Hardcoding Title ID 3 (LoL) and current Team ID for demo
-                                    createPlayer({ createPlayerInput: { nickname, teamId: "1", titleId: "3" } });
+                                    createPlayer({ createPlayerInput: { nickname, teamId, titleId: "3" } });
                                 }
                             }}
                             className="px-3 py-1 rounded bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 text-xs font-bold transition flex items-center gap-1"
