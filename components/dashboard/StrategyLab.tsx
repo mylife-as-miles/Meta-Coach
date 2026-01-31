@@ -11,6 +11,7 @@ import {
 } from '../../hooks/useDashboardQueries';
 import ChampionPickerModal from './modals/ChampionPickerModal';
 import SimulationResultModal from './modals/SimulationResultModal';
+import TacticalMap3D from './map/TacticalMap3D';
 import { Champion } from '../../lib/mockData';
 
 const StrategyLab: React.FC = () => {
@@ -270,36 +271,10 @@ const StrategyLab: React.FC = () => {
                 {/* MIDDLE COLUMN: Map & Timeline */}
                 <section className="col-span-12 lg:col-span-6 flex flex-col gap-4 h-full">
                     {/* Live Map */}
-                    <div className="flex-1 bg-[#0f1115] rounded-2xl border border-white/5 relative overflow-hidden shadow-2xl group">
-                        <div className="absolute inset-0 map-grid opacity-20"></div>
-
-                        {/* Map Background (SVG Representation) */}
-                        <div className="absolute inset-4 opacity-30">
-                            <svg viewBox="0 0 500 500" className="w-full h-full drop-shadow-[0_0_15px_rgba(210,249,111,0.1)]">
-                                <path d="M50,450 L150,350 L350,150 L450,50" stroke="#333" strokeWidth="40" fill="none" strokeLinecap="round" />
-                                <path d="M50,50 L50,450 L450,450" stroke="#222" strokeWidth="20" fill="none" />
-                                <path d="M50,50 L450,50 L450,450" stroke="#222" strokeWidth="20" fill="none" />
-                                <circle cx="250" cy="250" r="40" stroke="#444" strokeWidth="4" fill="none" />
-                            </svg>
-                        </div>
-
-                        {/* Live Players from Timeline Hook */}
-                        {matchTimeline?.players.map((player) => (
-                            <div
-                                key={player.id}
-                                className="absolute w-8 h-8 -ml-4 -mt-4 rounded-full border-2 bg-gray-900 flex items-center justify-center text-xs font-bold text-white shadow-lg map-player-icon z-10"
-                                style={{
-                                    left: `${(player.position.x / 500) * 100}%`,
-                                    top: `${(player.position.y / 500) * 100}%`,
-                                    borderColor: player.teamId === matchTimeline.teams.blue.id ? '#3b82f6' : '#ef4444'
-                                }}
-                            >
-                                {player.role.substring(0, 1)}
-                                <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 bg-black/80 text-[8px] px-1.5 py-0.5 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
-                                    {player.name}
-                                </div>
-                            </div>
-                        ))}
+                    <div className="flex-1 bg-[#0f1115] rounded-2xl border border-white/5 relative overflow-hidden shadow-2xl group min-h-[500px]">
+                        <TacticalMap3D
+                            players={matchTimeline?.players || []}
+                        />
 
                         {/* Objective Status */}
                         <div className="absolute top-4 left-4 flex flex-col gap-2">
@@ -360,8 +335,8 @@ const StrategyLab: React.FC = () => {
 
                             {tacticalInsights.map((insight, idx) => (
                                 <div key={idx} className={`flex gap-2 ${insight.type === 'critical' ? 'text-red-300' :
-                                        insight.type === 'warning' ? 'text-orange-300' :
-                                            insight.type === 'recommendation' ? 'text-primary' : 'text-gray-300'
+                                    insight.type === 'warning' ? 'text-orange-300' :
+                                        insight.type === 'recommendation' ? 'text-primary' : 'text-gray-300'
                                     } mt-1`}>
                                     <span className="text-primary select-none">&gt;</span>
                                     <span className="typing-effect">
@@ -489,8 +464,8 @@ const StrategyLab: React.FC = () => {
                                 onClick={runSimulation}
                                 disabled={simulationRunning}
                                 className={`w-full py-3 rounded-xl text-black font-bold text-sm transition shadow-neon flex items-center justify-center gap-2 cursor-pointer ${simulationRunning
-                                        ? 'bg-gray-500 cursor-not-allowed opacity-75'
-                                        : 'bg-primary hover:bg-primary-dark'
+                                    ? 'bg-gray-500 cursor-not-allowed opacity-75'
+                                    : 'bg-primary hover:bg-primary-dark'
                                     }`}
                             >
                                 {simulationRunning ? (
