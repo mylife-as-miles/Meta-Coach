@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useDashboardStore } from '../../stores/useDashboardStore';
 import { useSession } from '../../hooks/useAuth';
-import { useWorkspace, usePlayers } from '../../hooks/useDashboardQueries';
+import { useWorkspace, usePlayers, usePlayerStats } from '../../hooks/useDashboardQueries';
 import { getProxiedImageUrl } from '../../lib/imageProxy';
 import ComparePlayersModal from './modals/ComparePlayersModal';
 import EditAttributesModal from './modals/EditAttributesModal';
@@ -25,6 +25,12 @@ const PlayerHub: React.FC = () => {
     const userId = session?.user?.id;
     const { data: workspace } = useWorkspace(userId);
     const { data: allPlayers = [] } = usePlayers(workspace?.id);
+
+    // Fetch player micro-level stats from GRID (uses gridId if available)
+    const { data: playerStats, isLoading: statsLoading } = usePlayerStats(
+        selectedPlayer?.id,
+        selectedPlayer?.gridId
+    );
 
     // Handle URL params for direct linking
     useEffect(() => {
@@ -281,6 +287,139 @@ const PlayerHub: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Match Performance Analytics (GRID API) */}
+            <section className="mb-12">
+                <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                        <h3 className="text-xl font-bold text-white">Match Performance</h3>
+                        {statsLoading && (
+                            <span className="material-icons animate-spin text-primary text-sm">hourglass_top</span>
+                        )}
+                        {playerStats?.aggregated?.form && (
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${playerStats.aggregated.form === 'HOT' ? 'bg-green-500/20 text-green-400' :
+                                    playerStats.aggregated.form === 'COLD' ? 'bg-red-500/20 text-red-400' :
+                                        'bg-yellow-500/20 text-yellow-400'
+                                }`}>
+                                {playerStats.aggregated.form === 'HOT' ? '🔥 Hot Streak' :
+                                    playerStats.aggregated.form === 'COLD' ? '❄️ Cold' : '⚖️ Stable'}
+                            </span>
+                        )}
+                    </div>
+                    <span className="text-xs text-gray-500">Last {playerStats?.aggregated?.totalMatches || 0} matches from GRID</span>
+                </div>
+
+                {playerStats?.aggregated && (
+                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
+                        <div className="bg-surface-dark rounded-xl p-4 border border-white/5">
+                            <span className="text-xs text-gray-500 uppercase tracking-wider">Win Rate</span>
+                            <div className="text-2xl font-bold text-primary mt-1">{playerStats.aggregated.winRate}%</div>
+                            <span className="text-xs text-gray-500">{playerStats.aggregated.wins}W - {playerStats.aggregated.losses}L</span>
+                        </div>
+                        <div className="bg-surface-dark rounded-xl p-4 border border-white/5">
+                            <span className="text-xs text-gray-500 uppercase tracking-wider">Avg KDA</span>
+                            <div className="text-2xl font-bold text-white mt-1">{playerStats.aggregated.avgKda}</div>
+                            <span className="text-xs text-gray-500">{playerStats.aggregated.avgKills}/{playerStats.aggregated.avgDeaths}/{playerStats.aggregated.avgAssists}</span>
+                        </div>
+                        <div className="bg-surface-dark rounded-xl p-4 border border-white/5">
+                            <span className="text-xs text-gray-500 uppercase tracking-wider">Avg Kills</span>
+                            <div className="text-2xl font-bold text-green-400 mt-1">{playerStats.aggregated.avgKills}</div>
+                        </div>
+                        <div className="bg-surface-dark rounded-xl p-4 border border-white/5">
+                            <span className="text-xs text-gray-500 uppercase tracking-wider">Avg Deaths</span>
+                            <div className="text-2xl font-bold text-red-400 mt-1">{playerStats.aggregated.avgDeaths}</div>
+                        </div>
+                        <div className="bg-surface-dark rounded-xl p-4 border border-white/5">
+                            <span className="text-xs text-gray-500 uppercase tracking-wider">Avg Assists</span>
+                            <div className="text-2xl font-bold text-blue-400 mt-1">{playerStats.aggregated.avgAssists}</div>
+                        </div>
+                        <div className="bg-surface-dark rounded-xl p-4 border border-white/5">
+                            <span className="text-xs text-gray-500 uppercase tracking-wider">Avg Damage</span>
+                            <div className="text-2xl font-bold text-orange-400 mt-1">{playerStats.aggregated.avgDamage}</div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Performance Trend Chart */}
+                {playerStats?.performanceTrend && playerStats.performanceTrend.length > 0 && (
+                    <div className="bg-surface-dark rounded-xl p-6 border border-white/5 mb-6">
+                        <h4 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+                            <span className="material-icons-outlined text-primary text-sm">trending_up</span>
+                            KDA Trend (Last 5 Matches)
+                        </h4>
+                        <div className="flex items-end gap-3 h-24">
+                            {playerStats.performanceTrend.map((match, idx) => (
+                                <div key={idx} className="flex-1 flex flex-col items-center gap-2">
+                                    <div
+                                        className={`w-full rounded-t transition-all ${match.result === 'WIN' ? 'bg-primary' : 'bg-red-500/50'
+                                            }`}
+                                        style={{ height: `${Math.min(match.kda * 20, 100)}%`, minHeight: '10px' }}
+                                    />
+                                    <span className="text-xs font-mono text-gray-400">{match.kda}</span>
+                                    <span className={`text-[10px] font-bold ${match.result === 'WIN' ? 'text-primary' : 'text-red-400'
+                                        }`}>{match.result === 'WIN' ? 'W' : 'L'}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* Recent Matches Table */}
+                {playerStats?.recentMatches && playerStats.recentMatches.length > 0 && (
+                    <div className="bg-surface-dark rounded-xl border border-white/5 overflow-hidden">
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr className="text-gray-500 text-xs uppercase border-b border-white/5">
+                                    <th className="text-left py-3 px-4">Result</th>
+                                    <th className="text-left py-3 px-4">Opponent</th>
+                                    <th className="text-center py-3 px-4">K/D/A</th>
+                                    <th className="text-center py-3 px-4">KDA</th>
+                                    <th className="text-center py-3 px-4">Damage</th>
+                                    <th className="text-left py-3 px-4">Tournament</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {playerStats.recentMatches.slice(0, 5).map((match) => (
+                                    <tr key={match.matchId} className="border-b border-white/5 hover:bg-white/5">
+                                        <td className="py-3 px-4">
+                                            <span className={`font-bold ${match.result === 'WIN' ? 'text-primary' :
+                                                    match.result === 'LOSS' ? 'text-red-400' : 'text-gray-400'
+                                                }`}>{match.result}</span>
+                                            <span className="text-gray-500 ml-2 text-xs">{match.score}</span>
+                                        </td>
+                                        <td className="py-3 px-4">
+                                            <div className="flex items-center gap-2">
+                                                {match.opponentLogo && (
+                                                    <img src={match.opponentLogo} alt="" className="w-5 h-5 object-contain" referrerPolicy="no-referrer" />
+                                                )}
+                                                <span className="text-white">{match.opponent}</span>
+                                            </div>
+                                        </td>
+                                        <td className="py-3 px-4 text-center">
+                                            <span className="text-green-400">{match.stats.kills}</span>
+                                            <span className="text-gray-500">/</span>
+                                            <span className="text-red-400">{match.stats.deaths}</span>
+                                            <span className="text-gray-500">/</span>
+                                            <span className="text-blue-400">{match.stats.assists}</span>
+                                        </td>
+                                        <td className="py-3 px-4 text-center font-mono text-white">{match.stats.kda}</td>
+                                        <td className="py-3 px-4 text-center text-orange-400">{match.stats.damageDealt}</td>
+                                        <td className="py-3 px-4 text-gray-400 text-xs">{match.tournament}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+
+                {!playerStats && !statsLoading && (
+                    <div className="bg-surface-dark/50 rounded-xl p-8 border border-white/5 text-center">
+                        <span className="material-icons-outlined text-gray-600 text-4xl mb-3">query_stats</span>
+                        <p className="text-gray-500">No GRID match data available for this player.</p>
+                        <p className="text-xs text-gray-600 mt-1">Stats will appear once match history is available.</p>
+                    </div>
+                )}
+            </section>
 
             {/* Active Roster List */}
             <section>

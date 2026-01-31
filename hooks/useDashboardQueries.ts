@@ -302,3 +302,82 @@ export function useMatchStats(seriesId: string | undefined | null) {
         retry: 1,
     });
 }
+
+// ============================================
+// Hook: usePlayerStats (Player Micro Analytics)
+// ============================================
+export interface PlayerStatsData {
+    player: {
+        id: string;
+        name: string;
+        country: string | null;
+        countryCode: string | null;
+        team: string | null;
+    } | null;
+    aggregated: {
+        totalMatches: number;
+        wins: number;
+        losses: number;
+        winRate: number;
+        avgKills: number;
+        avgDeaths: number;
+        avgAssists: number;
+        avgKda: number;
+        avgDamage: number;
+        form: 'HOT' | 'STABLE' | 'COLD';
+    };
+    performanceTrend: {
+        matchNumber: number;
+        kda: number;
+        kills: number;
+        result: string;
+    }[];
+    recentMatches: {
+        matchId: string;
+        date: string;
+        tournament: string;
+        format: string;
+        opponent: string;
+        opponentLogo: string | null;
+        result: string;
+        score: string;
+        stats: {
+            kills: number;
+            deaths: number;
+            assists: number;
+            kda: number;
+            headshots: number;
+            damageDealt: number;
+            damageReceived: number;
+        };
+    }[];
+}
+
+export function usePlayerStats(playerId: string | undefined | null, gridPlayerId?: string | null) {
+    const effectiveId = gridPlayerId || playerId;
+
+    return useQuery({
+        queryKey: ['playerStats', effectiveId],
+        queryFn: async () => {
+            if (!effectiveId) return null;
+
+            console.log('[usePlayerStats] Fetching stats for player:', effectiveId);
+
+            const { data, error } = await invokeWithTimeout<PlayerStatsData>(
+                'player-stats',
+                { playerId: effectiveId },
+                15000
+            );
+
+            if (error) {
+                console.error('[usePlayerStats] Error:', error);
+                throw error;
+            }
+
+            return data || null;
+        },
+        enabled: !!effectiveId,
+        staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+        retry: 1,
+    });
+}

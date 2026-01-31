@@ -17,6 +17,7 @@ export interface Player {
     readiness?: number; // Hybrid Data
     isActive?: boolean; // Hybrid Data
     avatar?: string;
+    gridId?: string; // GRID API player ID for stats lookup
 }
 
 export interface Match {
