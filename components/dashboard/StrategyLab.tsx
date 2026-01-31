@@ -274,6 +274,9 @@ const StrategyLab: React.FC = () => {
                     <div className="flex-1 bg-[#0f1115] rounded-2xl border border-white/5 relative overflow-hidden shadow-2xl group min-h-[500px]">
                         <TacticalMap3D
                             players={matchTimeline?.players || []}
+                            events={matchTimeline?.recentEvents || []}
+                            hotspots={matchTimeline?.hotspots || []}
+                            objectiveControl={matchTimeline?.gameState?.objectiveControl}
                         />
 
                         {/* Objective Status */}
