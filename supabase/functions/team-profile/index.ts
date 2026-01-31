@@ -1,11 +1,11 @@
 // supabase/functions/team-profile/index.ts
-// Fetch team profile (scoped to user's gridTeamId)
+// Fetch team profile with enhanced details (logo, roster, country)
+// Uses GRID API Central Data Feed
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
-
-const GRID_API_URL = 'https://api-op.grid.gg/central-data/graphql'
+import { GRID_URLS, getGridHeaders } from '../_shared/grid-config.ts'
 
 serve(async (req) => {
     if (req.method === 'OPTIONS') {
@@ -57,23 +57,36 @@ serve(async (req) => {
             )
         }
 
-        // Fetch team data from GRID
+        // Enhanced query with full team details
         const query = `
-      query Team($teamId: ID!) {
-        team(id: $teamId) {
-          id
-          name
-          region
-        }
-      }
-    `
+            query Team($teamId: ID!) {
+                team(id: $teamId) {
+                    id
+                    name
+                    acronym
+                    logoUrl
+                    region
+                    country {
+                        name
+                        shortName
+                    }
+                    players {
+                        id
+                        nickname
+                        firstName
+                        lastName
+                        country {
+                            name
+                            shortName
+                        }
+                    }
+                }
+            }
+        `
 
-        const response = await fetch(GRID_API_URL, {
+        const response = await fetch(GRID_URLS.CENTRAL_DATA, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-api-key': gridApiKey,
-            },
+            headers: getGridHeaders(gridApiKey),
             body: JSON.stringify({
                 query,
                 variables: { teamId: workspace.grid_team_id }
@@ -81,27 +94,50 @@ serve(async (req) => {
         })
 
         if (!response.ok) {
+            const errorText = await response.text()
+            console.error(`[team-profile] GRID API error: ${errorText}`)
             throw new Error(`GRID API error: ${response.status}`)
         }
 
         const data = await response.json()
+
+        if (data.errors) {
+            console.warn('[team-profile] GraphQL errors:', data.errors)
+        }
+
         const team = data.data?.team || {}
 
+        // Shape enhanced response
+        const enhancedProfile = {
+            teamId: workspace.grid_team_id,
+            teamName: workspace.team_name || team.name || 'Unknown Team',
+            acronym: team.acronym || (team.name || '').substring(0, 3).toUpperCase(),
+            logoUrl: team.logoUrl || null,
+            game: workspace.game_title || 'Esports',
+            region: team.region || 'Unknown',
+            country: team.country?.name || null,
+            countryCode: team.country?.shortName || null,
+            roster: (team.players || []).map((p: any) => ({
+                id: p.id,
+                nickname: p.nickname,
+                firstName: p.firstName || null,
+                lastName: p.lastName || null,
+                country: p.country?.name || null,
+                countryCode: p.country?.shortName || null,
+            })),
+            source: 'grid'
+        }
+
         return new Response(
-            JSON.stringify({
-                teamId: workspace.grid_team_id,
-                teamName: workspace.team_name || team.name,
-                gameTitle: workspace.game_title,
-                region: team.region || 'Unknown',
-            }),
+            JSON.stringify(enhancedProfile),
             {
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' },
                 status: 200,
             }
         )
 
-    } catch (error) {
-        console.error('Error fetching team profile:', error)
+    } catch (error: any) {
+        console.error('[team-profile] Error:', error)
         return new Response(
             JSON.stringify({ error: error.message }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }

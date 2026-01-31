@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useDashboardStore } from '../../stores/useDashboardStore';
 import { useSession } from '../../hooks/useAuth';
-import { useWorkspace, usePlayers, useMatches, useTeamProfile } from '../../hooks/useDashboardQueries';
+import { useWorkspace, usePlayers, useMatches, useTeamProfile, useTeamStatistics } from '../../hooks/useDashboardQueries';
 import StrategyBriefModal from './modals/StrategyBriefModal';
 
 const DashboardOverview: React.FC = () => {
@@ -20,6 +20,7 @@ const DashboardOverview: React.FC = () => {
     const { data: allPlayers = [], isLoading: isPlayersLoading } = usePlayers(workspace?.id);
     const { data: teamProfile } = useTeamProfile(workspace?.id, workspace?.grid_team_id);
     const { data: allMatches = [], isLoading: isMatchesLoading } = useMatches(workspace?.grid_team_id, teamProfile?.game, teamProfile?.teamName);
+    const { data: teamStats } = useTeamStatistics(workspace?.grid_team_id);
 
     const isLoading = isPlayersLoading || isMatchesLoading;
 
@@ -298,20 +299,47 @@ const DashboardOverview: React.FC = () => {
                         </div>
 
                         {/* Roster Footer Stats */}
-                        <div className="grid grid-cols-3 gap-2 mb-6 z-10">
+                        <div className="grid grid-cols-3 gap-2 mb-4 z-10">
                             <div className="bg-surface-darker p-2 rounded-lg text-center border border-white/5">
-                                <p className="text-[9px] text-gray-400 mb-1 uppercase tracking-wider">Team KDA</p>
-                                <p className="text-sm font-bold text-white">4.5</p>
+                                <p className="text-[9px] text-gray-400 mb-1 uppercase tracking-wider">Record</p>
+                                <p className="text-sm font-bold text-white">
+                                    {teamStats ? `${teamStats.record.wins}W-${teamStats.record.losses}L` : '--'}
+                                </p>
                             </div>
                             <div className="bg-surface-darker p-2 rounded-lg text-center border border-white/5">
-                                <p className="text-[9px] text-gray-400 mb-1 uppercase tracking-wider">GPM</p>
-                                <p className="text-sm font-bold text-white">1,940</p>
+                                <p className="text-[9px] text-gray-400 mb-1 uppercase tracking-wider">Win Rate</p>
+                                <p className={`text-sm font-bold ${teamStats?.record?.winRate >= 60 ? 'text-primary' : teamStats?.record?.winRate >= 50 ? 'text-white' : 'text-red-400'}`}>
+                                    {teamStats?.record?.winRate ? `${teamStats.record.winRate}%` : '--'}
+                                </p>
                             </div>
                             <div className="bg-surface-darker p-2 rounded-lg text-center border border-white/5">
-                                <p className="text-[9px] text-gray-400 mb-1 uppercase tracking-wider">Control</p>
-                                <p className="text-sm font-bold text-white">62%</p>
+                                <p className="text-[9px] text-gray-400 mb-1 uppercase tracking-wider">Form</p>
+                                <p className={`text-sm font-bold ${teamStats?.form === 'DOMINANT' ? 'text-primary' :
+                                        teamStats?.form === 'HOT' ? 'text-green-400' :
+                                            teamStats?.form === 'STABLE' ? 'text-yellow-400' : 'text-red-400'
+                                    }`}>
+                                    {teamStats?.form || '--'}
+                                </p>
                             </div>
                         </div>
+
+                        {/* Team Performance Stats */}
+                        {teamStats?.stats && (
+                            <div className="grid grid-cols-3 gap-2 mb-6 z-10">
+                                <div className="bg-surface-darker p-2 rounded-lg text-center border border-white/5">
+                                    <p className="text-[9px] text-gray-400 mb-1 uppercase tracking-wider">Avg Kills</p>
+                                    <p className="text-sm font-bold text-white">{teamStats.stats.avgKills}</p>
+                                </div>
+                                <div className="bg-surface-darker p-2 rounded-lg text-center border border-white/5">
+                                    <p className="text-[9px] text-gray-400 mb-1 uppercase tracking-wider">Avg Gold</p>
+                                    <p className="text-sm font-bold text-white">{(teamStats.stats.avgGold / 1000).toFixed(1)}k</p>
+                                </div>
+                                <div className="bg-surface-darker p-2 rounded-lg text-center border border-white/5">
+                                    <p className="text-[9px] text-gray-400 mb-1 uppercase tracking-wider">Objectives</p>
+                                    <p className="text-sm font-bold text-white">{teamStats.stats.avgObjectives}</p>
+                                </div>
+                            </div>
+                        )}
 
                         {/* Launch Button */}
                         <div className="mt-auto z-10 flex flex-col gap-3">

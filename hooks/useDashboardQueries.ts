@@ -126,24 +126,41 @@ export function useTeamProfile(workspaceId: string | undefined, gridTeamId: stri
                 .eq('workspace_id', workspaceId)
                 .maybeSingle();
 
-            // Get GRID team data if available
-            let gridTeamData: { teamName?: string; region?: string; logoUrl?: string } = {};
+            // Get enhanced GRID team data via team-profile Edge Function
+            let gridTeamData: {
+                teamName?: string;
+                region?: string;
+                logoUrl?: string;
+                acronym?: string;
+                country?: string;
+                countryCode?: string;
+                roster?: any[];
+            } = {};
+
             if (gridTeamId) {
-                const { data: gridRes } = await invokeWithTimeout<any>('grid-teams', { teamId: gridTeamId });
-                if (gridRes?.team) {
+                const { data: profileRes } = await invokeWithTimeout<any>('team-profile', {});
+                if (profileRes) {
                     gridTeamData = {
-                        teamName: gridRes.team.name,
-                        region: 'Global',
-                        logoUrl: gridRes.team.logoUrl,
+                        teamName: profileRes.teamName,
+                        region: profileRes.region || 'Global',
+                        logoUrl: profileRes.logoUrl,
+                        acronym: profileRes.acronym,
+                        country: profileRes.country,
+                        countryCode: profileRes.countryCode,
+                        roster: profileRes.roster || [],
                     };
                 }
             }
 
             return {
                 teamName: gridTeamData.teamName || workspace?.team_name,
+                acronym: gridTeamData.acronym || (workspace?.team_name || '').substring(0, 3).toUpperCase(),
                 region: gridTeamData.region || 'Global',
+                country: gridTeamData.country || null,
+                countryCode: gridTeamData.countryCode || null,
                 game: workspace?.game_title,
                 logoUrl: gridTeamData.logoUrl || null,
+                roster: gridTeamData.roster || [],
                 ...aiData,
             };
         },
@@ -217,17 +234,27 @@ export function useMatches(gridTeamId: string | undefined, gameTitle: string = '
             return matchesData.matches.map((m: any) => ({
                 id: m.id,
                 date: new Date(m.startTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                startTime: m.startTime, // Raw ISO timestamp for sorting/calculations
                 duration: m.status === 'scheduled' ? 'TBD' : (m.duration || '35:00'),
                 result: m.result || (m.status === 'scheduled' ? 'UPCOMING' : 'UNKNOWN'),
                 score: m.score || '0 - 0',
                 format: m.format || 'Bo1',
                 type: m.type || 'Ranked',
                 opponent: {
+                    id: m.opponent?.id,
                     name: m.opponent?.name || 'Unknown',
                     abbreviation: m.opponent?.abbreviation || (m.opponent?.name || 'UNK').substring(0, 3).toUpperCase(),
                     color: 'red',
+                    logoUrl: m.opponent?.logoUrl, // Now available from enhanced API
                 },
+                tournament: m.tournament ? {
+                    id: m.tournament.id,
+                    name: m.tournament.name,
+                    startDate: m.tournament.startDate,
+                    endDate: m.tournament.endDate,
+                } : null,
                 performance: { macroControl: 50, microErrorRate: 'MED' },
+                source: m.source || 'grid', // Track data source
             }));
         },
         enabled: !!gridTeamId,
@@ -375,6 +402,134 @@ export function usePlayerStats(playerId: string | undefined | null, gridPlayerId
             return data || null;
         },
         enabled: !!effectiveId,
+        staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+        retry: 1,
+    });
+}
+
+// ============================================
+// Hook: useTeamStatistics (Aggregated Team Analytics)
+// ============================================
+export interface TeamStatisticsData {
+    teamId: string;
+    record: {
+        wins: number;
+        losses: number;
+        draws: number;
+        totalMatches: number;
+        winRate: number;
+    };
+    form: 'DOMINANT' | 'HOT' | 'STABLE' | 'COLD';
+    stats: {
+        avgKills: string;
+        avgDeaths: string;
+        avgAssists: string;
+        avgObjectives: string;
+        avgGold: number;
+        avgDamage: number;
+        seriesAnalyzed: number;
+    } | null;
+    recentMatches: {
+        id: string;
+        date: string;
+        format: string;
+        opponent: string;
+        score: string;
+        result: string;
+    }[];
+    source: string;
+}
+
+export function useTeamStatistics(teamId: string | undefined, matchLimit: number = 20) {
+    return useQuery({
+        queryKey: ['teamStatistics', teamId, matchLimit],
+        queryFn: async (): Promise<TeamStatisticsData | null> => {
+            if (!teamId) return null;
+
+            console.log('[useTeamStatistics] Fetching stats for team:', teamId);
+
+            const { data, error } = await invokeWithTimeout<TeamStatisticsData>(
+                'team-statistics',
+                { teamId, limit: matchLimit },
+                15000
+            );
+
+            if (error) {
+                console.error('[useTeamStatistics] Error:', error);
+                throw error;
+            }
+
+            return data || null;
+        },
+        enabled: !!teamId,
+        staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+        retry: 1,
+    });
+}
+
+// ============================================
+// Hook: usePlayerStatistics (Dedicated Player Analytics)
+// ============================================
+export interface PlayerStatisticsData {
+    player: {
+        id: string;
+        nickname: string;
+        firstName: string | null;
+        lastName: string | null;
+        country: string | null;
+        countryCode: string | null;
+        team: {
+            id: string;
+            name: string;
+            acronym: string;
+            logoUrl: string | null;
+        } | null;
+    } | null;
+    record: {
+        wins: number;
+        losses: number;
+        totalMatches: number;
+        winRate: number;
+    };
+    recentForm: 'HOT' | 'STABLE' | 'COLD';
+    aggregatedStats: {
+        kills: { total: number; average: string; max: number };
+        deaths: { total: number; average: string; max: number };
+        assists: { total: number; average: string; max: number };
+        kda: string;
+        damage: { total: number; average: number; max: number };
+        goldEarned: { total: number; average: number };
+        creepScore: { total: number; average: string };
+        visionScore: { total: number; average: string };
+        firstBloods: { kills: number; deaths: number };
+        seriesAnalyzed: number;
+    } | null;
+    seriesAnalyzed: number;
+    source: string;
+}
+
+export function usePlayerStatistics(playerId: string | undefined | null, matchLimit: number = 20) {
+    return useQuery({
+        queryKey: ['playerStatistics', playerId, matchLimit],
+        queryFn: async (): Promise<PlayerStatisticsData | null> => {
+            if (!playerId) return null;
+
+            console.log('[usePlayerStatistics] Fetching detailed stats for player:', playerId);
+
+            const { data, error } = await invokeWithTimeout<PlayerStatisticsData>(
+                'player-statistics',
+                { playerId, limit: matchLimit },
+                15000
+            );
+
+            if (error) {
+                console.error('[usePlayerStatistics] Error:', error);
+                throw error;
+            }
+
+            return data || null;
+        },
+        enabled: !!playerId,
         staleTime: 1000 * 60 * 5, // Cache for 5 minutes
         retry: 1,
     });

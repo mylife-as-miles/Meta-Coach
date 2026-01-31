@@ -16,6 +16,9 @@ export const GRID_URLS = {
     // Post-match results, player stats, team outcomes
     SERIES_STATE: 'https://api-op.grid.gg/live-data-feed/series-state/graphql',
 
+    // Aggregated player/team statistics
+    STATISTICS_FEED: 'https://api-op.grid.gg/statistics-feed/graphql',
+
     // Full event history, timeline, pattern mining
     FILE_DOWNLOAD: 'https://api.grid.gg',
 } as const;

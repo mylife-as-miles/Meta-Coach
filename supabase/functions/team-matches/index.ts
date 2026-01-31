@@ -154,12 +154,26 @@ serve(async (req) => {
               startTimeScheduled
               format { name nameShortened }
               type
-              tournament { id name }
+              tournament { 
+                id 
+                name
+                startDate
+                endDate
+              }
               teams {
-                baseInfo { id name nameShortened logoUrl }
+                baseInfo { 
+                  id 
+                  name 
+                  nameShortened 
+                  logoUrl 
+                }
                 scoreAdvantage
               }
             }
+          }
+          pageInfo {
+            endCursor
+            hasNextPage
           }
         }
       }
@@ -183,12 +197,26 @@ serve(async (req) => {
               startTimeScheduled
               format { name nameShortened }
               type
-              tournament { id name }
+              tournament { 
+                id 
+                name
+                startDate
+                endDate
+              }
               teams {
-                baseInfo { id name nameShortened logoUrl }
+                baseInfo { 
+                  id 
+                  name 
+                  nameShortened 
+                  logoUrl 
+                }
                 scoreAdvantage
               }
             }
+          }
+          pageInfo {
+            endCursor
+            hasNextPage
           }
         }
       }
@@ -283,8 +311,12 @@ serve(async (req) => {
           logoUrl: opponentTeam.baseInfo.logoUrl
         } : null,
         tournament: node.tournament ? {
-          name: node.tournament.name
-        } : null
+          id: node.tournament.id,
+          name: node.tournament.name,
+          startDate: node.tournament.startDate || null,
+          endDate: node.tournament.endDate || null
+        } : null,
+        source: 'grid'
       };
     }
 

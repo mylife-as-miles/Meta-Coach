@@ -1,11 +1,10 @@
 // supabase/functions/player-stats/index.ts
 // Fetch player micro-level performance analytics from GRID API
-// Used in Player Hub for detailed individual performance tracking
+// Uses Central Data Feed for match history + Statistics Feed for aggregated stats
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { corsHeaders } from '../_shared/cors.ts'
-
-const GRID_API_URL = 'https://api-op.grid.gg/central-data/graphql'
+import { GRID_URLS, getGridHeaders } from '../_shared/grid-config.ts'
 
 serve(async (req) => {
     if (req.method === 'OPTIONS') {
@@ -43,91 +42,158 @@ serve(async (req) => {
 
         console.log(`[player-stats] Fetching stats for player: ${playerId}`)
 
-        // Query player performance across recent matches
-        // Note: GRID API schema may vary - this is adapted from documented patterns
-        const playerStatsQuery = `
-      query GetPlayerStats($playerId: ID!, $limit: Int!) {
-        player(id: $playerId) {
-          id
-          nickname
-          country {
-            name
-            shortName
-          }
-          teams {
-            id
-            name
-          }
-        }
-        
-        allSeries(
-          filter: {
-            playerIds: { in: [$playerId] }
-          }
-          first: $limit
-          orderBy: StartTimeScheduled
-          orderDirection: DESC
-        ) {
-          edges {
-            node {
-              id
-              startTimeScheduled
-              type
-              format { name nameShortened }
-              tournament { id name }
-              teams {
-                baseInfo { id name nameShortened logoUrl }
-                scoreAdvantage
-                players {
-                  player { id nickname }
-                  stats {
-                    kills
-                    deaths
-                    assists
-                    headshots
-                    damageDealt
-                    damageReceived
-                  }
+        // Query 1: Player info and recent match history from Central Data Feed
+        const playerSeriesQuery = `
+            query GetPlayerStats($playerId: ID!, $limit: Int!) {
+                player(id: $playerId) {
+                    id
+                    nickname
+                    firstName
+                    lastName
+                    country {
+                        name
+                        shortName
+                    }
+                    teams {
+                        id
+                        name
+                        logoUrl
+                    }
                 }
-              }
+                
+                allSeries(
+                    filter: {
+                        playerIds: { in: [$playerId] }
+                    }
+                    first: $limit
+                    orderBy: StartTimeScheduled
+                    orderDirection: DESC
+                ) {
+                    edges {
+                        node {
+                            id
+                            startTimeScheduled
+                            type
+                            format { name nameShortened }
+                            tournament { id name }
+                            teams {
+                                baseInfo { id name nameShortened logoUrl }
+                                scoreAdvantage
+                                players {
+                                    player { id nickname }
+                                    stats {
+                                        kills
+                                        deaths
+                                        assists
+                                        headshots
+                                        damageDealt
+                                        damageReceived
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
-          }
-        }
-      }
-    `
+        `
 
-        const gridRes = await fetch(GRID_API_URL, {
+        // Execute Central Data query
+        const centralRes = await fetch(GRID_URLS.CENTRAL_DATA, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-api-key': gridApiKey
-            },
+            headers: getGridHeaders(gridApiKey),
             body: JSON.stringify({
-                query: playerStatsQuery,
+                query: playerSeriesQuery,
                 variables: { playerId, limit: matchLimit }
             })
         })
 
-        console.log(`[player-stats] GRID Response: ${gridRes.status}`)
+        console.log(`[player-stats] Central Data Response: ${centralRes.status}`)
 
-        if (!gridRes.ok) {
-            const errorText = await gridRes.text()
-            console.error(`[player-stats] GRID API Error: ${errorText}`)
+        if (!centralRes.ok) {
+            const errorText = await centralRes.text()
+            console.error(`[player-stats] Central Data API Error: ${errorText}`)
             return new Response(
-                JSON.stringify({ error: 'Failed to fetch player stats', details: errorText }),
+                JSON.stringify({ error: 'Failed to fetch player data', details: errorText }),
                 { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 502 }
             )
         }
 
-        const gridData = await gridRes.json()
+        const centralData = await centralRes.json()
 
-        if (gridData.errors) {
-            console.error('[player-stats] GraphQL Errors:', JSON.stringify(gridData.errors, null, 2))
-            // Return partial data even with errors
+        if (centralData.errors) {
+            console.warn('[player-stats] GraphQL Errors:', JSON.stringify(centralData.errors, null, 2))
         }
 
-        const playerInfo = gridData.data?.player || null
-        const matchEdges = gridData.data?.allSeries?.edges || []
+        const playerInfo = centralData.data?.player || null
+        const matchEdges = centralData.data?.allSeries?.edges || []
+
+        // Get series IDs for Statistics Feed query
+        const seriesIds = matchEdges.map((edge: any) => edge.node.id)
+
+        // Query 2: Aggregated statistics from Statistics Feed (if we have series)
+        let aggregatedFromStats: any = null
+        if (seriesIds.length > 0) {
+            try {
+                const statsQuery = `
+                    query PlayerStatistics($playerId: ID!, $seriesIds: [ID!]!) {
+                        playerStatistics(
+                            filter: {
+                                playerId: { in: [$playerId] }
+                                seriesId: { in: $seriesIds }
+                            }
+                        ) {
+                            edges {
+                                node {
+                                    playerId
+                                    seriesId
+                                    stats {
+                                        kills { total average max }
+                                        deaths { total average }
+                                        assists { total average }
+                                        kda { value }
+                                        damage { total average }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                `
+
+                const statsRes = await fetch(GRID_URLS.STATISTICS_FEED, {
+                    method: 'POST',
+                    headers: getGridHeaders(gridApiKey),
+                    body: JSON.stringify({
+                        query: statsQuery,
+                        variables: { playerId, seriesIds }
+                    })
+                })
+
+                if (statsRes.ok) {
+                    const statsData = await statsRes.json()
+                    if (!statsData.errors && statsData.data?.playerStatistics?.edges?.length > 0) {
+                        // Aggregate statistics from all series
+                        const statEdges = statsData.data.playerStatistics.edges
+                        const totalKills = statEdges.reduce((sum: number, e: any) => sum + (e.node.stats?.kills?.total || 0), 0)
+                        const totalDeaths = statEdges.reduce((sum: number, e: any) => sum + (e.node.stats?.deaths?.total || 0), 0)
+                        const totalAssists = statEdges.reduce((sum: number, e: any) => sum + (e.node.stats?.assists?.total || 0), 0)
+                        const totalDamage = statEdges.reduce((sum: number, e: any) => sum + (e.node.stats?.damage?.total || 0), 0)
+                        const avgKda = statEdges.reduce((sum: number, e: any) => sum + (e.node.stats?.kda?.value || 0), 0) / statEdges.length
+
+                        aggregatedFromStats = {
+                            kills: { total: totalKills, average: totalKills / statEdges.length },
+                            deaths: { total: totalDeaths, average: totalDeaths / statEdges.length },
+                            assists: { total: totalAssists, average: totalAssists / statEdges.length },
+                            damage: { total: totalDamage, average: totalDamage / statEdges.length },
+                            kda: avgKda,
+                            seriesCount: statEdges.length
+                        }
+                        console.log(`[player-stats] Got aggregated stats from Statistics Feed for ${statEdges.length} series`)
+                    }
+                }
+            } catch (statsError) {
+                console.warn('[player-stats] Statistics Feed query failed, using calculated stats:', statsError)
+            }
+        }
 
         // Process match data to extract player-specific stats
         const matchStats = matchEdges.map((edge: any) => {
@@ -177,26 +243,22 @@ serve(async (req) => {
             }
         })
 
-        // Calculate aggregated statistics
+        // Calculate aggregated statistics (use Stats Feed data if available, else calculate)
         const totalMatches = matchStats.length
         const wins = matchStats.filter((m: any) => m.result === 'WIN').length
         const winRate = totalMatches > 0 ? ((wins / totalMatches) * 100).toFixed(1) : 0
 
-        const avgKills = totalMatches > 0
-            ? (matchStats.reduce((sum: number, m: any) => sum + m.stats.kills, 0) / totalMatches).toFixed(1)
-            : 0
-        const avgDeaths = totalMatches > 0
-            ? (matchStats.reduce((sum: number, m: any) => sum + m.stats.deaths, 0) / totalMatches).toFixed(1)
-            : 0
-        const avgAssists = totalMatches > 0
-            ? (matchStats.reduce((sum: number, m: any) => sum + m.stats.assists, 0) / totalMatches).toFixed(1)
-            : 0
-        const avgKda = totalMatches > 0
-            ? (matchStats.reduce((sum: number, m: any) => sum + m.stats.kda, 0) / totalMatches).toFixed(2)
-            : 0
-        const avgDamage = totalMatches > 0
-            ? Math.round(matchStats.reduce((sum: number, m: any) => sum + m.stats.damageDealt, 0) / totalMatches)
-            : 0
+        // Use aggregated stats from Statistics Feed if available
+        const avgKills = aggregatedFromStats?.kills?.average?.toFixed(1) ??
+            (totalMatches > 0 ? (matchStats.reduce((sum: number, m: any) => sum + m.stats.kills, 0) / totalMatches).toFixed(1) : 0)
+        const avgDeaths = aggregatedFromStats?.deaths?.average?.toFixed(1) ??
+            (totalMatches > 0 ? (matchStats.reduce((sum: number, m: any) => sum + m.stats.deaths, 0) / totalMatches).toFixed(1) : 0)
+        const avgAssists = aggregatedFromStats?.assists?.average?.toFixed(1) ??
+            (totalMatches > 0 ? (matchStats.reduce((sum: number, m: any) => sum + m.stats.assists, 0) / totalMatches).toFixed(1) : 0)
+        const avgKda = aggregatedFromStats?.kda?.toFixed(2) ??
+            (totalMatches > 0 ? (matchStats.reduce((sum: number, m: any) => sum + m.stats.kda, 0) / totalMatches).toFixed(2) : 0)
+        const avgDamage = aggregatedFromStats?.damage?.average ??
+            (totalMatches > 0 ? Math.round(matchStats.reduce((sum: number, m: any) => sum + m.stats.damageDealt, 0) / totalMatches) : 0)
 
         // Build performance trend (last 5 matches)
         const recentMatches = matchStats.slice(0, 5)
@@ -216,9 +278,12 @@ serve(async (req) => {
             player: playerInfo ? {
                 id: playerInfo.id,
                 name: playerInfo.nickname,
+                firstName: playerInfo.firstName || null,
+                lastName: playerInfo.lastName || null,
                 country: playerInfo.country?.name || null,
                 countryCode: playerInfo.country?.shortName || null,
-                team: playerInfo.teams?.[0]?.name || null
+                team: playerInfo.teams?.[0]?.name || null,
+                teamLogo: playerInfo.teams?.[0]?.logoUrl || null
             } : null,
             aggregated: {
                 totalMatches,
@@ -234,7 +299,7 @@ serve(async (req) => {
             },
             performanceTrend,
             recentMatches: matchStats.slice(0, 10),
-            source: 'grid'
+            source: aggregatedFromStats ? 'grid-statistics-feed' : 'grid-central-data'
         }
 
         return new Response(

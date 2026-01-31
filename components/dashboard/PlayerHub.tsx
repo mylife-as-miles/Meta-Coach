@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useDashboardStore } from '../../stores/useDashboardStore';
 import { useSession } from '../../hooks/useAuth';
-import { useWorkspace, usePlayers, usePlayerStats } from '../../hooks/useDashboardQueries';
+import { useWorkspace, usePlayers, usePlayerStats, usePlayerStatistics } from '../../hooks/useDashboardQueries';
 import { getProxiedImageUrl } from '../../lib/imageProxy';
 import ComparePlayersModal from './modals/ComparePlayersModal';
 import EditAttributesModal from './modals/EditAttributesModal';
@@ -31,6 +31,9 @@ const PlayerHub: React.FC = () => {
         selectedPlayer?.id,
         selectedPlayer?.gridId
     );
+
+    // Fetch detailed player statistics from Statistics Feed
+    const { data: playerDetailedStats } = usePlayerStatistics(selectedPlayer?.gridId);
 
     // Handle URL params for direct linking
     useEffect(() => {
@@ -436,6 +439,73 @@ const PlayerHub: React.FC = () => {
                         <span className="material-icons-outlined text-gray-600 text-4xl mb-3">query_stats</span>
                         <p className="text-gray-500">No GRID match data available for this player.</p>
                         <p className="text-xs text-gray-600 mt-1">Stats will appear once match history is available.</p>
+                    </div>
+                )}
+
+                {/* Detailed Statistics from Statistics Feed */}
+                {playerDetailedStats?.aggregatedStats && (
+                    <div className="mt-8">
+                        <h4 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                            <span className="material-icons-outlined text-primary text-lg">analytics</span>
+                            Aggregated Statistics
+                            <span className="text-xs text-gray-500 font-normal">({playerDetailedStats.seriesAnalyzed} matches analyzed)</span>
+                        </h4>
+                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                            <div className="bg-surface-dark rounded-xl p-4 border border-white/5">
+                                <span className="text-xs text-gray-500 uppercase tracking-wider">Total Kills</span>
+                                <div className="text-2xl font-bold text-green-400 mt-1">
+                                    {playerDetailedStats.aggregatedStats.kills.total}
+                                </div>
+                                <span className="text-xs text-gray-500">
+                                    Max: <span className="text-green-300">{playerDetailedStats.aggregatedStats.kills.max}</span>
+                                </span>
+                            </div>
+                            <div className="bg-surface-dark rounded-xl p-4 border border-white/5">
+                                <span className="text-xs text-gray-500 uppercase tracking-wider">Total Deaths</span>
+                                <div className="text-2xl font-bold text-red-400 mt-1">
+                                    {playerDetailedStats.aggregatedStats.deaths.total}
+                                </div>
+                                <span className="text-xs text-gray-500">
+                                    Max: <span className="text-red-300">{playerDetailedStats.aggregatedStats.deaths.max}</span>
+                                </span>
+                            </div>
+                            <div className="bg-surface-dark rounded-xl p-4 border border-white/5">
+                                <span className="text-xs text-gray-500 uppercase tracking-wider">Total Damage</span>
+                                <div className="text-2xl font-bold text-orange-400 mt-1">
+                                    {(playerDetailedStats.aggregatedStats.damage.total / 1000).toFixed(1)}k
+                                </div>
+                                <span className="text-xs text-gray-500">
+                                    Avg: <span className="text-orange-300">{playerDetailedStats.aggregatedStats.damage.average}</span>
+                                </span>
+                            </div>
+                            <div className="bg-surface-dark rounded-xl p-4 border border-white/5">
+                                <span className="text-xs text-gray-500 uppercase tracking-wider">Gold Earned</span>
+                                <div className="text-2xl font-bold text-yellow-400 mt-1">
+                                    {(playerDetailedStats.aggregatedStats.goldEarned.total / 1000).toFixed(1)}k
+                                </div>
+                                <span className="text-xs text-gray-500">
+                                    Avg: <span className="text-yellow-300">{playerDetailedStats.aggregatedStats.goldEarned.average}</span>
+                                </span>
+                            </div>
+                            <div className="bg-surface-dark rounded-xl p-4 border border-white/5">
+                                <span className="text-xs text-gray-500 uppercase tracking-wider">CS Total</span>
+                                <div className="text-2xl font-bold text-purple-400 mt-1">
+                                    {playerDetailedStats.aggregatedStats.creepScore.total}
+                                </div>
+                                <span className="text-xs text-gray-500">
+                                    Avg: <span className="text-purple-300">{playerDetailedStats.aggregatedStats.creepScore.average}/game</span>
+                                </span>
+                            </div>
+                            <div className="bg-surface-dark rounded-xl p-4 border border-white/5">
+                                <span className="text-xs text-gray-500 uppercase tracking-wider">First Bloods</span>
+                                <div className="text-2xl font-bold text-white mt-1">
+                                    {playerDetailedStats.aggregatedStats.firstBloods.kills}
+                                </div>
+                                <span className="text-xs text-gray-500">
+                                    Deaths: <span className="text-red-300">{playerDetailedStats.aggregatedStats.firstBloods.deaths}</span>
+                                </span>
+                            </div>
+                        </div>
                     </div>
                 )}
             </section>
