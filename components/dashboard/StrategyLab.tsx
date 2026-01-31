@@ -304,7 +304,11 @@ const StrategyLab: React.FC = () => {
                         </div>
 
                         {/* 3D Map Component */}
-                        <TacticalMap3D />
+                        <TacticalMap3D
+                            players={matchTimeline?.players || []}
+                            events={matchTimeline?.events || []}
+                            objectiveControl={matchTimeline?.gameState?.objectiveControl}
+                        />
 
                         <div className="absolute bottom-4 left-4 right-4 z-10">
                             <div className="bg-black/80 backdrop-blur p-3 rounded-lg border border-white/10 text-xs font-mono text-gray-400">
