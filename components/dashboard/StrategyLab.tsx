@@ -13,6 +13,7 @@ import ChampionPickerModal from './modals/ChampionPickerModal';
 import SimulationResultModal from './modals/SimulationResultModal';
 import TeamInsightPanel from './TeamInsightPanel';
 import MoneyballModal from './MoneyballModal';
+import TacticalMap3D from './map/TacticalMap3D';
 import { Champion } from '../../lib/mockData';
 
 const StrategyLab: React.FC = () => {
@@ -199,15 +200,265 @@ const StrategyLab: React.FC = () => {
                 </div>
             </div>
 
-            <div className="flex-1 px-4 pb-6 overflow-hidden flex flex-col">
-                {/* Full Width Moneyball Panel */}
-                <div className="flex-1 bg-[#0f1115] rounded-2xl border border-white/5 relative overflow-hidden shadow-2xl group w-full h-full">
-                    <TeamInsightPanel
-                        teamName={selectedOpponent?.name || matchTimeline?.teams.red.name || "T1"}
-                        onSearchClick={() => setMoneyballOpen(true)}
-                    />
-                </div>
+            <div className="grid grid-cols-12 gap-6 px-4 pb-6 flex-1 overflow-hidden">
+
+                {/* LEFT COLUMN: Draft Simulator */}
+                <aside className="col-span-12 lg:col-span-3 flex flex-col h-full overflow-hidden">
+                    <div className="bg-surface-card rounded-2xl border border-white/5 p-5 h-full flex flex-col shadow-xl">
+                        <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2 uppercase tracking-wider">
+                            <span className="material-icons-outlined text-primary text-base">psychology</span>
+                            Draft Simulator
+                        </h2>
+
+                        <div className="bg-surface-darker/50 rounded-xl p-4 border border-white/5 mb-6 relative">
+                            <p className="text-xs text-gray-400 mb-1 font-mono uppercase tracking-wider">Draft Advantage</p>
+                            <div className="flex items-end gap-2">
+                                <span className="text-4xl font-bold text-primary font-mono shadow-neon-text">{winProbability}%</span>
+                                <span className="text-xs text-primary mb-1.5">WIN PROB</span>
+                            </div>
+                            <div className="w-full h-1.5 bg-gray-800 rounded-full mt-3 flex overflow-hidden">
+                                <div
+                                    className="h-full bg-primary shadow-[0_0_10px_#D2F96F] transition-all duration-500"
+                                    style={{ width: `${winProbability}%` }}
+                                ></div>
+                            </div>
+                            {draftLoading && (
+                                <div className="absolute -right-2 top-4 w-16 h-16 opacity-30">
+                                    <svg className="animate-spin-slow" viewBox="0 0 100 100">
+                                        <circle cx="50" cy="50" fill="none" r="40" stroke="white" strokeDasharray="10 5" strokeWidth="2"></circle>
+                                    </svg>
+                                </div>
+                            )}
+                        </div>
+                        <div className="space-y-4 flex-1 overflow-y-auto pr-1 custom-scrollbar">
+                            <div>
+                                <div className="flex justify-between text-xs text-gray-400 mb-2 font-mono">
+                                    <span>BLUE SIDE (YOU)</span>
+                                    <span className="text-blue-400">{bluePicks.length < 5 ? 'PICKING...' : 'LOCKED'}</span>
+                                </div>
+                                <div className="space-y-2">
+                                    {bluePicks.map((pick, i) => (
+                                        <div key={i} className="flex items-center gap-3 bg-surface-darker p-2 rounded-lg border-l-2 border-blue-500">
+                                            <div className="w-8 h-8 bg-gray-800 rounded flex items-center justify-center text-lg">
+                                                {pick.icon || '👤'}
+                                            </div>
+                                            <div className="flex-1">
+                                                <p className="text-sm font-bold text-white">{pick.name}</p>
+                                                <p className="text-[10px] text-gray-500">Pick {i + 1}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+
+                                    {bluePicks.length < 5 && (
+                                        <div
+                                            onClick={openChampionPicker}
+                                            className="flex items-center gap-3 bg-primary/10 p-2 rounded-lg border border-primary/30 relative overflow-hidden cursor-pointer hover:bg-primary/20 transition"
+                                        >
+                                            <div className="absolute inset-0 bg-primary/5 animate-pulse"></div>
+                                            <div className="w-8 h-8 bg-gray-800 rounded border border-primary/50 flex items-center justify-center relative z-10">
+                                                <span className="material-icons-outlined text-primary text-sm">add</span>
+                                            </div>
+                                            <div className="flex-1 relative z-10">
+                                                <p className="text-sm font-bold text-primary">Select Champion</p>
+                                                <p className="text-[10px] text-primary/70">
+                                                    Recommended: {recommendedPick?.heroName || 'Loading...'}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="pt-2 border-t border-white/5">
+                                <div className="flex justify-between text-xs text-gray-400 mb-2 font-mono">
+                                    <span>RED SIDE</span>
+                                </div>
+                                <div className="space-y-2 opacity-80">
+                                    {redPicks.map((pick, i) => (
+                                        <div key={i} className="flex items-center gap-3 bg-surface-darker p-2 rounded-lg border-r-2 border-red-500 flex-row-reverse text-right">
+                                            <div className="w-8 h-8 bg-gray-800 rounded flex items-center justify-center text-lg">
+                                                {pick.icon || '🛡️'}
+                                            </div>
+                                            <div className="flex-1">
+                                                <p className="text-sm font-bold text-white">{pick.name}</p>
+                                                <p className="text-[10px] text-gray-500">Pick {i + 1}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </aside>
+
+                {/* MIDDLE COLUMN: Tactical Map 3D */}
+                <section className="col-span-12 lg:col-span-6 flex flex-col gap-4 h-full relative">
+                    <div className="flex-1 bg-black rounded-xl border border-white/10 relative overflow-hidden shadow-2xl group">
+                        <div className="absolute top-4 left-4 z-10 flex gap-2">
+                            <div className="px-3 py-1 rounded bg-black/60 backdrop-blur border border-white/10 text-xs font-mono text-primary flex items-center gap-2">
+                                <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
+                                LIVE FEED
+                            </div>
+                            <div className="px-3 py-1 rounded bg-black/60 backdrop-blur border border-white/10 text-xs font-mono text-gray-300">
+                                {gamePhase} GAME
+                            </div>
+                        </div>
+
+                        {/* 3D Map Component */}
+                        <TacticalMap3D />
+
+                        <div className="absolute bottom-4 left-4 right-4 z-10">
+                            <div className="bg-black/80 backdrop-blur p-3 rounded-lg border border-white/10 text-xs font-mono text-gray-400">
+                                <span className="text-primary">></span> WAR ROOM ACTIVE: Analyzing pathing vectors...
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Console - Briefing */}
+                    <div className="h-40 bg-[#0a0c08] rounded-xl border border-white/10 p-4 font-mono text-sm relative overflow-hidden shadow-lg flex flex-col">
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-primary font-bold text-xs tracking-wider">GEMINI_TACTICAL_BRIEFING</span>
+                            <span className="text-[10px] text-gray-600">v2.0.4</span>
+                        </div>
+                        <div className="flex-1 overflow-y-auto custom-scrollbar space-y-1">
+                            <div className="text-gray-400"><span className="text-green-500">$</span> {executiveSummary}</div>
+                            {tacticalInsights.slice(0, 2).map((insight, idx) => (
+                                <div key={idx} className="text-gray-500"><span className="text-primary">></span> {insight.content}</div>
+                            ))}
+                            <div className="text-primary animate-pulse">_</div>
+                        </div>
+                    </div>
+                </section>
+
+                {/* Scenario Variables (Right Sidebar) */}
+                <aside className="col-span-12 lg:col-span-3 flex flex-col gap-4 h-full">
+                    <div className="bg-surface-dark rounded-2xl border border-white/10 p-5 flex-1 shadow-lg relative overflow-y-auto custom-scrollbar">
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-white font-bold flex items-center gap-2">
+                                <span className="material-icons-outlined text-gray-400 text-sm">tune</span>
+                                Scenario Variables
+                            </h2>
+                            <button className="text-[10px] text-primary hover:underline cursor-pointer">RESET</button>
+                        </div>
+                        <div className="space-y-6">
+                            <div>
+                                <div className="flex justify-between items-center mb-2">
+                                    <label className="text-xs text-gray-300 font-medium">Gold Advantage</label>
+                                    <span className="text-xs font-mono text-red-400">{goldAdvantage}</span>
+                                </div>
+                                <input
+                                    className="w-full h-1.5 bg-surface-darker rounded-lg appearance-none cursor-pointer accent-primary [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:shadow-neon"
+                                    max="5000"
+                                    min="-5000"
+                                    type="range"
+                                    value={goldAdvantage}
+                                    onChange={(e) => setGoldAdvantage(parseInt(e.target.value))}
+                                />
+                                <div className="flex justify-between text-[10px] text-gray-600 mt-1 font-mono">
+                                    <span>-5k</span>
+                                    <span>0</span>
+                                    <span>+5k</span>
+                                </div>
+                            </div>
+                            <div className="bg-surface-darker/50 p-3 rounded-xl border border-white/5">
+                                <label className="text-xs text-gray-400 block mb-2">Game Phase</label>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => setGamePhase('EARLY')}
+                                        className={`flex-1 py-1.5 text-xs rounded border transition cursor-pointer ${gamePhase === 'EARLY' ? 'border-primary/30 bg-primary/10 text-primary font-bold shadow-neon' : 'border-white/10 bg-surface-dark text-gray-400 hover:text-white hover:border-white/30'}`}
+                                    >
+                                        Early
+                                    </button>
+                                    <button
+                                        onClick={() => setGamePhase('MID')}
+                                        className={`flex-1 py-1.5 text-xs rounded border transition cursor-pointer ${gamePhase === 'MID' ? 'border-primary/30 bg-primary/10 text-primary font-bold shadow-neon' : 'border-white/10 bg-surface-dark text-gray-400 hover:text-white hover:border-white/30'}`}
+                                    >
+                                        Mid
+                                    </button>
+                                    <button
+                                        onClick={() => setGamePhase('LATE')}
+                                        className={`flex-1 py-1.5 text-xs rounded border transition cursor-pointer ${gamePhase === 'LATE' ? 'border-primary/30 bg-primary/10 text-primary font-bold shadow-neon' : 'border-white/10 bg-surface-dark text-gray-400 hover:text-white hover:border-white/30'}`}
+                                    >
+                                        Late
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between p-3 bg-surface-darker rounded-xl border border-white/5">
+                                    <div className="flex items-center gap-2">
+                                        <span className="material-icons-outlined text-gray-400 text-sm">battery_alert</span>
+                                        <span className="text-xs text-gray-300">Player Fatigue</span>
+                                    </div>
+                                    <label className="relative inline-flex items-center cursor-pointer">
+                                        <input
+                                            checked={playerFatigue}
+                                            onChange={(e) => setPlayerFatigue(e.target.checked)}
+                                            className="sr-only peer"
+                                            type="checkbox"
+                                        />
+                                        <div className="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+                                    </label>
+                                </div>
+                                <div className="flex items-center justify-between p-3 bg-surface-darker rounded-xl border border-white/5">
+                                    <div className="flex items-center gap-2">
+                                        <span className="material-icons-outlined text-gray-400 text-sm">flag</span>
+                                        <span className="text-xs text-gray-300">Objective Priority</span>
+                                    </div>
+                                    <label className="relative inline-flex items-center cursor-pointer">
+                                        <input defaultChecked className="sr-only peer" type="checkbox" />
+                                        <div className="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+                                    </label>
+                                </div>
+                            </div>
+                            <div className="mt-6 pt-4 border-t border-white/10">
+                                <h3 className="text-xs font-bold text-white mb-3 uppercase tracking-wider">Simulated Outcome</h3>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="bg-surface-darker p-3 rounded-lg border border-white/5 text-center">
+                                        <div className="text-[10px] text-gray-500 mb-1">TEAMFIGHT WR</div>
+                                        <div className={`text-xl font-mono ${scenarioLoading ? 'text-gray-500' : 'text-white'} font-bold`}>
+                                            {scenarioLoading ? '...' : `${teamfightWR}%`}
+                                        </div>
+                                    </div>
+                                    <div className="bg-surface-darker p-3 rounded-lg border border-white/5 text-center">
+                                        <div className="text-[10px] text-gray-500 mb-1">SPLIT PUSH</div>
+                                        <div className={`text-xl font-mono ${scenarioLoading ? 'text-gray-500' : 'text-primary'} font-bold shadow-neon-text`}>
+                                            {scenarioLoading ? '...' : splitPushRating}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="mt-6">
+                            <button
+                                onClick={runSimulation}
+                                disabled={simulationRunning}
+                                className={`w-full py-3 rounded-xl text-black font-bold text-sm transition shadow-neon flex items-center justify-center gap-2 cursor-pointer ${simulationRunning
+                                    ? 'bg-gray-500 cursor-not-allowed opacity-75'
+                                    : 'bg-primary hover:bg-primary-dark'
+                                    }`}
+                            >
+                                {simulationRunning ? (
+                                    <>
+                                        <span className="material-icons-outlined text-lg animate-spin">sync</span>
+                                        Running Simulation...
+                                    </>
+                                ) : (
+                                    <>
+                                        <span className="material-icons-outlined text-lg">play_arrow</span>
+                                        Run Simulation
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </aside>
             </div>
+
+            {/* Moneyball Modal (Kept for search access) */}
+            <MoneyballModal
+                isOpen={moneyballOpen}
+                onClose={() => setMoneyballOpen(false)}
+                currentTeamId={matchTimeline?.teams.blue.id}
+            />
 
             {/* Champion Picker Modal */}
             <ChampionPickerModal

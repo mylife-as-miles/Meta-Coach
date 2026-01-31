@@ -933,3 +933,43 @@ export function useTeamHistory(teamId: string | undefined) {
         staleTime: 1000 * 60 * 10
     });
 }
+// ============================================
+// Hook: usePlayerAnalysis (Gemini 3 Pro)
+// ============================================
+export interface PlayerAnalysis {
+    synergies: {
+        name: string;
+        partner: string;
+        score: number;
+        description: string;
+    }[];
+    potential: {
+        score: number;
+        projectedPeak: number;
+        trajectory: number[];
+        analysis: string;
+    };
+}
+
+export function usePlayerAnalysis(
+    playerName: string | undefined,
+    playerRole?: string,
+    teamId?: string,
+    recentStats?: any
+) {
+    return useQuery({
+        queryKey: ['playerAnalysis', playerName, teamId],
+        queryFn: async () => {
+            if (!playerName) return null;
+
+            const { data, error } = await supabase.functions.invoke('player-analysis', {
+                body: { playerName, playerRole, teamId, recentStats }
+            });
+
+            if (error) throw error;
+            return data as PlayerAnalysis;
+        },
+        enabled: !!playerName,
+        staleTime: 1000 * 60 * 60 * 24, // 24 hours (it's expensive deep analysis)
+    });
+}
