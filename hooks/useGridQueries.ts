@@ -16,41 +16,43 @@ const invokeGridPlayers = async (action: string, params: any = {}) => {
 // QUERIES
 // ==========================================
 
-export const useGridPlayers = (filter?: any, first: number = 20) => {
+export const useGridPlayers = (filter?: any, first: number = 20, options?: { enabled?: boolean }) => {
     return useQuery({
         queryKey: ['gridPlayers', filter, first],
-        queryFn: () => invokeGridPlayers('players', { filter, first })
+        queryFn: () => invokeGridPlayers('players', { filter, first }),
+        enabled: options?.enabled
     });
 };
 
-export const useGridPlayer = (id: string) => {
+export const useGridPlayer = (id: string, options?: { enabled?: boolean }) => {
     return useQuery({
         queryKey: ['gridPlayer', id],
         queryFn: () => invokeGridPlayers('player', { id }),
-        enabled: !!id
+        enabled: !!id && (options?.enabled ?? true)
     });
 };
 
-export const useGridPlayerByExternalId = (dataProviderName: string, externalPlayerId: string, titleId?: string) => {
+export const useGridPlayerByExternalId = (dataProviderName: string, externalPlayerId: string, titleId?: string, options?: { enabled?: boolean }) => {
     return useQuery({
         queryKey: ['gridPlayerByExternalId', dataProviderName, externalPlayerId, titleId],
         queryFn: () => invokeGridPlayers('playerIdByExternalId', { dataProviderName, externalPlayerId, titleId }),
-        enabled: !!dataProviderName && !!externalPlayerId
+        enabled: !!dataProviderName && !!externalPlayerId && (options?.enabled ?? true)
     });
 };
 
-export const useGridPlayerRoles = (filter?: any) => {
+export const useGridPlayerRoles = (filter?: any, options?: { enabled?: boolean }) => {
     return useQuery({
         queryKey: ['gridPlayerRoles', filter],
-        queryFn: () => invokeGridPlayers('playerRoles', { filter })
+        queryFn: () => invokeGridPlayers('playerRoles', { filter }),
+        enabled: options?.enabled
     });
 };
 
-export const useGridPlayerRole = (id: string) => {
+export const useGridPlayerRole = (id: string, options?: { enabled?: boolean }) => {
     return useQuery({
         queryKey: ['gridPlayerRole', id],
         queryFn: () => invokeGridPlayers('playerRole', { id }),
-        enabled: !!id
+        enabled: !!id && (options?.enabled ?? true)
     });
 };
 
