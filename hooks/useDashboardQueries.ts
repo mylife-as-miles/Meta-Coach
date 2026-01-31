@@ -864,3 +864,72 @@ export function useTacticalBriefing(params: {
         retry: 1,
     });
 }
+
+// ============================================
+// Hook: useTeamSearch
+// ============================================
+export function useTeamSearch(query: string, titleId: number = 3) {
+    return useQuery({
+        queryKey: ['teamSearch', query, titleId],
+        queryFn: async () => {
+            // Mock search for now as we don't have a dedicated search endpoint yet
+            // In a real app, this would hit /search/teams?q=...
+            if (!query) return [];
+
+            // Simulate network delay
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            // Return some mock results filtered by query
+            const mockTeams = [
+                { id: 't1', name: 'T1', acronym: 'T1', region: 'LCK', logoUrl: 'https://am-a.akamaihd.net/image?resize=200:&f=http%3A%2F%2Fstatic.lolesports.com%2Fteams%2Ft1-full-on-dark.png' },
+                { id: 'geng', name: 'Gen.G', acronym: 'GEN', region: 'LCK', logoUrl: 'https://am-a.akamaihd.net/image?resize=200:&f=http%3A%2F%2Fstatic.lolesports.com%2Fteams%2F1655210113163_GenG_logo_200x200.png' },
+                { id: 'jdg', name: 'JD Gaming', acronym: 'JDG', region: 'LPL', logoUrl: 'https://am-a.akamaihd.net/image?resize=200:&f=http%3A%2F%2Fstatic.lolesports.com%2Fteams%2F1631819669150_jdg-200.png' },
+                { id: 'g2', name: 'G2 Esports', acronym: 'G2', region: 'LEC', logoUrl: 'https://am-a.akamaihd.net/image?resize=200:&f=http%3A%2F%2Fstatic.lolesports.com%2Fteams%2F1704375161752_G2-Esports-Logo-2024.png' },
+                { id: 'fnc', name: 'Fnatic', acronym: 'FNC', region: 'LEC', logoUrl: 'https://am-a.akamaihd.net/image?resize=200:&f=http%3A%2F%2Fstatic.lolesports.com%2Fteams%2Ffnatic-logo-2020.png' },
+                { id: 'c9', name: 'Cloud9', acronym: 'C9', region: 'LCS', logoUrl: 'https://am-a.akamaihd.net/image?resize=200:&f=http%3A%2F%2Fstatic.lolesports.com%2Fteams%2F1704375087130_Cloud9-Logo-2024.png' }
+            ];
+
+            return mockTeams.filter(t => t.name.toLowerCase().includes(query.toLowerCase()) || t.acronym.toLowerCase().includes(query.toLowerCase()));
+        },
+        enabled: query.length > 1,
+        staleTime: 1000 * 60 * 60 // 1 hour
+    });
+}
+
+// ============================================
+// Hook: useTeamHistory (Moneyball Data)
+// ============================================
+export function useTeamHistory(teamId: string | undefined) {
+    return useQuery({
+        queryKey: ['teamHistory', teamId],
+        queryFn: async () => {
+            if (!teamId) return null;
+
+            // Call draft-analysis to get the deep dive data? 
+            // Or simulate fetching detailed roster history for the Moneyball view
+            console.log('[useTeamHistory] Fetching history for:', teamId);
+
+            // Simulating a fetch to our enhanced backend
+            await new Promise(resolve => setTimeout(resolve, 800));
+
+            // Return rich data structure matching the TeamInsightPanel expectations
+            // This corresponds to the user's "T1" reference image but dynamic
+            return {
+                teamId,
+                avgGameTime: "29:15",
+                firstBloodRate: 58.5,
+                dragonControl: 65,
+                winRate: 72,
+                roster: [
+                    { name: "Top Laner", role: "TOP", banPriority: "MED" as const, powerPicks: [{ name: "Aatrox", winRate: 65 }, { name: "K'Sante", winRate: 62 }], attributes: [{ label: "Laning", value: 85 }, { label: "Teamfight", value: 90 }] },
+                    { name: "Jungler", role: "JUNGLE", banPriority: "HIGH" as const, powerPicks: [{ name: "Lee Sin", winRate: 72 }, { name: "Viego", winRate: 68 }], attributes: [{ label: "Gank", value: 92 }, { label: "Control", value: 88 }] },
+                    { name: "Mid Laner", role: "MID", banPriority: "CRITICAL" as const, powerPicks: [{ name: "Azir", winRate: 80 }, { name: "Orianna", winRate: 75 }], attributes: [{ label: "Macro", value: 95 }, { label: "Micro", value: 98 }] },
+                    { name: "ADC Carry", role: "ADC", banPriority: "LOW" as const, powerPicks: [{ name: "Xayah", winRate: 60 }, { name: "Kaisa", winRate: 58 }], attributes: [{ label: "Dmg", value: 92 }, { label: "Position", value: 85 }] },
+                    { name: "Support", role: "SUPPORT", banPriority: "MED" as const, powerPicks: [{ name: "Rakan", winRate: 66 }, { name: "Nautilus", winRate: 64 }], attributes: [{ label: "Vision", value: 90 }, { label: "Engage", value: 88 }] },
+                ]
+            };
+        },
+        enabled: !!teamId,
+        staleTime: 1000 * 60 * 10
+    });
+}

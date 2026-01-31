@@ -78,6 +78,7 @@ interface TeamInsightPanelProps {
         attributes: { label: string; value: number }[];
         powerPicks: { name: string; winRate: number }[];
     }[];
+    onSearchClick?: () => void;
 }
 
 const TeamInsightPanel: React.FC<TeamInsightPanelProps> = ({
@@ -173,15 +174,17 @@ const TeamInsightPanel: React.FC<TeamInsightPanelProps> = ({
                 { name: "Nautilus", winRate: 62 }
             ]
         }
-    ]
+    ],
+    onSearchClick
 }) => {
     return (
         <div className="w-full h-full bg-[#050505] rounded-2xl overflow-hidden flex flex-col font-sans">
             {/* Header */}
             <header className="px-6 py-6 border-b border-white/5 flex items-center justify-between bg-[#0a0c0f]">
-                <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-gray-800 to-black border border-white/10 flex items-center justify-center shadow-lg">
-                        <span className="text-2xl font-bold text-white">{teamName}</span>
+                <div className="flex items-center gap-4 cursor-pointer hover:opacity-80 transition-opacity" onClick={onSearchClick} title="Click to change team">
+                    <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-gray-800 to-black border border-white/10 flex items-center justify-center shadow-lg relative group">
+                        <span className="text-2xl font-bold text-white group-hover:hidden">{teamName.substring(0, 2)}</span>
+                        <span className="material-icons text-white hidden group-hover:block">search</span>
                     </div>
                     <div>
                         <div className="flex items-center gap-2">

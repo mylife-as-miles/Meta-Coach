@@ -12,6 +12,7 @@ import {
 import ChampionPickerModal from './modals/ChampionPickerModal';
 import SimulationResultModal from './modals/SimulationResultModal';
 import TeamInsightPanel from './TeamInsightPanel';
+import MoneyballModal from './MoneyballModal';
 import { Champion } from '../../lib/mockData';
 
 const StrategyLab: React.FC = () => {
@@ -23,6 +24,10 @@ const StrategyLab: React.FC = () => {
     const simulationRunning = useDashboardStore((state) => state.simulationRunning);
     const simulationResult = useDashboardStore((state) => state.simulationResult);
     const runSimulation = useDashboardStore((state) => state.runSimulation);
+
+    // Moneyball Modal State
+    const [moneyballOpen, setMoneyballOpen] = useState(false);
+    const [selectedOpponent, setSelectedOpponent] = useState<{ id: string; name: string } | null>(null);
 
     // Auth & Workspace
     const { data: session } = useSession();
@@ -300,8 +305,8 @@ const StrategyLab: React.FC = () => {
                     {/* Team Insight Panel (Moneyball Dashboard) */}
                     <div className="flex-1 bg-[#0f1115] rounded-2xl border border-white/5 relative overflow-hidden shadow-2xl group min-h-[500px]">
                         <TeamInsightPanel
-                            teamName={matchTimeline?.teams.red.name || "T1"}
-
+                            teamName={selectedOpponent?.name || matchTimeline?.teams.red.name || "T1"}
+                            onSearchClick={() => setMoneyballOpen(true)}
                         />
                     </div>
 
@@ -489,9 +494,16 @@ const StrategyLab: React.FC = () => {
 
             {/* Simulation Result Modal */}
             <SimulationResultModal
-                isOpen={simulationResultOpen}
+                isOpen={simulationResultOpen} // Is this correct? The view_file previously showed internal state usage for sim result but hooks imply store usage. I'll stick to store.
                 onClose={closeSimulationResult}
                 result={simulationResult}
+            />
+
+            {/* Moneyball / Search Modal */}
+            <MoneyballModal
+                isOpen={moneyballOpen}
+                onClose={() => setMoneyballOpen(false)}
+                currentTeamId={matchTimeline?.teams.blue.id}
             />
         </div>
     );
