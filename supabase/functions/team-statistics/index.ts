@@ -33,7 +33,8 @@ serve(async (req) => {
         }
 
         // If no teamId provided, get from user's workspace
-        if (!teamId) {
+        let dbTeamName = null;
+        if (!teamId || true) { // Always fetch workspace for fallback name
             const authHeader = req.headers.get('Authorization')
             if (authHeader) {
                 const supabase = createClient(supabaseUrl, supabaseAnonKey, {
@@ -43,10 +44,12 @@ serve(async (req) => {
                 if (user) {
                     const { data: workspace } = await supabase
                         .from('workspaces')
-                        .select('grid_team_id')
+                        .select('grid_team_id, team_name, grid_title_id')
                         .eq('user_id', user.id)
                         .single()
-                    teamId = workspace?.grid_team_id
+                    if (!teamId) teamId = workspace?.grid_team_id
+                    dbTeamName = workspace?.team_name
+                    var titleId = workspace?.grid_title_id
                 }
             }
         }
@@ -60,9 +63,15 @@ serve(async (req) => {
 
         console.log(`[team-statistics] Fetching statistics for team: ${teamId}`)
 
-        // Step 1: Get recent series IDs from Central Data Feed
+        // Step 1: Get Team Info and Recent Series
+        // We fetch the Team object directly to ensure we get the correct name
         const seriesQuery = `
-            query GetTeamSeries($teamId: ID!, $limit: Int!) {
+            query GetTeamAndSeries($teamId: ID!, $limit: Int!) {
+                team(id: $teamId) {
+                    id
+                    name
+                    acronym
+                }
                 allSeries(
                     filter: {
                         teamIds: { in: [$teamId] }
@@ -75,6 +84,7 @@ serve(async (req) => {
                         node {
                             id
                             startTimeScheduled
+                            status
                             format { nameShortened }
                             teams {
                                 baseInfo { id name }
@@ -88,7 +98,7 @@ serve(async (req) => {
 
         const seriesRes = await fetch(GRID_URLS.CENTRAL_DATA, {
             method: 'POST',
-            headers: getGridHeaders(gridApiKey),
+            headers: getGridHeaders(gridApiKey, titleId),
             body: JSON.stringify({
                 query: seriesQuery,
                 variables: { teamId, limit: matchLimit }
@@ -100,6 +110,7 @@ serve(async (req) => {
         }
 
         const seriesData = await seriesRes.json()
+        const teamInfo = seriesData.data?.team
         const seriesEdges = seriesData.data?.allSeries?.edges || []
         const seriesIds = seriesEdges.map((e: any) => e.node.id)
 
@@ -107,13 +118,16 @@ serve(async (req) => {
         let wins = 0, losses = 0, draws = 0
         for (const edge of seriesEdges) {
             const node = edge.node
-            const myTeam = node.teams?.find((t: any) => t.baseInfo?.id === teamId)
-            const oppTeam = node.teams?.find((t: any) => t.baseInfo?.id !== teamId)
-            const myScore = myTeam?.scoreAdvantage || 0
-            const oppScore = oppTeam?.scoreAdvantage || 0
-            if (myScore > oppScore) wins++
-            else if (myScore < oppScore) losses++
-            else if (myScore > 0 || oppScore > 0) draws++
+            // Only count completed games for W/L record
+            if (node.status === 'completed' || node.status === 'finished') {
+                const myTeam = node.teams?.find((t: any) => t.baseInfo?.id === teamId)
+                const oppTeam = node.teams?.find((t: any) => t.baseInfo?.id !== teamId)
+                const myScore = myTeam?.scoreAdvantage || 0
+                const oppScore = oppTeam?.scoreAdvantage || 0
+                if (myScore > oppScore) wins++
+                else if (myScore < oppScore) losses++
+                else if (myScore > 0 || oppScore > 0) draws++
+            }
         }
 
         // Step 2: Get aggregated statistics from Statistics Feed
@@ -148,7 +162,7 @@ serve(async (req) => {
 
                 const statsRes = await fetch(GRID_URLS.STATISTICS_FEED, {
                     method: 'POST',
-                    headers: getGridHeaders(gridApiKey),
+                    headers: getGridHeaders(gridApiKey, titleId),
                     body: JSON.stringify({
                         query: statsQuery,
                         variables: { teamId, seriesIds }
@@ -208,6 +222,7 @@ serve(async (req) => {
 
         const response = {
             teamId,
+            teamName: teamInfo?.name || dbTeamName || 'Team',
             record: {
                 wins,
                 losses,
@@ -237,7 +252,8 @@ serve(async (req) => {
                     format: node.format?.nameShortened || 'Bo1',
                     opponent: oppTeam?.baseInfo?.name || 'Unknown',
                     score: `${myScore} - ${oppScore}`,
-                    result: myScore > oppScore ? 'WIN' : myScore < oppScore ? 'LOSS' : 'TBD'
+                    result: (node.status === 'scheduled' || node.status === 'upcoming') ? 'UPCOMING' :
+                        (myScore > oppScore ? 'WIN' : myScore < oppScore ? 'LOSS' : 'DRAW')
                 }
             }),
             source: teamStatsFromFeed ? 'grid-statistics-feed' : 'grid-central-data'

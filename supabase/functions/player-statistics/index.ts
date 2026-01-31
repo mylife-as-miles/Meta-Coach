@@ -3,6 +3,7 @@
 // Provides granular player analytics with configurable filters
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
 import { GRID_URLS, getGridHeaders } from '../_shared/grid-config.ts'
 
@@ -23,12 +24,45 @@ serve(async (req) => {
         let playerId = url.searchParams.get('playerId')
         let seriesIds: string[] = []
         let matchLimit = parseInt(url.searchParams.get('limit') || '20')
+        let titleId: string | number | undefined = url.searchParams.get('titleId') || undefined
 
         if (req.method === 'POST') {
             const body = await req.json()
             if (!playerId) playerId = body.playerId
             if (body.seriesIds) seriesIds = body.seriesIds
             if (body.limit) matchLimit = body.limit
+            if (body.titleId) titleId = body.titleId
+        }
+
+        // Check if playerId is a UUID (internal ID) and resolve to GRID ID
+        const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(playerId || '')
+
+        if (isUUID && playerId) {
+            const supabaseUrl = Deno.env.get('SUPABASE_URL')
+            const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')
+
+            if (supabaseUrl && supabaseAnonKey) {
+                const supabase = createClient(supabaseUrl, supabaseAnonKey)
+                const { data: playerData } = await supabase
+                    .from('players')
+                    .select('grid_player_id, workspace_id')
+                    .eq('id', playerId)
+                    .single()
+
+                if (playerData?.grid_player_id) {
+                    playerId = playerData.grid_player_id
+
+                    // If titleId not provided, try to get from workspace
+                    if (!titleId && playerData.workspace_id) {
+                        const { data: workspace } = await supabase
+                            .from('workspaces')
+                            .select('grid_title_id')
+                            .eq('id', playerData.workspace_id)
+                            .single()
+                        if (workspace?.grid_title_id) titleId = workspace.grid_title_id
+                    }
+                }
+            }
         }
 
         if (!playerId) {
@@ -86,7 +120,7 @@ serve(async (req) => {
 
         const centralRes = await fetch(GRID_URLS.CENTRAL_DATA, {
             method: 'POST',
-            headers: getGridHeaders(gridApiKey),
+            headers: getGridHeaders(gridApiKey, titleId),
             body: JSON.stringify({
                 query: playerQuery,
                 variables: { playerId, limit: matchLimit }
@@ -159,7 +193,7 @@ serve(async (req) => {
 
                 const statsRes = await fetch(GRID_URLS.STATISTICS_FEED, {
                     method: 'POST',
-                    headers: getGridHeaders(gridApiKey),
+                    headers: getGridHeaders(gridApiKey, titleId),
                     body: JSON.stringify({
                         query: statsQuery,
                         variables: { playerId, seriesIds }
