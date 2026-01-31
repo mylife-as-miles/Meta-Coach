@@ -29,7 +29,13 @@ const PlayerHub: React.FC = () => {
     // GRID Players Data
     // We assume the workspace has a link to a GRID Team ID, or we default to a known ID for demo
     const teamId = workspace?.grid_team_id || "1"; // Defaulting to 1 for demo if no team linked
-    const { data: gridPlayersData, isLoading: playersLoading } = useGridPlayers({ teamIdFilter: { id: teamId } });
+
+    // Only fetch grid players if we have a valid user session to prevent 401 Unauthorized race conditions
+    const { data: gridPlayersData, isLoading: playersLoading } = useGridPlayers(
+        { teamIdFilter: { id: teamId } },
+        20,
+        { enabled: !!userId }
+    );
     const { mutate: createPlayer } = useGridCreatePlayer();
     const { mutate: deletePlayer } = useGridDeletePlayer();
 
