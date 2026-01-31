@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useDashboardStore } from '../../stores/useDashboardStore';
 import { useSession } from '../../hooks/useAuth';
-import { useWorkspace, usePlayerStats, usePlayerStatistics } from '../../hooks/useDashboardQueries';
+import { useWorkspace, usePlayerStats, usePlayerStatistics, usePlayerAnalysis } from '../../hooks/useDashboardQueries';
 import { useGridPlayers, useGridPlayer, useGridCreatePlayer, useGridDeletePlayer } from '../../hooks/useGridQueries';
 import { getProxiedImageUrl } from '../../lib/imageProxy';
 import ComparePlayersModal from './modals/ComparePlayersModal';
@@ -54,6 +54,14 @@ const PlayerHub: React.FC = () => {
 
     // Fetch detailed player statistics from Statistics Feed
     const { data: playerDetailedStats } = usePlayerStatistics(selectedPlayer?.gridId);
+
+    // AI Analysis (Gemini 3 Pro)
+    const { data: playerAnalysis, isLoading: analysisLoading } = usePlayerAnalysis(
+        selectedPlayer?.name,
+        selectedPlayer?.role,
+        teamId,
+        playerDetailedStats
+    );
 
     // Handle URL params for direct linking
     useEffect(() => {
@@ -156,10 +164,12 @@ const PlayerHub: React.FC = () => {
                         <div className="bg-surface-darker rounded-xl p-4 border border-white/5 mt-auto">
                             <div className="flex justify-between items-center mb-2">
                                 <span className="text-xs text-gray-400 uppercase tracking-wider">Projected Peak</span>
-                                <span className="text-purple-400 font-bold font-mono text-lg">98 OVR</span>
+                                <span className="text-purple-400 font-bold font-mono text-lg">
+                                    {analysisLoading ? '...' : (playerAnalysis?.potential?.projectedPeak || '98')} OVR
+                                </span>
                             </div>
                             <p className="text-[10px] text-gray-500 leading-relaxed">
-                                Based on current scrim performance, Gemini predicts <span className="text-white">Mechanics</span> will cap at 99 by Playoffs.
+                                {analysisLoading ? 'Analyzing trajectory...' : (playerAnalysis?.potential?.analysis || 'Based on current scrim performance, Gemini predicts Mechanics will cap at 99 by Playoffs.')}
                             </p>
                         </div>
                     </div>

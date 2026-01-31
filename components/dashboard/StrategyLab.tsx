@@ -308,7 +308,7 @@ const StrategyLab: React.FC = () => {
 
                         <div className="absolute bottom-4 left-4 right-4 z-10">
                             <div className="bg-black/80 backdrop-blur p-3 rounded-lg border border-white/10 text-xs font-mono text-gray-400">
-                                <span className="text-primary">></span> WAR ROOM ACTIVE: Analyzing pathing vectors...
+                                <span className="text-primary">&gt;</span> WAR ROOM ACTIVE: Analyzing pathing vectors...
                             </div>
                         </div>
                     </div>
@@ -322,7 +322,7 @@ const StrategyLab: React.FC = () => {
                         <div className="flex-1 overflow-y-auto custom-scrollbar space-y-1">
                             <div className="text-gray-400"><span className="text-green-500">$</span> {executiveSummary}</div>
                             {tacticalInsights.slice(0, 2).map((insight, idx) => (
-                                <div key={idx} className="text-gray-500"><span className="text-primary">></span> {insight.content}</div>
+                                <div key={idx} className="text-gray-500"><span className="text-primary">&gt;</span> {insight.content}</div>
                             ))}
                             <div className="text-primary animate-pulse">_</div>
                         </div>
