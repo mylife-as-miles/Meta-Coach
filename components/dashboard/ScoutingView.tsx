@@ -1,202 +1,349 @@
 import React, { useState } from 'react';
-import { Search, Filter, Cpu, TrendingUp, Trophy, Activity, Zap } from 'lucide-react';
-import { calculate_eOBP, calculate_eSLG, calculate_eWAR } from '../../lib/MoneyballMetrics';
-import ScoutingReportModal from './modals/ScoutingReportModal';
+import { useSession } from '../../hooks/useAuth';
+import { supabase } from '../../lib/supabase';
 
-// Defined specifically for Market/Scouting usage (External Players)
-export interface ScoutPlayer {
-    id: string;
-    name: string;
-    role: 'TOP' | 'JG' | 'MID' | 'ADC' | 'SUP';
-    team: string;
-    avatarUrl?: string;
-    stats: {
-        kills: number;
-        deaths: number;
-        assists: number;
-        goldEarned: number;
-        damageToChampions: number;
-        wins: number;
-        gamesPlayed: number;
-    };
-}
-
-// Mock data extension for scouting (simulation)
-const MARKET_PLAYERS: ScoutPlayer[] = [
+// Mock Data for Market Players
+const MARKET_PLAYERS = [
     {
-        id: 'p1', name: 'Gumayusi', role: 'ADC', team: 'T1', avatarUrl: 'https://am-a.akamaihd.net/image?resize=60:&f=http%3A%2F%2Fstatic.lolesports.com%2Fplayers%2F1633604810793_Gumayusi.png',
-        stats: { kills: 180, deaths: 40, assists: 120, goldEarned: 350000, damageToChampions: 550000, wins: 35, gamesPlayed: 50 }
+        id: '1',
+        name: 'Berserker',
+        team: 'C9',
+        region: 'KR',
+        role: 'ADC',
+        price: 2.4,
+        metrics: { eOBP: 0.482, eSLG: 0.610, war: 5.2, impEff: 92 },
+        stats: { kills: 180, deaths: 45, assists: 120, goldEarned: 14500, damageToChampions: 28000 },
+        fit: 98,
+        status: 'In Progress',
+        img: "https://lh3.googleusercontent.com/aida-public/AB6AXuAFil26kJ3bUewkiNb-4gib2BeYc4Zx4NZjVRcWkLirY71c86hv4iOL2vPRy1KV0Qt1lVlZMRwMItsRt2oH389wzilXcbIm-i-nmKakxAZGwLtYFbY9VT5Q2KIRH2YcnWLWwVT_17XbL-Ng4f1vO2RbaTseAuUwd8wyB6YQ_w4Try1kkgG3VFzDyObGFq20bI0WhWA2ZKXkQYimaYOxyiAJu-qQzsmjRC4mwpkBWo2uAnVRSil0IyCt9h-EMh2oFSR5WbY3arxgeSc",
+        annotation: "High eOBP in objective contests"
     },
     {
-        id: 'p2', name: 'Ruler', role: 'ADC', team: 'JDG', avatarUrl: 'https://am-a.akamaihd.net/image?resize=60:&f=http%3A%2F%2Fstatic.lolesports.com%2Fplayers%2F1673891461463_Ruler_JDG_2023.png',
-        stats: { kills: 200, deaths: 60, assists: 100, goldEarned: 380000, damageToChampions: 580000, wins: 33, gamesPlayed: 50 }
+        id: '2',
+        name: 'Gumayusi',
+        team: 'T1',
+        region: 'KR',
+        role: 'ADC',
+        price: 4.1,
+        metrics: { eOBP: 0.410, eSLG: 0.580, war: 4.8, impEff: 85 },
+        stats: { kills: 160, deaths: 50, assists: 140, goldEarned: 13800, damageToChampions: 26500 },
+        fit: 76,
+        status: 'Pending',
+        img: "https://lh3.googleusercontent.com/aida-public/AB6AXuAnZHcSrpkq-4S4qmJXdr6_VhmwSYKTgBwySukjrnGqn8M8DPxDi-_T89gMvPjZJuk5_YnTIKw4EKg0qcJLf5m9Bt-dXlPiBq2kKdwYXHZTaOlCgsFapA1gpGLbBNZ5_-MITHR2kuaqWAzhqxlkrEJ21e6rhziCrRwoZu9BRP_WmTwNzPz1Q9vIcYV5_dAJqKG6SXpWb7DxmTtCkQbEXLcIaXyMBNx34AFE2Hfk8o7S1p-4J0HIXtEmVWCEuRn8PAe7U9GsA4ysQNo",
+        annotation: "Overvalued by 15% vs Impact"
     },
     {
-        id: 'p3', name: 'Berserker', role: 'ADC', team: 'C9', avatarUrl: '',
-        stats: { kills: 140, deaths: 30, assists: 90, goldEarned: 320000, damageToChampions: 480000, wins: 28, gamesPlayed: 45 }
+        id: '3',
+        name: 'Ruler',
+        team: 'JDG',
+        region: 'KR',
+        role: 'ADC',
+        price: 5.5,
+        metrics: { eOBP: 0.450, eSLG: 0.620, war: 5.0, impEff: 88 },
+        stats: { kills: 190, deaths: 40, assists: 150, goldEarned: 15200, damageToChampions: 31000 },
+        fit: 82,
+        status: null,
+        img: "https://lh3.googleusercontent.com/aida-public/AB6AXuAFil26kJ3bUewkiNb-4gib2BeYc4Zx4NZjVRcWkLirY71c86hv4iOL2vPRy1KV0Qt1lVlZMRwMItsRt2oH389wzilXcbIm-i-nmKakxAZGwLtYFbY9VT5Q2KIRH2YcnWLWwVT_17XbL-Ng4f1vO2RbaTseAuUwd8wyB6YQ_w4Try1kkgG3VFzDyObGFq20bI0WhWA2ZKXkQYimaYOxyiAJu-qQzsmjRC4mwpkBWo2uAnVRSil0IyCt9h-EMh2oFSR5WbY3arxgeSc"
     },
-    // Undervalued Prospect
     {
-        id: 'p4', name: 'Peyz', role: 'ADC', team: 'GEN', avatarUrl: '',
-        stats: { kills: 150, deaths: 25, assists: 150, goldEarned: 310000, damageToChampions: 520000, wins: 40, gamesPlayed: 50 }
+        id: '4',
+        name: 'Prince',
+        team: 'FLY',
+        region: 'KR',
+        role: 'ADC',
+        price: 1.8,
+        metrics: { eOBP: 0.425, eSLG: 0.510, war: 3.9, impEff: 75 },
+        stats: { kills: 120, deaths: 60, assists: 110, goldEarned: 12500, damageToChampions: 22000 },
+        fit: 65,
+        status: null,
+        img: "https://lh3.googleusercontent.com/aida-public/AB6AXuAnZHcSrpkq-4S4qmJXdr6_VhmwSYKTgBwySukjrnGqn8M8DPxDi-_T89gMvPjZJuk5_YnTIKw4EKg0qcJLf5m9Bt-dXlPiBq2kKdwYXHZTaOlCgsFapA1gpGLbBNZ5_-MITHR2kuaqWAzhqxlkrEJ21e6rhziCrRwoZu9BRP_WmTwNzPz1Q9vIcYV5_dAJqKG6SXpWb7DxmTtCkQbEXLcIaXyMBNx34AFE2Hfk8o7S1p-4J0HIXtEmVWCEuRn8PAe7U9GsA4ysQNo"
     }
 ];
 
 const ScoutingView: React.FC = () => {
-    const [viewMode, setViewMode] = useState<'moneyball' | 'traditional'>('moneyball');
-    const [searchTerm, setSearchTerm] = useState('');
-    const [roleFilter, setRoleFilter] = useState<string>('ADC');
-    const [selectedPlayer, setSelectedPlayer] = useState<ScoutPlayer | null>(null); // For Modal
+    const { data: session } = useSession();
+    const [selectedPlayer, setSelectedPlayer] = useState(MARKET_PLAYERS[0]);
+    const [analyzing, setAnalyzing] = useState(false);
+    const [scoutReport, setScoutReport] = useState<string | null>(null);
 
-    // Calculate metrics for all players
-    const scoutingDatabase = MARKET_PLAYERS.map(p => ({
-        ...p,
-        eOBP: calculate_eOBP({ ...p.stats, role: p.role }),
-        eSLG: calculate_eSLG({ ...p.stats, role: p.role }),
-        eWAR: calculate_eWAR({ ...p.stats, role: p.role }, 0.50), // Approx role avg
-    }));
+    const handleAutoScout = async () => {
+        if (!selectedPlayer) return;
+        setAnalyzing(true);
+        setScoutReport(null);
 
-    const filteredPlayers = scoutingDatabase.filter(p =>
-        (p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.team?.toLowerCase().includes(searchTerm.toLowerCase())) &&
-        (roleFilter === 'All' || p.role === roleFilter)
-    );
+        try {
+            const { data, error } = await supabase.functions.invoke('scouting-report', {
+                body: { player: selectedPlayer }
+            });
+
+            if (error) throw error;
+            if (data?.report) {
+                setScoutReport(data.report);
+            }
+        } catch (err) {
+            console.error("Auto-Scout failed:", err);
+            setScoutReport("AI Analysis unavailable. Check connection.");
+        } finally {
+            setAnalyzing(false);
+        }
+    };
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-8">
-            <header className="flex justify-between items-end">
+        <div className="w-full max-w-[1800px] mx-auto min-h-[calc(100vh-80px)]">
+            <header className="flex justify-between items-end mb-8 border-b border-white/5 pb-6">
                 <div>
-                    <h1 className="text-4xl font-bold font-display text-white mb-2 tracking-tight">Market Scouting</h1>
-                    <p className="text-gray-400">Discover undervalued talent using advanced sabermetrics</p>
-                </div>
-
-                <div className="flex gap-4">
-                    <div className="flex bg-surface-dark border border-white/10 rounded-lg p-1">
-                        <button
-                            onClick={() => setViewMode('traditional')}
-                            className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${viewMode === 'traditional' ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-white'}`}
-                        >
-                            Traditional
-                        </button>
-                        <button
-                            onClick={() => setViewMode('moneyball')}
-                            className={`px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${viewMode === 'moneyball' ? 'bg-primary/20 text-primary border border-primary/30' : 'text-gray-400 hover:text-white'}`}
-                        >
-                            <Cpu size={14} />
-                            Moneyball
-                        </button>
+                    <div className="flex items-center gap-2 mb-2">
+                        <span className="bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider">Sabermetrics V2.4</span>
+                        <span className="text-gray-500 text-[10px] font-mono">// TRANSFER WINDOW OPEN</span>
                     </div>
+                    <h1 className="text-3xl font-bold text-white tracking-tight flex items-center gap-3">
+                        Market Scout: Exploiting Inefficiencies
+                        <span className="material-icons-outlined text-gray-600 cursor-help" title="Using proprietary algorithms to find market mismatches">info</span>
+                    </h1>
+                    <p className="text-gray-400 text-sm mt-1 max-w-2xl">
+                        Identify undervalued talent using proprietary metrics (eOBP, WAR). Optimize budget allocation by targeting high-impact, low-cost assets.
+                    </p>
+                </div>
+                <div className="flex items-center gap-3">
+                    <div className="bg-surface-dark border border-white/10 rounded-lg flex items-center p-1">
+                        <span className="material-icons-outlined text-gray-500 ml-2 text-sm">filter_list</span>
+                        <select className="bg-transparent border-none text-xs text-white focus:ring-0 cursor-pointer py-1.5 focus:outline-none">
+                            <option>Region: Global</option>
+                            <option>Region: NA</option>
+                            <option>Region: KR</option>
+                        </select>
+                    </div>
+                    <button
+                        onClick={handleAutoScout}
+                        disabled={analyzing}
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-black font-bold text-sm hover:bg-primary-dark transition shadow-neon disabled:opacity-50"
+                    >
+                        {analyzing ? (
+                            <span className="material-icons-outlined text-sm animate-spin">refresh</span>
+                        ) : (
+                            <span className="material-icons-outlined text-sm">auto_awesome</span>
+                        )}
+                        {analyzing ? "Analyzing..." : "AI Auto-Scout"}
+                    </button>
                 </div>
             </header>
 
-            {/* Filters */}
-            <div className="flex gap-4 bg-surface-dark p-4 rounded-xl border border-white/5 items-center">
-                <div className="relative flex-1 max-w-md">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
-                    <input
-                        type="text"
-                        placeholder="Search player, team..."
-                        className="w-full bg-black/40 border border-white/10 rounded-lg pl-10 pr-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-primary/50"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                </div>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
+                {/* Left Column: Inefficiency Finder */}
+                <div className="lg:col-span-3 flex flex-col gap-6">
+                    <div className="bg-surface-dark rounded-xl border border-white/5 shadow-lg flex flex-col h-[500px]">
+                        <div className="p-5 border-b border-white/5 flex justify-between items-start">
+                            <div>
+                                <h3 className="text-white font-bold text-sm flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-primary text-sm">troubleshoot</span>
+                                    Inefficiency Finder
+                                </h3>
+                                <p className="text-[10px] text-gray-500 mt-1 font-mono">PRICE vs. IMPACT SCATTER</p>
+                            </div>
+                        </div>
+                        <div className="p-4 flex-1 relative">
+                            {/* Scatter Plot Simulation */}
+                            <div className="w-full h-48 border-l border-b border-white/10 relative mb-4">
+                                <div className="absolute -left-6 top-1/2 -rotate-90 text-[9px] text-gray-500 font-mono tracking-widest origin-center whitespace-nowrap">IMPACT SCORE (WAR)</div>
+                                <div className="absolute bottom-[-20px] left-1/2 -translate-x-1/2 text-[9px] text-gray-500 font-mono tracking-widest">MARKET PRICE ($)</div>
 
-                <div className="w-px h-8 bg-white/10 mx-2"></div>
+                                <div className="absolute top-0 left-0 w-1/2 h-1/2 bg-primary/5 border border-primary/10 flex items-center justify-center">
+                                    <span className="text-[10px] font-bold text-primary/50">UNDERVALUED</span>
+                                </div>
 
-                <div className="flex gap-2">
-                    {['Top', 'Jungle', 'Mid', 'ADC', 'Support'].map(role => (
-                        <button
-                            key={role}
-                            onClick={() => setRoleFilter(role)}
-                            className={`px-4 py-2 rounded-lg text-sm border transition-all ${roleFilter === role ? 'bg-white text-black border-white' : 'bg-transparent text-gray-400 border-white/10 hover:border-white/30'}`}
-                        >
-                            {role}
-                        </button>
-                    ))}
-                </div>
-            </div>
+                                {/* Plot Points for Players */}
+                                {MARKET_PLAYERS.map(player => (
+                                    <div
+                                        key={player.id}
+                                        onClick={() => setSelectedPlayer(player)}
+                                        className={`absolute w-2 h-2 rounded-full cursor-pointer hover:scale-150 transition-transform ${selectedPlayer.id === player.id ? 'bg-primary border border-white shadow-neon z-20 scale-125' : 'bg-gray-400 opacity-60 hover:opacity-100 hover:bg-white'}`}
+                                        style={{
+                                            // Simple mapping: Price (Y) high=top, WAR (X) high=right
+                                            // Normalized: Price 1M-6M -> 0-100%, WAR 3.0-6.0 -> 0-100%
+                                            bottom: `${((player.price - 1.0) / 5.0) * 100}%`,
+                                            left: `${((player.metrics.war - 3.0) / 3.0) * 100}%`
+                                        }}
+                                        title={`${player.name} ($${player.price}M, WAR ${player.metrics.war})`}
+                                    />
+                                ))}
+                            </div>
 
-            {/* Player Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {filteredPlayers.map(player => (
-                    <div key={player.id} className="group bg-surface-dark border border-white/5 rounded-2xl p-5 hover:border-primary/30 transition-all hover:shadow-[0_0_30px_-10px_rgba(196,240,66,0.2)] relative overflow-hidden">
-                        {/* Header */}
-                        <div className="flex items-center gap-4 mb-6">
-                            <div className="w-16 h-16 rounded-xl bg-black/50 border border-white/10 overflow-hidden relative">
-                                {player.avatarUrl ? (
-                                    <img src={player.avatarUrl} alt={player.name} className="w-full h-full object-cover" />
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-gray-600 font-bold">{player.role[0]}</div>
-                                )}
+                            {/* Contextual Info for Selected */}
+                            <div className="space-y-3 mt-6">
+                                <div className="flex items-start gap-3 p-3 rounded bg-surface-lighter border border-primary/20 relative group">
+                                    <div className="absolute -left-[1px] top-0 bottom-0 w-[2px] bg-primary"></div>
+                                    <img alt="Player" className="w-8 h-8 rounded bg-black object-cover opacity-80" src={selectedPlayer.img} />
+                                    <div>
+                                        <div className="flex justify-between w-full items-center">
+                                            <h4 className="text-xs font-bold text-white">{selectedPlayer.name}</h4>
+                                            <span className="text-[10px] font-mono text-primary bg-primary/10 px-1 rounded">{selectedPlayer.fit}% FIT</span>
+                                        </div>
+                                        <p className="text-[10px] text-gray-400 mt-1 leading-tight">
+                                            {selectedPlayer.annotation || "Selected for analysis."}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Market Trends */}
+                    <div className="bg-surface-dark rounded-xl border border-white/5 p-4">
+                        <h4 className="text-[11px] font-mono text-gray-400 mb-3 uppercase">Market Trends</h4>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <div className="text-2xl font-mono text-white font-bold">12.4</div>
+                                <div className="text-[10px] text-gray-500">Avg eOBP (ADC)</div>
                             </div>
                             <div>
-                                <h3 className="text-xl font-bold text-white leading-none mb-1">{player.name}</h3>
-                                <div className="text-sm text-gray-400 font-mono">{player.team || 'Free Agent'} • {player.role}</div>
+                                <div className="text-2xl font-mono text-red-400 font-bold">-4%</div>
+                                <div className="text-[10px] text-gray-500">Salary Cap Inflation</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Center Column: Market Grid */}
+                <div className="lg:col-span-6 flex flex-col h-full">
+                    <div className="bg-surface-dark rounded-xl border border-white/5 shadow-lg flex-1 flex flex-col overflow-hidden">
+                        <div className="p-4 border-b border-white/5 flex gap-2 overflow-x-auto no-scrollbar items-center">
+                            <button className="px-3 py-1.5 rounded-md bg-white/10 text-white text-xs font-medium hover:bg-white/20 transition whitespace-nowrap">All Roles</button>
+                            <button className="px-3 py-1.5 rounded-md bg-primary/10 border border-primary/20 text-primary text-xs font-medium transition whitespace-nowrap">ADC (Focus)</button>
+                        </div>
+
+                        <div className="grid grid-cols-12 gap-2 px-4 py-3 bg-surface-darker border-b border-white/5 text-[10px] font-mono text-gray-500 uppercase tracking-wider sticky top-0 z-10">
+                            <div className="col-span-4 pl-2">Athlete / Team</div>
+                            <div className="col-span-2 text-right">Price (M)</div>
+                            <div className="col-span-1 text-center text-white font-bold">eOBP</div>
+                            <div className="col-span-1 text-center">eSLG</div>
+                            <div className="col-span-1 text-center text-primary font-bold">WAR</div>
+                            <div className="col-span-2 text-center">Imp. Eff.</div>
+                            <div className="col-span-1"></div>
+                        </div>
+
+                        <div className="overflow-y-auto custom-scrollbar flex-1 relative">
+                            {MARKET_PLAYERS.map(player => (
+                                <div
+                                    key={player.id}
+                                    onClick={() => setSelectedPlayer(player)}
+                                    className={`group data-row grid grid-cols-12 gap-2 px-4 py-3 border-b border-white/5 items-center hover:bg-white/5 transition relative cursor-pointer ${selectedPlayer.id === player.id ? 'bg-white/5' : ''}`}
+                                >
+                                    {selectedPlayer.id === player.id && (
+                                        <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-primary"></div>
+                                    )}
+                                    <div className="col-span-4 flex items-center gap-3 pl-2">
+                                        <div className="w-8 h-8 rounded bg-gray-800 flex items-center justify-center text-xs font-bold text-gray-400">{player.name[0]}</div>
+                                        <div>
+                                            <div className={`text-sm font-bold transition ${selectedPlayer.id === player.id ? 'text-primary' : 'text-white group-hover:text-primary'}`}>{player.name}</div>
+                                            <div className="text-[10px] text-gray-500">{player.team} · {player.region} · <span className="text-primary">{player.role}</span></div>
+                                        </div>
+                                    </div>
+                                    <div className="col-span-2 text-right font-mono text-xs text-white">${player.price}M</div>
+                                    <div className="col-span-1 text-center font-mono text-xs text-primary font-bold bg-primary/5 rounded py-1">{player.metrics.eOBP.toFixed(3).substring(1)}</div>
+                                    <div className="col-span-1 text-center font-mono text-xs text-gray-400">{player.metrics.eSLG.toFixed(3).substring(1)}</div>
+                                    <div className="col-span-1 text-center font-mono text-xs text-white font-bold">{player.metrics.war}</div>
+                                    <div className="col-span-2 text-center">
+                                        <div className="w-full bg-gray-800 h-1.5 rounded-full mt-1">
+                                            <div className="bg-primary h-1.5 rounded-full" style={{ width: `${player.metrics.impEff}%` }}></div>
+                                        </div>
+                                    </div>
+                                    <div className="col-span-1 flex justify-end">
+                                        <span className={`material-icons-outlined text-sm ${selectedPlayer.id === player.id ? 'text-white' : 'text-gray-600'}`}>visibility</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Right Column: Roster Comparison */}
+                <div className="lg:col-span-3 flex flex-col gap-6">
+                    <div className="bg-surface-dark rounded-xl border border-white/5 shadow-lg flex-1 p-5 relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-2 opacity-10">
+                            <span className="material-icons-outlined text-6xl">compare_arrows</span>
+                        </div>
+                        <h3 className="text-white font-bold text-sm mb-6 flex items-center gap-2 relative z-10">
+                            <span className="material-symbols-outlined text-primary text-sm">radar</span>
+                            Roster Comparison
+                        </h3>
+
+                        <div className="flex justify-between items-center mb-6 relative z-10">
+                            <div className="text-center">
+                                <div className="w-12 h-12 rounded-full border-2 border-primary bg-surface-darker flex items-center justify-center mb-2 overflow-hidden mx-auto shadow-[0_0_15px_rgba(210,249,111,0.2)]">
+                                    <img className="w-full h-full object-cover" src={selectedPlayer.img} alt={selectedPlayer.name} />
+                                </div>
+                                <div className="text-xs font-bold text-white">{selectedPlayer.name}</div>
+                                <div className="text-[9px] font-mono text-primary">SCOUTED</div>
+                            </div>
+                            <div className="text-xs font-mono text-gray-500">VS</div>
+                            <div className="text-center opacity-60">
+                                <div className="w-10 h-10 rounded-full border border-gray-600 bg-surface-darker flex items-center justify-center mb-2 overflow-hidden mx-auto grayscale">
+                                    <span className="material-icons text-xl text-gray-400">person</span>
+                                </div>
+                                <div className="text-xs font-bold text-gray-400">Tactical</div>
+                                <div className="text-[9px] font-mono text-gray-500">ROSTER</div>
                             </div>
                         </div>
 
-                        {/* Stats Display */}
-                        {viewMode === 'moneyball' ? (
-                            <div className="space-y-4">
-                                <div className="grid grid-cols-3 gap-2">
-                                    <div className="bg-black/30 rounded-lg p-3 text-center border border-white/5">
-                                        <div className="text-[10px] uppercase text-gray-500 font-bold tracking-wider mb-1 flex justify-center items-center gap-1">
-                                            eOBP <Activity size={10} className="text-blue-400" />
-                                        </div>
-                                        <div className="text-xl font-mono text-blue-400 font-bold">{player.eOBP.toFixed(3)}</div>
-                                    </div>
-                                    <div className="bg-black/30 rounded-lg p-3 text-center border border-white/5">
-                                        <div className="text-[10px] uppercase text-gray-500 font-bold tracking-wider mb-1 flex justify-center items-center gap-1">
-                                            eSLG <Zap size={10} className="text-yellow-400" />
-                                        </div>
-                                        <div className="text-xl font-mono text-yellow-400 font-bold">{player.eSLG.toFixed(0)}</div>
-                                    </div>
-                                    <div className="bg-black/30 rounded-lg p-3 text-center border border-white/5">
-                                        <div className="text-[10px] uppercase text-gray-500 font-bold tracking-wider mb-1 flex justify-center items-center gap-1">
-                                            eWAR <Trophy size={10} className="text-primary" />
-                                        </div>
-                                        <div className="text-xl font-mono text-primary font-bold">{player.eWAR.toFixed(1)}</div>
-                                    </div>
-                                </div>
+                        <div className="relative w-full aspect-square mb-6">
+                            {/* Static Radar for demo, could be dynamic with chart.js in future */}
+                            <svg className="w-full h-full text-gray-700" viewBox="0 0 100 100">
+                                <polygon fill="none" opacity="0.2" points="50,10 90,30 90,70 50,90 10,70 10,30" stroke="currentColor" strokeWidth="0.5"></polygon>
+                                <polygon fill="none" opacity="0.2" points="50,25 75,37.5 75,62.5 50,75 25,62.5 25,37.5" stroke="currentColor" strokeWidth="0.5"></polygon>
+                                <polygon className="drop-shadow-[0_0_8px_rgba(210,249,111,0.5)]" fill="rgba(210, 249, 111, 0.2)" points="50,12 85,32 80,68 50,85 20,65 15,35" stroke="#D2F96F" strokeWidth="2"></polygon>
+                                <polygon fill="rgba(255, 255, 255, 0.05)" points="50,30 70,40 65,65 50,70 30,60 25,45" stroke="#666" strokeDasharray="2 2" strokeWidth="1.5"></polygon>
+                            </svg>
+                        </div>
 
-                                <button
-                                    onClick={() => setSelectedPlayer(player)}
-                                    className="w-full py-3 mt-2 bg-gradient-to-r from-gray-800 to-gray-900 border border-white/10 rounded-lg text-sm text-gray-300 hover:text-white hover:border-primary/50 transition-all flex items-center justify-center gap-2 group-hover:from-gray-800 group-hover:to-gray-800"
-                                >
-                                    <Cpu size={14} />
-                                    Generate Scout Report (Gemini)
-                                </button>
+                        <div className="bg-surface-darker rounded border border-white/5 p-3">
+                            <div className="flex justify-between items-center mb-1">
+                                <span className="text-[10px] text-gray-400 uppercase tracking-widest">Projected Analysis</span>
+                                <span className="text-sm font-bold text-primary font-mono">
+                                    {analyzing ? '...' : (scoutReport ? 'AI Report' : `+${(selectedPlayer.metrics.war * 2.5).toFixed(1)} WAR`)}
+                                </span>
                             </div>
-                        ) : (
-                            <div className="space-y-4">
-                                <div className="flex justify-between items-center text-sm border-b border-white/5 pb-2">
-                                    <span className="text-gray-500">KDA Ratio</span>
-                                    <span className="text-white font-mono">{((player.stats.kills + player.stats.assists) / (player.stats.deaths || 1)).toFixed(2)}</span>
-                                </div>
-                                <div className="flex justify-between items-center text-sm border-b border-white/5 pb-2">
-                                    <span className="text-gray-500">Avg Gold</span>
-                                    <span className="text-white font-mono">{(player.stats.goldEarned / player.stats.gamesPlayed / 1000).toFixed(1)}k</span>
-                                </div>
-                                <div className="flex justify-between items-center text-sm pb-2">
-                                    <span className="text-gray-500">Win Rate</span>
-                                    <span className="text-white font-mono">{((player.stats.wins / player.stats.gamesPlayed) * 100).toFixed(1)}%</span>
-                                </div>
-                                <button className="w-full py-3 mt-2 bg-white text-black font-bold rounded-lg text-sm hover:bg-gray-200 transition-colors">
-                                    View Full Profile
-                                </button>
+                            <div className="w-full bg-gray-800 h-1 rounded-full mb-2">
+                                <div className="bg-primary h-1 rounded-full shadow-neon" style={{ width: `${selectedPlayer.fit}%` }}></div>
                             </div>
-                        )}
+                            <p className="text-[10px] text-gray-500 italic leading-relaxed h-20 overflow-y-auto custom-scrollbar">
+                                {analyzing ? (
+                                    <span className="animate-pulse">Generating scouting report with Gemini...</span>
+                                ) : scoutReport ? (
+                                    <span className="text-white">{scoutReport}</span>
+                                ) : (
+                                    `"${selectedPlayer.name} provides a significant upgrade in eOBP over the current roster option."`
+                                )}
+                            </p>
+                        </div>
                     </div>
-                ))}
-            </div>
 
-            {/* AI Scout Report Modal */}
-            {selectedPlayer && (
-                <ScoutingReportModal
-                    player={selectedPlayer}
-                    onClose={() => setSelectedPlayer(null)}
-                />
-            )}
+                    {/* Shortlist */}
+                    <section className="mt-8 border-t border-white/5 pt-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                                <span className="w-1.5 h-1.5 rounded-full bg-primary shadow-neon"></span>
+                                Active Shortlist
+                            </h3>
+                            <button className="text-xs text-primary hover:text-white transition">View All</button>
+                        </div>
+                        <div className="grid grid-cols-1 gap-4">
+                            {MARKET_PLAYERS.filter(p => p.status).map(player => (
+                                <div key={player.id} className="bg-surface-dark border border-white/5 rounded-lg p-3 flex items-center gap-3 hover:border-primary/30 transition cursor-pointer group" onClick={() => setSelectedPlayer(player)}>
+                                    <img className="w-10 h-10 rounded bg-black object-cover" src={player.img} alt={player.name} />
+                                    <div>
+                                        <div className="text-sm font-bold text-white group-hover:text-primary transition">{player.name}</div>
+                                        <div className="text-[10px] text-gray-500">Negotiation: <span className={player.status === 'In Progress' ? 'text-yellow-500' : 'text-gray-400'}>{player.status}</span></div>
+                                    </div>
+                                </div>
+                            ))}
+                            <div className="border border-dashed border-white/10 rounded-lg p-3 flex items-center justify-center gap-2 hover:bg-white/5 transition cursor-pointer text-gray-500 hover:text-white">
+                                <span className="material-icons-outlined text-sm">add</span>
+                                <span className="text-xs font-medium">Add to Shortlist</span>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
         </div>
     );
 };

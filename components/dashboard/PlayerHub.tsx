@@ -131,10 +131,10 @@ const PlayerHub: React.FC = () => {
                         <span className="material-icons-outlined text-sm">compare_arrows</span> Compare
                     </button>
                     <button
-                        onClick={openEditAttributes}
+                        onClick={() => window.location.href = '/dashboard/scout'}
                         className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-primary text-black font-bold text-sm hover:bg-primary-dark transition shadow-[0_0_5px_rgba(210,249,111,0.3),0_0_15px_rgba(210,249,111,0.1)] cursor-pointer"
                     >
-                        <span className="material-icons-outlined text-sm">visibility</span> Scout
+                        <span className="material-icons-outlined text-sm">auto_awesome</span> Market Scout
                     </button>
                 </div>
             </header>
