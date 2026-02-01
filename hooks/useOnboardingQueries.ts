@@ -53,8 +53,13 @@ export function useGridPlayers(teamId: string | null, titleId: string | null) {
                 throw error;
             }
 
-            console.log('Players fetched:', data?.players?.length);
-            return data?.players || [];
+            // Normalize GraphQL edges if present
+            const players = data?.players?.edges
+                ? data.players.edges.map((e: any) => e.node)
+                : data?.players || [];
+
+            console.log('Players fetched:', players.length);
+            return players;
         },
         enabled: !!teamId,
         staleTime: 1000 * 60 * 5, // 5 minutes
