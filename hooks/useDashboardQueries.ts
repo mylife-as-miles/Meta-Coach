@@ -56,8 +56,9 @@ async function invokeWithTimeout<T>(
         if (!response.ok) {
             // Check for 401 specifically
             if (response.status === 401) {
-                console.error('Session expired or invalid JWT. Redirecting to login...');
-                window.location.href = '/auth';
+                console.error('Session expired or invalid JWT. Returning 401 error.');
+                // Do NOT hard redirect here, as it causes loops if the API fails for other reasons
+                // window.location.href = '/auth'; 
                 return { data: null, error: { status: 401, message: 'Unauthorized' } };
             }
             return { data: null, error: data || { message: response.statusText } };
