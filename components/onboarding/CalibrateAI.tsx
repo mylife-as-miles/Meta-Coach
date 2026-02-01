@@ -68,8 +68,17 @@ const CalibrateAI: React.FC = () => {
     addLog("Querying GRID historical match database...");
 
     try {
-      const { data, error } = await supabase.functions.invoke('ai-match-prep', {
-        body: {
+      // Manual fetch with explicit token
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
+      const response = await fetch(`${supabase['supabaseUrl']}/functions/v1/ai-match-prep`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token || ''}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
           team: {
             name: teamName,
             region: 'Global', // Placeholder until real team metadata is available
@@ -78,10 +87,21 @@ const CalibrateAI: React.FC = () => {
           gameTitle,
           roster: roster.map(p => ({ role: p.role, ign: p.ign })),
           opponentName: customOpponent || opponentName
-        }
+        })
       });
 
-      if (error) throw error;
+      if (!response.ok) {
+        if (response.status === 401) {
+          window.location.href = '/auth';
+          throw new Error('Unauthorized');
+        }
+        throw new Error('AI Service Unavailable');
+      }
+
+      const data = await response.json();
+      if (data.error) throw new Error(data.error);
+
+
 
       addLog("Analysis complete. Generating strategic profile...");
       await new Promise(r => setTimeout(r, 500));

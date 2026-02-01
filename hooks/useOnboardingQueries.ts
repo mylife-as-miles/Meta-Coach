@@ -13,10 +13,29 @@ export function useGridTeams(titleId: string | null) {
         queryKey: onboardingKeys.teams(titleId),
         queryFn: async () => {
             if (!titleId) return [];
-            const { data, error } = await supabase.functions.invoke('grid-teams', {
-                body: { titleId }
+
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+
+            const response = await fetch(`${supabase['supabaseUrl']}/functions/v1/grid-teams`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token || ''}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ titleId })
             });
-            if (error) throw new Error(error.message || 'Failed to fetch teams');
+
+            if (!response.ok) {
+                if (response.status === 401) {
+                    window.location.href = '/auth';
+                    throw new Error('Unauthorized');
+                }
+                throw new Error('Failed to fetch teams');
+            }
+
+            const data = await response.json();
+            if (data.error) throw new Error(data.error);
             return data?.teams || [];
         },
         enabled: !!titleId,
@@ -34,15 +53,34 @@ export function useGridPlayers(teamId: string | null, titleId: string | null) {
             if (!teamId) return [];
             console.log('Fetching players for team:', teamId, 'with name:', teamName);
 
-            const { data, error } = await supabase.functions.invoke('grid-players', {
-                body: {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+
+            const response = await fetch(`${supabase['supabaseUrl']}/functions/v1/grid-players`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token || ''}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
                     teamId,
                     titleId,
                     teamName // Important for AI image search
-                }
+                })
             });
 
-            if (error) throw new Error(error.message || 'Failed to fetch players');
+            if (!response.ok) {
+                if (response.status === 401) {
+                    window.location.href = '/auth';
+                    throw new Error('Unauthorized');
+                }
+                const errData = await response.json();
+                throw new Error(errData.error || 'Failed to fetch players');
+            }
+
+            const data = await response.json();
+            if (data.error) throw new Error(data.error);
+
             console.log('Players fetched:', data?.players?.length);
             return data?.players || [];
         },

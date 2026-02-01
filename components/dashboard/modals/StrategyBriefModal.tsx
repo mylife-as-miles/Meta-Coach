@@ -32,12 +32,29 @@ const StrategyBriefModal: React.FC<StrategyBriefModalProps> = ({ isOpen, onClose
                 setIsLoading(true);
                 setError(null);
                 try {
-                    const { data, error: fetchError } = await supabase.functions.invoke('ai-match-prep', {
-                        body: { opponentId }
+                    // Manual fetch with explicit token
+                    const { data: { session } } = await supabase.auth.getSession();
+                    const token = session?.access_token;
+
+                    const response = await fetch(`${supabase['supabaseUrl']}/functions/v1/ai-match-prep`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token || ''}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ opponentId })
                     });
 
-                    if (fetchError) throw new Error(fetchError.message);
-                    setMatchPrepData(data);
+                    if (!response.ok) {
+                        if (response.status === 401) {
+                            window.location.href = '/auth';
+                            throw new Error('Unauthorized');
+                        }
+                        throw new Error('Failed to fetch strategy brief');
+                    }
+
+                    const data = await response.json();
+
                 } catch (err: any) {
                     console.error('Error fetching match prep:', err);
                     setError(err.message);
