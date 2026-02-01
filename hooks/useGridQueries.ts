@@ -3,13 +3,40 @@ import { supabase } from '../lib/supabase';
 
 // Helper to invoke the grid-players edge function
 const invokeGridPlayers = async (action: string, params: any = {}) => {
-    const { data, error } = await supabase.functions.invoke('grid-players', {
-        body: { action, ...params }
-    });
+    // 1. Get fresh session token explicitly
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
 
-    if (error) throw error;
-    if (data.error) throw new Error(data.error);
-    return data;
+    // 2. Manual fetch
+    const functionUrl = `${supabase['supabaseUrl']}/functions/v1/grid-players`;
+
+    try {
+        const response = await fetch(functionUrl, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token || ''}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ action, ...params })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            if (response.status === 401) {
+                console.error('Session expired or invalid JWT (grid-players). Redirecting to login...');
+                window.location.href = '/auth';
+                return { players: [], error: 'Unauthorized' };
+            }
+            throw new Error(data.error || 'Failed to fetch');
+        }
+
+        if (data.error) throw new Error(data.error);
+        return data;
+
+    } catch (error) {
+        throw error;
+    }
 };
 
 // ==========================================
@@ -20,12 +47,37 @@ export const useGridTeamPlayers = (teamId: string, first: number = 50, options?:
     return useQuery({
         queryKey: ['gridTeamPlayers', teamId, first],
         queryFn: async () => {
-            const { data, error } = await supabase.functions.invoke('grid-players', {
-                body: { teamId, first } // Sending simplified payload as requested
-            });
-            if (error) throw error;
-            if (data.error) throw new Error(data.error);
-            return data;
+            // Manual fetch for consistency and 401 handling
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+            const functionUrl = `${supabase['supabaseUrl']}/functions/v1/grid-players`;
+
+            try {
+                const response = await fetch(functionUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token || ''}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ teamId, first })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        console.error('Session expired or invalid JWT (gridTeamPlayers). Redirecting to login...');
+                        window.location.href = '/auth';
+                        return { players: [], error: 'Unauthorized' };
+                    }
+                    throw new Error(data.error || 'Failed to fetch');
+                }
+
+                if (data.error) throw new Error(data.error);
+                return data;
+            } catch (error) {
+                throw error;
+            }
         },
         enabled: !!teamId && (options?.enabled ?? true)
     });

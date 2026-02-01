@@ -26,24 +26,49 @@ async function invokeWithTimeout<T>(
     body: any,
     timeoutMs: number = 10000
 ): Promise<{ data: T | null; error: any }> {
-    const invokePromise = supabase.functions.invoke(functionName, { body });
-    const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error(`${functionName} timeout after ${timeoutMs}ms`)), timeoutMs)
-    );
-
     try {
-        const result = await Promise.race([invokePromise, timeoutPromise]);
+        // 1. Get fresh session token explicitly (as requested)
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
 
-        // Handle 401 Unauthorized globally for Edge Functions
-        if (result && (result as any).error && ((result as any).error?.status === 401 || (result as any).error?.code === 401 || (result as any).error?.message?.includes('Invalid JWT'))) {
-            console.error('Session expired or invalid JWT. Redirecting to login...');
-            // Clear session if possible (optional)
-            window.location.href = '/auth'; // Force redirect to auth/login
-            return { data: null, error: (result as any).error };
+        // 2. Construct URL (using internal URL logic or fallback)
+        // Hardcoded project ref for certainty based on user request context, or use supabase.supabaseUrl
+        // const projectUrl = supabase.supabaseUrl; // e.g. https://mhvdcrxoulyrwvrcjdyy.supabase.co
+        const functionUrl = `${supabase['supabaseUrl']}/functions/v1/${functionName}`;
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+        const response = await fetch(functionUrl, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token || ''}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(body),
+            signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            // Check for 401 specifically
+            if (response.status === 401) {
+                console.error('Session expired or invalid JWT. Redirecting to login...');
+                window.location.href = '/auth';
+                return { data: null, error: { status: 401, message: 'Unauthorized' } };
+            }
+            return { data: null, error: data || { message: response.statusText } };
         }
 
-        return result as { data: T | null; error: any };
+        return { data, error: null };
+
     } catch (error: any) {
+        if (error.name === 'AbortError') {
+            return { data: null, error: new Error(`${functionName} timeout after ${timeoutMs}ms`) };
+        }
         console.warn(`Edge function ${functionName} failed:`, error);
         return { data: null, error };
     }
