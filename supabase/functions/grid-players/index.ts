@@ -196,11 +196,12 @@ serve(async (req) => {
 
             // Default fallback for original team-based query (backward compatibility if needed, though we should migrate)
             default:
+            default:
                 if (params.teamId) {
                     // Legacy behavior for "list players by team"
                     query = `
-                        query GetPlayersForTeam($teamId: ID!) {
-                            players(filter: { teamIdFilter: { id: $teamId } }, first: 20) {
+                        query GetPlayersForTeam($teamId: ID!, $first: Int) {
+                            players(filter: { teamIdFilter: { id: $teamId } }, first: $first) {
                                 edges {
                                     node {
                                         id
@@ -214,7 +215,10 @@ serve(async (req) => {
                             }
                         }
                     `;
-                    variables = { teamId: params.teamId };
+                    variables = {
+                        teamId: params.teamId,
+                        first: params.first || 50
+                    };
                 } else {
                     throw new Error(`Unknown action: ${action}`);
                 }

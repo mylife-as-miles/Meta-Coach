@@ -16,6 +16,21 @@ const invokeGridPlayers = async (action: string, params: any = {}) => {
 // QUERIES
 // ==========================================
 
+export const useGridTeamPlayers = (teamId: string, first: number = 50, options?: { enabled?: boolean }) => {
+    return useQuery({
+        queryKey: ['gridTeamPlayers', teamId, first],
+        queryFn: async () => {
+            const { data, error } = await supabase.functions.invoke('grid-players', {
+                body: { teamId, first } // Sending simplified payload as requested
+            });
+            if (error) throw error;
+            if (data.error) throw new Error(data.error);
+            return data;
+        },
+        enabled: !!teamId && (options?.enabled ?? true)
+    });
+};
+
 export const useGridPlayers = (filter?: any, first: number = 20, options?: { enabled?: boolean }) => {
     return useQuery({
         queryKey: ['gridPlayers', filter, first],

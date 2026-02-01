@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useDashboardStore } from '../../stores/useDashboardStore';
 import { useSession } from '../../hooks/useAuth';
 import { useWorkspace, usePlayerStats, usePlayerStatistics, usePlayerAnalysis } from '../../hooks/useDashboardQueries';
-import { useGridPlayers, useGridPlayer, useGridCreatePlayer, useGridDeletePlayer } from '../../hooks/useGridQueries';
+import { useGridPlayers, useGridPlayer, useGridCreatePlayer, useGridDeletePlayer, useGridTeamPlayers } from '../../hooks/useGridQueries';
 import { getProxiedImageUrl } from '../../lib/imageProxy';
 import ComparePlayersModal from './modals/ComparePlayersModal';
 import EditAttributesModal from './modals/EditAttributesModal';
@@ -31,9 +31,10 @@ const PlayerHub: React.FC = () => {
     const teamId = workspace?.grid_team_id || "1"; // Defaulting to 1 for demo if no team linked
 
     // Only fetch grid players if we have a valid user session to prevent 401 Unauthorized race conditions
-    const { data: gridPlayersData, isLoading: playersLoading } = useGridPlayers(
-        { teamIdFilter: { id: teamId } },
-        20,
+    // Use the simplified team-focused hook as requested
+    const { data: gridPlayersData, isLoading: playersLoading } = useGridTeamPlayers(
+        teamId,
+        50, // Higher limit as requested
         { enabled: !!userId }
     );
     const { mutate: createPlayer } = useGridCreatePlayer();
