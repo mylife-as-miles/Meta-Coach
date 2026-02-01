@@ -1,5 +1,6 @@
 // supabase/functions/player-analysis/index.ts
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
 import { GoogleGenAI } from 'npm:@google/genai@^1.0.0'
 
@@ -9,12 +10,18 @@ serve(async (req) => {
     }
 
     try {
-        const { playerName, playerRole, teamId, recentStats } = await req.json()
+        const { playerName, playerRole, teamId, recentStats, playerId } = await req.json()
         const apiKey = Deno.env.get('GEMINI_API_KEY')
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')
+        const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+
         if (!apiKey) throw new Error('GEMINI_API_KEY not configured')
 
-        // Initialize Gemini Client
-        const client = new GoogleGenAI({ apiKey })
+        // Initialize Clients
+        const genAI = new GoogleGenAI({ apiKey })
+        const supabase = (supabaseUrl && supabaseKey)
+            ? createClient(supabaseUrl, supabaseKey)
+            : null
 
         // Configuration for Gemini 3.0 Pro
         const tools = [
@@ -59,7 +66,7 @@ serve(async (req) => {
     `
 
         // Generate Content
-        const result = await client.models.generateContent({
+        const result = await genAI.models.generateContent({
             model,
             config,
             contents: [{ role: 'user', parts: [{ text: prompt }] }],
@@ -75,22 +82,42 @@ serve(async (req) => {
         } else if (result.response && typeof result.response.text === 'function') {
             text = result.response.text();
         } else if (result.candidates && result.candidates.length > 0) {
-            // Direct candidate access
             text = result.candidates[0].content?.parts?.[0]?.text || "";
         } else {
-            // Fallback: try to stringify or check for 'data'
             console.warn("Unexpected Gemini response shape:", result);
             text = JSON.stringify(result);
         }
 
         console.log("Gemini 3 Analysis Extracted:", text.substring(0, 100) + "...");
 
+        // Persist to Database if playerId is provided
+        if (playerId && text && supabase) {
+            try {
+                const analysisJson = JSON.parse(text);
+                console.log(`Persisting analysis for player ${playerId}`);
+                const { error: dbError } = await supabase
+                    .from('roster')
+                    .update({
+                        analysis_data: analysisJson
+                    })
+                    .eq('id', playerId);
+
+                if (dbError) {
+                    console.error("Failed to persist analysis:", dbError);
+                } else {
+                    console.log("Analysis saved to DB for player:", playerId);
+                }
+            } catch (e) {
+                console.error("Failed to parse/save JSON:", e);
+            }
+        }
+
         return new Response(text, {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
 
     } catch (error) {
-        console.error("Gemini Error:", error);
+        console.error("Function Error:", error);
         return new Response(JSON.stringify({ error: error.message || error.toString() }), {
             status: 500,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }

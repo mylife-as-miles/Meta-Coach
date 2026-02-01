@@ -989,7 +989,8 @@ export function usePlayerAnalysis(
     playerName: string | undefined,
     playerRole?: string,
     teamId?: string,
-    recentStats?: any
+    recentStats?: any,
+    playerId?: string
 ) {
     return useQuery({
         queryKey: ['playerAnalysis', playerName, teamId],

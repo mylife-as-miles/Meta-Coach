@@ -70,7 +70,8 @@ const PlayerHub: React.FC = () => {
         selectedPlayer?.name,
         selectedPlayer?.role,
         teamId,
-        playerDetailedStats
+        playerDetailedStats,
+        selectedPlayer?.id // Pass ID for persistence
     );
 
     // Handle URL params for direct linking
