@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useSession } from '../../hooks/useAuth';
-import { useWorkspace, useUserProfile, useTeamProfile, useMatches, useUpdateUserProfile } from '../../hooks/useDashboardQueries';
+import { useWorkspace, useUserProfile, useTeamProfile, useMatches } from '../../hooks/useDashboardQueries';
 
 const CoachProfile: React.FC = () => {
-    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-
     // Server Data from TanStack Query
     const { data: session } = useSession();
     const userId = session?.user?.id;
@@ -12,48 +11,6 @@ const CoachProfile: React.FC = () => {
     const { data: userProfile } = useUserProfile(userId);
     const { data: teamProfile } = useTeamProfile(workspace?.id, workspace?.grid_team_id);
     const { data: allMatches = [] } = useMatches(workspace?.grid_team_id);
-
-    // Profile update mutation
-    const updateProfileMutation = useUpdateUserProfile();
-
-    // Edit Form State
-    const [formData, setFormData] = useState({
-        name: '',
-        role: '',
-        bio: '',
-        location: '',
-        languages: '',
-    });
-
-    useEffect(() => {
-        if (userProfile) {
-            setFormData({
-                name: userProfile.name || '',
-                role: userProfile.role || 'Coach',
-                bio: userProfile.bio || '',
-                location: userProfile.location || '',
-                languages: userProfile.languages ? userProfile.languages.join(', ') : '',
-            });
-        }
-    }, [userProfile]);
-
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        const { id, value } = e.target;
-        setFormData(prev => ({ ...prev, [id]: value }));
-    };
-
-    const handleSave = async () => {
-        if (!userId) return;
-        await updateProfileMutation.mutateAsync({
-            userId,
-            name: formData.name,
-            role: formData.role,
-            bio: formData.bio,
-            location: formData.location,
-            languages: formData.languages.split(',').map(l => l.trim()).filter(Boolean)
-        });
-        setIsEditModalOpen(false);
-    };
 
     // Derived Stats
     const matchesCoached = allMatches.length;
@@ -138,123 +95,7 @@ const CoachProfile: React.FC = () => {
                 }
             `}</style>
 
-            {/* Edit Profile Modal */}
-            {isEditModalOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsEditModalOpen(false)}></div>
-                    <div className="relative w-full max-w-2xl bg-surface-dark border border-primary/30 rounded-2xl shadow-2xl overflow-hidden animate-fade-in-up">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
-                        <div className="px-8 py-6 border-b border-white/5 flex justify-between items-center relative z-10">
-                            <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
-                                <span className="material-icons-outlined text-primary">edit_note</span>
-                                Edit Profile
-                            </h2>
-                            <button className="text-gray-400 hover:text-white transition" onClick={() => setIsEditModalOpen(false)}>
-                                <span className="material-icons-outlined">close</span>
-                            </button>
-                        </div>
-                        <div className="px-8 py-6 max-h-[70vh] overflow-y-auto custom-scrollbar relative z-10">
-                            <form className="space-y-6">
-                                <div className="flex items-center gap-6">
-                                    <div className="relative group">
-                                        {userProfile?.avatar ? (
-                                            <img alt="Profile Preview" className="w-20 h-20 rounded-full border-2 border-primary/20 object-cover" src={userProfile.avatar} />
-                                        ) : (
-                                            <div className="w-20 h-20 rounded-full border-2 border-primary/20 bg-surface-darker flex items-center justify-center text-xl font-bold text-gray-500">
-                                                {userProfile?.name?.substring(0, 2).toUpperCase() || 'CH'}
-                                            </div>
-                                        )}
-                                        {/* Avatar upload placeholder - implementation omitted as per scope, but UI preserved */}
-                                        <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition cursor-pointer">
-                                            <span className="material-icons-outlined text-white text-sm">camera_alt</span>
-                                        </div>
-                                    </div>
-                                    <div className="flex-1">
-                                        <label className="block text-sm font-medium text-gray-400 mb-1">Profile Picture</label>
-                                        <div className="flex gap-3">
-                                            <button className="px-4 py-2 bg-surface-darker border border-white/10 hover:border-primary/50 rounded-lg text-sm text-white transition flex items-center gap-2" type="button">
-                                                <span className="material-icons-outlined text-base">upload</span> Upload New
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-400 mb-1.5" htmlFor="name">Full Name</label>
-                                        <input
-                                            className="w-full bg-surface-darker border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder-gray-600 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition"
-                                            id="name"
-                                            type="text"
-                                            value={formData.name}
-                                            onChange={handleInputChange}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-400 mb-1.5" htmlFor="role">Role</label>
-                                        <input
-                                            className="w-full bg-surface-darker border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder-gray-600 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition"
-                                            id="role"
-                                            type="text"
-                                            value={formData.role}
-                                            onChange={handleInputChange}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-400 mb-1.5" htmlFor="location">Location</label>
-                                        <input
-                                            className="w-full bg-surface-darker border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder-gray-600 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition"
-                                            id="location"
-                                            type="text"
-                                            value={formData.location}
-                                            onChange={handleInputChange}
-                                            placeholder="e.g. Los Angeles, CA"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-400 mb-1.5" htmlFor="languages">Languages</label>
-                                        <input
-                                            className="w-full bg-surface-darker border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder-gray-600 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition"
-                                            id="languages"
-                                            type="text"
-                                            value={formData.languages}
-                                            onChange={handleInputChange}
-                                            placeholder="e.g. English, Korean"
-                                        />
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-400 mb-1.5" htmlFor="bio">Professional Bio</label>
-                                    <textarea
-                                        className="w-full bg-surface-darker border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder-gray-600 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition min-h-[100px]"
-                                        id="bio"
-                                        value={formData.bio}
-                                        onChange={handleInputChange}
-                                    ></textarea>
-                                    <div className="flex justify-between mt-1">
-                                        <span className="text-xs text-gray-500">Brief description for your public profile card.</span>
-                                    </div>
-                                </div>
-                            </form>
-                        </div>
-                        <div className="px-8 py-5 border-t border-white/5 flex justify-end gap-3 bg-surface-darker/50 relative z-10">
-                            <button
-                                className="px-6 py-2.5 rounded-xl text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 transition border border-transparent"
-                                onClick={() => setIsEditModalOpen(false)}
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                className="px-6 py-2.5 rounded-xl text-sm font-bold bg-primary hover:bg-primary-dark text-black shadow-neon transition flex items-center gap-2"
-                                onClick={handleSave}
-                            >
-                                <span className="material-icons-outlined text-lg">save</span> Save Changes
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            <div className={isEditModalOpen ? "blur-sm brightness-50 pointer-events-none transition duration-300" : "transition duration-300"}>
+            <div className="transition duration-300">
                 <header className="relative bg-surface-dark rounded-2xl p-8 mb-6 border border-white/5 overflow-hidden shadow-glow">
                     <div className="absolute inset-0 grid-bg opacity-30"></div>
                     <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
@@ -281,7 +122,7 @@ const CoachProfile: React.FC = () => {
                                     AI Synergy: Elite
                                 </span>
                             </div>
-                            <p className="text-gray-400 max-w-2xl mb-4">{userProfile?.bio || "No professional bio available. Click edit to add one."}</p>
+                            <p className="text-gray-400 max-w-2xl mb-4">{userProfile?.bio || "No professional bio available. Go to Settings to add one."}</p>
                             <div className="flex items-center gap-6 justify-center md:justify-start text-sm text-gray-500 font-mono">
                                 <span className="flex items-center gap-1"><span className="material-icons-outlined text-base">verified</span> Member since {memberSince}</span>
                                 <span className="flex items-center gap-1"><span className="material-icons-outlined text-base">location_on</span> {userProfile?.location || 'Unknown Location'}</span>
@@ -292,12 +133,13 @@ const CoachProfile: React.FC = () => {
                             <button className="bg-white text-black hover:bg-gray-200 px-6 py-2.5 rounded-xl font-semibold text-sm transition flex items-center gap-2 cursor-pointer">
                                 <span className="material-icons-outlined text-lg">mail</span> Contact
                             </button>
-                            <button
-                                className="bg-surface-dark border border-white/10 hover:border-primary/50 text-white hover:text-primary px-4 py-2.5 rounded-xl transition cursor-pointer"
-                                onClick={() => setIsEditModalOpen(true)}
+                            <Link
+                                to="/dashboard/settings"
+                                className="bg-surface-dark border border-white/10 hover:border-primary/50 text-white hover:text-primary px-4 py-2.5 rounded-xl transition cursor-pointer flex items-center justify-center"
+                                title="Edit Profile"
                             >
-                                <span className="material-icons-outlined text-lg">edit</span>
-                            </button>
+                                <span className="material-icons-outlined text-lg">settings</span>
+                            </Link>
                         </div>
                     </div>
                 </header>

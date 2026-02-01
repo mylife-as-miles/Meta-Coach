@@ -1,13 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useSession, useProfile } from '../../../hooks/useAuth';
+import { useUpdateUserProfile } from '../../../hooks/useDashboardQueries';
 import { supabase } from '../../../lib/supabase';
 
 const AccountSettings: React.FC = () => {
     const { data: session } = useSession();
     const userId = session?.user?.id;
     const { data: profile, isLoading, refetch } = useProfile(userId);
+    const updateProfileMutation = useUpdateUserProfile();
 
     const [displayName, setDisplayName] = useState('');
+    const [role, setRole] = useState('');
+    const [bio, setBio] = useState('');
+    const [location, setLocation] = useState('');
+    const [languages, setLanguages] = useState('');
     const [email, setEmail] = useState('');
     const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
     const [uploading, setUploading] = useState(false);
@@ -18,8 +24,12 @@ const AccountSettings: React.FC = () => {
     useEffect(() => {
         if (session?.user?.email) setEmail(session.user.email);
         if (profile) {
-            setDisplayName(profile.display_name || '');
-            setAvatarUrl(profile.avatar_url || '');
+            setDisplayName(profile.display_name || profile.name || '');
+            setRole(profile.role || '');
+            setBio(profile.bio || '');
+            setLocation(profile.location || '');
+            setLanguages(profile.languages ? profile.languages.join(', ') : '');
+            setAvatarUrl(profile.avatar_url || profile.avatar || '');
         }
     }, [session, profile]);
 
@@ -75,19 +85,19 @@ const AccountSettings: React.FC = () => {
     };
 
     const handleSaveChanges = async () => {
+        if (!userId) return;
         try {
             setSaving(true);
             setMessage(null);
 
-            const updates = {
-                id: userId,
-                display_name: displayName,
-                updated_at: new Date(),
-            };
-
-            const { error } = await supabase.from('profiles').upsert(updates);
-
-            if (error) throw error;
+            await updateProfileMutation.mutateAsync({
+                userId,
+                name: displayName,
+                role,
+                bio,
+                location,
+                languages: languages.split(',').map(l => l.trim()).filter(Boolean)
+            });
 
             refetch();
             setMessage({ type: 'success', text: 'Profile updated successfully!' });
@@ -120,16 +130,9 @@ const AccountSettings: React.FC = () => {
                 {/* Header */}
                 <div className="flex justify-between items-start mb-8 border-b border-white/5 pb-6">
                     <div>
-                        <h2 className="text-2xl font-bold text-white mb-1">Account Settings</h2>
-                        <p className="text-sm text-gray-400">Manage your profile information and account security.</p>
+                        <h2 className="text-2xl font-bold text-white mb-1">Account & Profile</h2>
+                        <p className="text-sm text-gray-400">Manage your public profile and account security.</p>
                     </div>
-                    <button
-                        onClick={handleSignOut}
-                        className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-sm text-white transition flex items-center gap-2 cursor-pointer"
-                    >
-                        <span className="material-symbols-outlined text-sm">logout</span>
-                        Sign Out
-                    </button>
                 </div>
 
                 {/* Feedback Message */}
@@ -143,7 +146,7 @@ const AccountSettings: React.FC = () => {
                 <div className="mb-8">
                     <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
                         <span className="material-symbols-outlined text-primary">person</span>
-                        Profile Information
+                        Public Profile
                     </h3>
                     <div className="bg-surface-darker rounded-xl border border-white/5 p-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -189,6 +192,61 @@ const AccountSettings: React.FC = () => {
                                     placeholder="Your Name"
                                 />
                             </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-300 mb-2">Role</label>
+                                <input
+                                    className="w-full bg-background-dark border border-white/10 rounded-lg px-4 py-2.5 text-white focus:border-primary focus:ring-1 focus:ring-primary placeholder-gray-600 transition"
+                                    type="text"
+                                    value={role}
+                                    onChange={(e) => setRole(e.target.value)}
+                                    placeholder="e.g. Head Coach"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-300 mb-2">Location</label>
+                                <input
+                                    className="w-full bg-background-dark border border-white/10 rounded-lg px-4 py-2.5 text-white focus:border-primary focus:ring-1 focus:ring-primary placeholder-gray-600 transition"
+                                    type="text"
+                                    value={location}
+                                    onChange={(e) => setLocation(e.target.value)}
+                                    placeholder="e.g. Los Angeles, CA"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-300 mb-2">Languages</label>
+                                <input
+                                    className="w-full bg-background-dark border border-white/10 rounded-lg px-4 py-2.5 text-white focus:border-primary focus:ring-1 focus:ring-primary placeholder-gray-600 transition"
+                                    type="text"
+                                    value={languages}
+                                    onChange={(e) => setLanguages(e.target.value)}
+                                    placeholder="e.g. English, Korean (comma separated)"
+                                />
+                            </div>
+
+                            <div className="col-span-1 md:col-span-2">
+                                <label className="block text-sm font-medium text-gray-300 mb-2">Information / Bio</label>
+                                <textarea
+                                    className="w-full bg-background-dark border border-white/10 rounded-lg px-4 py-2.5 text-white focus:border-primary focus:ring-1 focus:ring-primary placeholder-gray-600 transition min-h-[100px]"
+                                    value={bio}
+                                    onChange={(e) => setBio(e.target.value)}
+                                    placeholder="Brief description for your public profile card."
+                                ></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Account Security */}
+                <div className="mb-8">
+                    <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                        <span className="material-symbols-outlined text-primary">lock</span>
+                        Account Security
+                    </h3>
+                    <div className="bg-surface-darker rounded-xl border border-white/5 p-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <label className="block text-sm font-medium text-gray-300 mb-2">Email Address</label>
                                 <input
@@ -200,25 +258,24 @@ const AccountSettings: React.FC = () => {
                                 />
                             </div>
 
-                            {/* Password Reset */}
-                            <div className="col-span-1 md:col-span-2 pt-2">
+                            <div className="flex items-end">
                                 <button
                                     onClick={handlePasswordReset}
-                                    className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-sm text-white transition flex items-center gap-2 w-fit cursor-pointer"
+                                    className="px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-sm text-white transition flex items-center gap-2 w-fit cursor-pointer h-[42px]"
                                 >
                                     <span className="material-symbols-outlined text-sm">lock_reset</span>
-                                    Change Password
+                                    Reset Password
                                 </button>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                {/* Security (Static for now, but functional toggle UI) */}
+                {/* Security (Static) */}
                 <div className="mb-8">
                     <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
                         <span className="material-symbols-outlined text-primary">security</span>
-                        Security
+                        Security Features
                     </h3>
                     <div className="bg-surface-darker rounded-xl border border-white/5 overflow-hidden">
                         <div className="flex items-center justify-between p-5 hover:bg-white/[0.02] transition">
@@ -265,8 +322,12 @@ const AccountSettings: React.FC = () => {
                     <button
                         onClick={() => {
                             if (profile) {
-                                setDisplayName(profile.display_name || '');
-                                setAvatarUrl(profile.avatar_url || '');
+                                setDisplayName(profile.display_name || profile.name || '');
+                                setRole(profile.role || '');
+                                setBio(profile.bio || '');
+                                setLocation(profile.location || '');
+                                setLanguages(profile.languages ? profile.languages.join(', ') : '');
+                                setAvatarUrl(profile.avatar_url || profile.avatar || '');
                             }
                             setMessage(null);
                         }}
