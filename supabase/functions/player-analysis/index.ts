@@ -58,15 +58,32 @@ serve(async (req) => {
       The scores should be realistic (0-100).
     `
 
-        // Generate Content (Non-streaming for simpler Edge Function response)
-        const response = await client.models.generateContent({
+        // Generate Content
+        const result = await client.models.generateContent({
             model,
             config,
             contents: [{ role: 'user', parts: [{ text: prompt }] }],
         })
 
-        const text = response.text()
-        console.log("Gemini 3 Analysis:", text)
+        console.log("Gemini Raw Result Keys:", Object.keys(result));
+
+        let text = "";
+
+        // Handle various response shapes from the new SDK
+        if (typeof result.text === 'function') {
+            text = result.text();
+        } else if (result.response && typeof result.response.text === 'function') {
+            text = result.response.text();
+        } else if (result.candidates && result.candidates.length > 0) {
+            // Direct candidate access
+            text = result.candidates[0].content?.parts?.[0]?.text || "";
+        } else {
+            // Fallback: try to stringify or check for 'data'
+            console.warn("Unexpected Gemini response shape:", result);
+            text = JSON.stringify(result);
+        }
+
+        console.log("Gemini 3 Analysis Extracted:", text.substring(0, 100) + "...");
 
         return new Response(text, {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
