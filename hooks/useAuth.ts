@@ -35,7 +35,7 @@ export function useProfile(userId: string | undefined) {
 
             const { data, error } = await supabase
                 .from('profiles')
-                .select('onboarding_complete')
+                .select('*')
                 .eq('id', userId)
                 .single();
 
@@ -60,7 +60,7 @@ function useQueryClientEffect(queryClient: any) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
         // console.log('Auth State Change:', event, session?.user?.id);
 
-        if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+        if (event === 'SIGNED_OUT' || event === 'USER_DELETED' as any) {
             // Clear all data
             queryClient.clear();
             // Redirect to Auth if not already there (handled by Router usually, but we force it)
@@ -68,7 +68,7 @@ function useQueryClientEffect(queryClient: any) {
                 window.location.href = '/auth';
             }
         }
-        else if (event === 'TOKEN_REFRESH_ROKEN') {
+        else if (event === 'TOKEN_REFRESH_BROKEN' as any) {
             // Refresh failed (likely revoked or expired max age)
             console.error('Token refresh failed. Redirecting to login.');
             queryClient.clear();
