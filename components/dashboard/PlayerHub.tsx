@@ -49,7 +49,8 @@ const PlayerHub: React.FC = () => {
             },
             gridId: player.grid_player_id, // GRID ID for stats
             imageUrl: player.metadata?.imageUrl || player.image_url,
-            teamId: player.workspace_id // or grid team id? keeping consistent
+            teamId: player.workspace_id, // or grid team id? keeping consistent
+            synergy: player.synergy_score || 85 // Added to satisfy Player interface
         }));
     }, [rosterPlayers]);
 
