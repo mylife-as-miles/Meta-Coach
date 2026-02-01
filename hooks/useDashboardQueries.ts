@@ -33,8 +33,17 @@ async function invokeWithTimeout<T>(
 
     try {
         const result = await Promise.race([invokePromise, timeoutPromise]);
+
+        // Handle 401 Unauthorized globally for Edge Functions
+        if (result && (result as any).error && ((result as any).error?.status === 401 || (result as any).error?.code === 401 || (result as any).error?.message?.includes('Invalid JWT'))) {
+            console.error('Session expired or invalid JWT. Redirecting to login...');
+            // Clear session if possible (optional)
+            window.location.href = '/auth'; // Force redirect to auth/login
+            return { data: null, error: (result as any).error };
+        }
+
         return result as { data: T | null; error: any };
-    } catch (error) {
+    } catch (error: any) {
         console.warn(`Edge function ${functionName} failed:`, error);
         return { data: null, error };
     }

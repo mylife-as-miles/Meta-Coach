@@ -7,9 +7,11 @@ import { useGridCreatePlayer, useGridDeletePlayer, useGridTeamPlayers } from '..
 import { getProxiedImageUrl } from '../../lib/imageProxy';
 import ComparePlayersModal from './modals/ComparePlayersModal';
 import EditAttributesModal from './modals/EditAttributesModal';
+import AddPlayerModal from './modals/AddPlayerModal';
 
 const PlayerHub: React.FC = () => {
     const [searchParams] = useSearchParams();
+    const [addPlayerOpen, setAddPlayerOpen] = React.useState(false);
 
     // UI State from Zustand
     const selectedPlayer = useDashboardStore((state) => state.selectedPlayer);
@@ -530,13 +532,7 @@ const PlayerHub: React.FC = () => {
                     <h3 className="text-xl font-bold text-white">Active Roster</h3>
                     <div className="flex gap-2">
                         <button
-                            onClick={async () => {
-                                const nickname = prompt("Enter player nickname:");
-                                if (nickname) {
-                                    // Hardcoding Title ID 3 (LoL) and current Team ID for demo
-                                    createPlayer({ createPlayerInput: { nickname, teamId, titleId: "3" } });
-                                }
-                            }}
+                            onClick={() => setAddPlayerOpen(true)}
                             className="px-3 py-1 rounded bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 text-xs font-bold transition flex items-center gap-1"
                         >
                             <span className="material-icons-outlined text-sm">add</span> Add Player
@@ -596,6 +592,13 @@ const PlayerHub: React.FC = () => {
             </section>
 
             {/* Modals */}
+            <AddPlayerModal
+                isOpen={addPlayerOpen}
+                onClose={() => setAddPlayerOpen(false)}
+                onAdd={(nickname) => {
+                    createPlayer({ createPlayerInput: { nickname, teamId, titleId: "3" } });
+                }}
+            />
             <ComparePlayersModal
                 isOpen={comparePlayersOpen}
                 onClose={closeComparePlayers}
