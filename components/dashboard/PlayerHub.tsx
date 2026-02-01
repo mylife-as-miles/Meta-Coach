@@ -2,8 +2,8 @@ import React, { useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useDashboardStore } from '../../stores/useDashboardStore';
 import { useSession } from '../../hooks/useAuth';
-import { useWorkspace, usePlayerStats, usePlayerStatistics, usePlayerAnalysis } from '../../hooks/useDashboardQueries';
-import { useGridPlayers, useGridPlayer, useGridCreatePlayer, useGridDeletePlayer, useGridTeamPlayers } from '../../hooks/useGridQueries';
+import { useWorkspace, usePlayerStats, usePlayerStatistics, usePlayerAnalysis, useRoster } from '../../hooks/useDashboardQueries';
+import { useGridCreatePlayer, useGridDeletePlayer, useGridTeamPlayers } from '../../hooks/useGridQueries';
 import { getProxiedImageUrl } from '../../lib/imageProxy';
 import ComparePlayersModal from './modals/ComparePlayersModal';
 import EditAttributesModal from './modals/EditAttributesModal';
@@ -26,32 +26,29 @@ const PlayerHub: React.FC = () => {
     const userId = session?.user?.id;
     const { data: workspace } = useWorkspace(userId);
 
-    // GRID Players Data
-    // We assume the workspace has a link to a GRID Team ID, or we default to a known ID for demo
-    const teamId = workspace?.grid_team_id || "1"; // Defaulting to 1 for demo if no team linked
+    // Use Roster Table (Local DB) instead of GRID API
+    const { data: rosterPlayers, isLoading: playersLoading } = useRoster(workspace?.id);
 
-    // Only fetch grid players if we have a valid user session to prevent 401 Unauthorized race conditions
-    // Use the simplified team-focused hook as requested
-    const { data: gridPlayersData, isLoading: playersLoading } = useGridTeamPlayers(
-        teamId,
-        50, // Higher limit as requested
-        { enabled: !!userId }
-    );
+    // Legacy GRID hooks (kept for create/delete if needed, though they might need to update Roster table too)
     const { mutate: createPlayer } = useGridCreatePlayer();
     const { mutate: deletePlayer } = useGridDeletePlayer();
 
     const allPlayers = React.useMemo(() => {
-        if (!gridPlayersData?.players?.edges) return [];
-        return gridPlayersData.players.edges.map((edge: any) => ({
-            id: edge.node.id,
-            name: edge.node.nickname,
-            role: 'N/A', // Role not always in basic player object, might need separate query or expansion
-            overall: 85, // Placeholder until stats are ready
-            stats: { mechanics: 80, objectives: 80, macro: 80, vision: 80, teamwork: 80, mental: 80 }, // Defaults
-            gridId: edge.node.id,
-            ...edge.node
+        if (!rosterPlayers) return [];
+        return rosterPlayers.map((player: any) => ({
+            id: player.id, // Internal UUID
+            name: player.ign, // Display Name
+            role: player.role,
+            overall: player.readiness_score || 85,
+            stats: {
+                mechanics: 80, objectives: 80, macro: 80,
+                vision: 80, teamwork: 80, mental: 80
+            },
+            gridId: player.grid_player_id, // GRID ID for stats
+            imageUrl: player.metadata?.imageUrl || player.image_url,
+            teamId: player.workspace_id // or grid team id? keeping consistent
         }));
-    }, [gridPlayersData]);
+    }, [rosterPlayers]);
 
     // Fetch player micro-level stats from GRID (uses gridId if available)
     const { data: playerStats, isLoading: statsLoading } = usePlayerStats(
