@@ -51,9 +51,9 @@ const ScoutingView: React.FC = () => {
     // Calculate metrics for all players
     const scoutingDatabase = MARKET_PLAYERS.map(p => ({
         ...p,
-        eOBP: calculate_eOBP(p.stats),
-        eSLG: calculate_eSLG(p.stats),
-        eWAR: calculate_eWAR(p.stats, 0.50), // Approx role avg
+        eOBP: calculate_eOBP({ ...p.stats, role: p.role }),
+        eSLG: calculate_eSLG({ ...p.stats, role: p.role }),
+        eWAR: calculate_eWAR({ ...p.stats, role: p.role }, 0.50), // Approx role avg
     }));
 
     const filteredPlayers = scoutingDatabase.filter(p =>
