@@ -283,64 +283,40 @@ const PlayerHub: React.FC = () => {
                             <span className="material-icons-outlined text-gray-500 text-sm">hub</span>
                         </h3>
                         <div className="space-y-6">
-                            <div className="group">
-                                <div className="flex justify-between items-end mb-2">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-full bg-surface-darker border border-white/10 flex items-center justify-center overflow-hidden">
-                                            <span className="material-icons-outlined text-gray-400">person</span>
+                            {analysisLoading ? (
+                                <div className="text-xs text-gray-500 animate-pulse text-center py-4">
+                                    Analyzing roster synergies...
+                                </div>
+                            ) : playerAnalysis?.synergies?.map((synergy, idx) => (
+                                <div className="group" key={idx}>
+                                    <div className="flex justify-between items-end mb-2">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-full bg-surface-darker border border-white/10 flex items-center justify-center overflow-hidden">
+                                                <span className="material-icons-outlined text-gray-400">person</span>
+                                            </div>
+                                            <div>
+                                                <p className="text-xs text-gray-400">{synergy.name}</p>
+                                                <p className="text-sm font-bold text-white">{synergy.partner}</p>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <p className="text-xs text-gray-400">Mid-Jungle</p>
-                                            <p className="text-sm font-bold text-white">Jojopyun</p>
-                                        </div>
+                                        <span className="text-lg font-bold text-primary font-mono shadow-[0_0_5px_rgba(210,249,111,0.3),0_0_15px_rgba(210,249,111,0.1)]">
+                                            {synergy.score}%
+                                        </span>
                                     </div>
-                                    <span className="text-lg font-bold text-primary font-mono shadow-[0_0_5px_rgba(210,249,111,0.3),0_0_15px_rgba(210,249,111,0.1)]">94%</span>
-                                </div>
-                                <div className="w-full h-1.5 bg-surface-darker rounded-full overflow-hidden border border-white/5">
-                                    <div className="h-full bg-gradient-to-r from-primary/50 to-primary w-[94%] shadow-[0_0_5px_rgba(210,249,111,0.3),0_0_15px_rgba(210,249,111,0.1)]"></div>
-                                </div>
-                                <p className="text-[10px] text-gray-500 mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                    Exceptional 2v2 skirmish win rate (68%)
-                                </p>
-                            </div>
-                            <div className="group">
-                                <div className="flex justify-between items-end mb-2">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-full bg-surface-darker border border-white/10 flex items-center justify-center overflow-hidden">
-                                            <span className="material-icons-outlined text-gray-400">person</span>
-                                        </div>
-                                        <div>
-                                            <p className="text-xs text-gray-400">Top Side</p>
-                                            <p className="text-sm font-bold text-white">Fudge</p>
-                                        </div>
+                                    <div className="w-full h-1.5 bg-surface-darker rounded-full overflow-hidden border border-white/5">
+                                        <div
+                                            className="h-full bg-gradient-to-r from-primary/50 to-primary shadow-[0_0_5px_rgba(210,249,111,0.3),0_0_15px_rgba(210,249,111,0.1)] transition-all duration-1000"
+                                            style={{ width: `${synergy.score}%` }}
+                                        ></div>
                                     </div>
-                                    <span className="text-lg font-bold text-yellow-400 font-mono">82%</span>
+                                    <p className="text-[10px] text-gray-500 mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                        {synergy.description}
+                                    </p>
                                 </div>
-                                <div className="w-full h-1.5 bg-surface-darker rounded-full overflow-hidden border border-white/5">
-                                    <div className="h-full bg-gradient-to-r from-yellow-500/50 to-yellow-400 w-[82%]"></div>
-                                </div>
-                            </div>
-                            <div className="group">
-                                <div className="flex justify-between items-end mb-2">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-full bg-surface-darker border border-white/10 flex items-center justify-center overflow-hidden">
-                                            <span className="material-icons-outlined text-gray-400">person</span>
-                                        </div>
-                                        <div>
-                                            <p className="text-xs text-gray-400">Support Roam</p>
-                                            <p className="text-sm font-bold text-white">Vulcan</p>
-                                        </div>
-                                    </div>
-                                    <span className="text-lg font-bold text-red-400 font-mono">65%</span>
-                                </div>
-                                <div className="w-full h-1.5 bg-surface-darker rounded-full overflow-hidden border border-white/5">
-                                    <div className="h-full bg-gradient-to-r from-red-500/50 to-red-400 w-[65%]"></div>
-                                </div>
-                                <div className="mt-2 flex items-center gap-1.5 bg-red-500/10 border border-red-500/20 rounded px-2 py-1 w-fit">
-                                    <span className="material-icons-outlined text-[10px] text-red-400">warning</span>
-                                    <span className="text-[10px] text-red-300 font-medium">Vision mismatch</span>
-                                </div>
-                            </div>
+                            ))}
+                            {!analysisLoading && (!playerAnalysis?.synergies || playerAnalysis.synergies.length === 0) && (
+                                <p className="text-xs text-gray-500 text-center">No synergy data available.</p>
+                            )}
                         </div>
                     </div>
                 </div>
