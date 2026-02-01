@@ -51,12 +51,13 @@ serve(async (req) => {
 
         const config = {
             thinkingConfig: {
-                thinkingLevel: 'MINIMAL',
+                thinkingLevel: 'HIGH',
             },
+            tools: [{ googleSearch: {} }],
         };
 
         const response = await ai.models.generateContent({
-            model: 'gemini-2.0-flash-thinking-exp',
+            model: 'gemini-3-pro-preview',
             config,
             contents: [{ role: 'user', parts: [{ text: prompt }] }],
         })
