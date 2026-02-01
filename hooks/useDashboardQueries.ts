@@ -996,11 +996,32 @@ export function usePlayerAnalysis(
         queryFn: async () => {
             if (!playerName) return null;
 
-            const { data, error } = await supabase.functions.invoke('player-analysis', {
-                body: { playerName, playerRole, teamId, recentStats }
+            // Manual fetch to bypass potential Auth issues and ensure fresh token
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+
+            const response = await fetch(`${supabase['supabaseUrl']}/functions/v1/player-analysis`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token || ''}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ playerName, playerRole, teamId, recentStats })
             });
 
-            if (error) throw error;
+            if (!response.ok) {
+                if (response.status === 401) {
+                    console.error('Session expired or invalid JWT (player-analysis). Redirecting to login...');
+                    window.location.href = '/auth';
+                    throw new Error('Unauthorized');
+                }
+                const errData = await response.json();
+                throw new Error(errData.error || 'Failed to fetch player analysis');
+            }
+
+            const data = await response.json();
+            if (data.error) throw new Error(data.error);
+
             return data as PlayerAnalysis;
         },
         enabled: !!playerName,
