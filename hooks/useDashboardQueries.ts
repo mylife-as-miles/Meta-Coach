@@ -973,3 +973,42 @@ export function usePlayerAnalysis(
         staleTime: 1000 * 60 * 60 * 24, // 24 hours (it's expensive deep analysis)
     });
 }
+
+// ============================================
+// Hook: useRoster (Local DB)
+// ============================================
+export interface RosterPlayer {
+    id: string;
+    workspace_id: string;
+    role: string;
+    ign: string;
+    grid_player_id: string;
+    created_at: string;
+    metadata: {
+        gridId: string;
+        imageUrl: string | null;
+    };
+    readiness_score: number;
+    synergy_score: number;
+    is_active: boolean;
+    image_url: string | null;
+}
+
+export function useRoster(workspaceId: string | undefined) {
+    return useQuery({
+        queryKey: ['roster', workspaceId],
+        queryFn: async () => {
+            if (!workspaceId) return [];
+
+            const { data, error } = await supabase
+                .from('roster')
+                .select('*')
+                .eq('workspace_id', workspaceId)
+                .order('role', { ascending: true }); // Heuristic sorting, can refine
+
+            if (error) throw error;
+            return data as RosterPlayer[];
+        },
+        enabled: !!workspaceId,
+    });
+}

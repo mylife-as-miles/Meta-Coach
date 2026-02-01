@@ -26,6 +26,9 @@ const PlayerHub: React.FC = () => {
     const userId = session?.user?.id;
     const { data: workspace } = useWorkspace(userId);
 
+    // GRID Team ID (needed for AI linking)
+    const teamId = workspace?.grid_team_id || "1";
+
     // Use Roster Table (Local DB) instead of GRID API
     const { data: rosterPlayers, isLoading: playersLoading } = useRoster(workspace?.id);
 
