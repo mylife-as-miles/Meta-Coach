@@ -14,14 +14,14 @@ on team_match_cache for select
 to authenticated
 using (true);
 
-create policy "Enable insert/update for authenticated users"
+create policy "Enable insert/update for service role only"
 on team_match_cache for insert
 to authenticated
-with check (true);
+with check (false);
     
-create policy "Enable update for authenticated users"
+create policy "Enable update for service role only"
 on team_match_cache for update
 to authenticated
-using (true);
+using (false);
 
 notify pgrst, 'reload schema';

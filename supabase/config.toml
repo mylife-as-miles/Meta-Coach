@@ -1,0 +1,56 @@
+[functions.ai-draft-context]
+verify_jwt = false
+
+[functions.ai-match-prep]
+verify_jwt = false
+
+[functions.draft-analysis]
+verify_jwt = false
+
+[functions.grid-players]
+verify_jwt = false
+
+[functions.grid-teams]
+verify_jwt = false
+
+[functions.grid-titles]
+verify_jwt = false
+
+[functions.image-proxy]
+verify_jwt = false
+
+[functions.match-stats]
+verify_jwt = false
+
+[functions.match-timeline]
+verify_jwt = false
+
+[functions.player-analysis]
+verify_jwt = false
+
+[functions.player-image-search]
+verify_jwt = false
+
+[functions.player-statistics]
+verify_jwt = false
+
+[functions.player-stats]
+verify_jwt = false
+
+[functions.scenario-prediction]
+verify_jwt = false
+
+[functions.series-state]
+verify_jwt = false
+
+[functions.tactical-briefing]
+verify_jwt = false
+
+[functions.team-matches]
+verify_jwt = false
+
+[functions.team-profile]
+verify_jwt = false
+
+[functions.team-statistics]
+verify_jwt = false
