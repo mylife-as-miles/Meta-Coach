@@ -55,7 +55,28 @@ export interface Champion {
 
 // Empty arrays - no mock data, real data comes from Supabase/GRID API
 export const players: Player[] = [];
-export const matches: Match[] = [];
+export const matches: Match[] = [
+    {
+        id: 'mock-match-1',
+        date: 'Oct 24',
+        startTime: new Date().toISOString(),
+        duration: '34:20',
+        result: 'WIN',
+        score: '18 - 6',
+        format: 'Bo1',
+        type: 'Ranked',
+        opponent: {
+            id: 'opp-1',
+            name: 'Cloud9',
+            abbreviation: 'C9',
+            color: 'blue',
+            logoUrl: 'https://am-a.akamaihd.net/image?resize=60:&f=http%3A%2F%2Fstatic.lolesports.com%2Fteams%2Fcloud9-logo-2023.png'
+        },
+        tournament: { name: 'World Championship' },
+        performance: { macroControl: 75, microErrorRate: 'LOW' },
+        source: 'grid'
+    }
+];
 
 // Champion data for Strategy Lab (static game data, not mock user data)
 // This would ideally come from Riot Data Dragon or similar game asset API

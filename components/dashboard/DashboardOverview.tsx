@@ -233,24 +233,10 @@ const DashboardOverview: React.FC = () => {
                                         </div>
                                     </div>
                                 ))
-                            ) : teamProfile?.generated_reasoning ? (
-                                <div className="flex items-center p-3 hover:bg-white/5 rounded-xl transition group cursor-pointer border border-transparent hover:border-primary/20">
-                                    <div className="w-10 h-10 rounded-lg bg-gray-900 flex items-center justify-center mr-4 relative border border-white/10">
-                                        <span className="material-icons text-white opacity-70">psychology</span>
-                                    </div>
-                                    <div className="flex-1">
-                                        <div className="flex justify-between mb-1">
-                                            <span className="text-sm font-bold text-white group-hover:text-primary transition">Strategic Analysis</span>
-                                            <span className="text-xs font-mono text-gray-500">Live</span>
-                                        </div>
-                                        <div className="text-xs text-gray-400 leading-relaxed">
-                                            {teamProfile.generated_reasoning.substring(0, 120)}...
-                                        </div>
-                                    </div>
-                                </div>
                             ) : (
-                                <div className="text-center text-gray-500 text-xs py-10">
-                                    Run a strategy simulation to generate insights.
+                                <div className="flex flex-col items-center justify-center h-full text-center py-10 opacity-60">
+                                    <span className="material-icons-outlined text-3xl mb-2">analytics</span>
+                                    <span className="text-gray-400 text-xs">No high-impact plays analyzed for this match.</span>
                                 </div>
                             )}
                         </div>

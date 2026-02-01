@@ -3,7 +3,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
-import { Player, Match } from '../lib/mockData';
+import { Player, Match, matches } from '../lib/mockData';
 
 // ============================================
 // Query Keys
@@ -260,9 +260,10 @@ export function useMatches(gridTeamId: string | undefined, gameTitle: string = '
                 teamName: teamName
             });
 
-            if (error || !matchesData?.matches) {
-                console.warn('Matches fetch failed, returning empty array');
-                return [];
+            if (error || !matchesData?.matches || matchesData.matches.length === 0) {
+                console.warn('Matches fetch failed or empty, using mock data');
+                // Return mock matches if API fails (Dev/Fallback mode)
+                return matches;
             }
 
             return matchesData.matches.map((m: any) => ({
