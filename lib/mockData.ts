@@ -23,16 +23,21 @@ export interface Player {
 export interface Match {
     id: string;
     date: string;
+    startTime?: string; // ISO string for calculations
     duration: string;
     result: 'WIN' | 'LOSS' | 'UPCOMING' | 'TBD';
     score: string;
     format: 'Bo1' | 'Bo3' | 'Bo5';
     type: 'Ranked' | 'Scrim';
     opponent: {
+        id?: string;
         name: string;
         abbreviation: string;
         color: string;
         logoUrl?: string;
+    };
+    tournament?: {
+        name: string;
     };
     performance: {
         macroControl: number;
