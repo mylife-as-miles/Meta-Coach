@@ -246,9 +246,9 @@ export function usePlayers(workspaceId: string | undefined) {
 // ============================================
 // Hook: useMatches
 // ============================================
-export function useMatches(gridTeamId: string | undefined, gameTitle: string = 'Esports', teamName: string = 'Team') {
+export function useMatches(gridTeamId: string | undefined, titleId: string | number = 3, gameTitle: string = 'Esports', teamName: string = 'Team') {
     return useQuery({
-        queryKey: dashboardKeys.matches(gridTeamId),
+        queryKey: [...dashboardKeys.matches(gridTeamId), titleId],
         queryFn: async (): Promise<Match[]> => {
             if (!gridTeamId) {
                 console.log('No grid team ID, returning empty matches');
@@ -257,6 +257,7 @@ export function useMatches(gridTeamId: string | undefined, gameTitle: string = '
 
             const { data: matchesData, error } = await invokeWithTimeout<any>('team-matches', {
                 teamId: gridTeamId,
+                titleId: titleId,
                 game: gameTitle,
                 teamName: teamName
             });

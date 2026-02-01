@@ -19,7 +19,7 @@ const DashboardOverview: React.FC = () => {
     const { data: workspace } = useWorkspace(userId);
     const { data: allPlayers = [], isLoading: isPlayersLoading } = usePlayers(workspace?.id);
     const { data: teamProfile } = useTeamProfile(workspace?.id, workspace?.grid_team_id);
-    const { data: allMatches = [], isLoading: isMatchesLoading } = useMatches(workspace?.grid_team_id, teamProfile?.game, teamProfile?.teamName);
+    const { data: allMatches = [], isLoading: isMatchesLoading } = useMatches(workspace?.grid_team_id, 3, teamProfile?.game, teamProfile?.teamName);
     const { data: teamStats } = useTeamStatistics(workspace?.grid_team_id);
 
     // Get latest completed match for AI insights

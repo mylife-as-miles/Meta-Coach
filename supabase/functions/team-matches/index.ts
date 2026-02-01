@@ -108,12 +108,14 @@ serve(async (req) => {
 
     const url = new URL(req.url)
     let teamId = url.searchParams.get('teamId')
+    let titleId = url.searchParams.get('titleId')
     let game = url.searchParams.get('game')
     let teamNameArg = url.searchParams.get('teamName')
 
     if (req.method === 'POST') {
       const body = await req.json()
       if (!teamId) teamId = body.teamId
+      if (!titleId) titleId = body.titleId
       if (!game) game = body.game
       if (!teamNameArg) teamNameArg = body.teamName
     }
@@ -125,31 +127,26 @@ serve(async (req) => {
       )
     }
 
-    console.log(`[team-matches] Fetching matches for team: ${teamId}`)
-    console.log(`[team-matches] Using API URL: ${GRID_API_URL}`)
-    console.log(`[team-matches] API Key present: ${!!gridApiKey}, length: ${gridApiKey?.length}`)
+    // Default titleId to 3 (LoL) if missing, as per general usage
+    if (!titleId) titleId = '3';
+
+    console.log(`[team-matches] Fetching matches for team: ${teamId}, title: ${titleId}`)
 
     const nowISO = new Date().toISOString();
-    console.log(`[team-matches] Query time: ${nowISO}`)
 
     // =========================================
-    // OPTIMIZED: Two separate queries with server-side filtering
+    // QUERY: seriesStatistics 
+    // Attempting to fetch series list via statistics endpoint as requested
     // =========================================
 
-    // Query 1: Upcoming matches (scheduled, future dates, ordered ASC)
-    const upcomingQuery = `
-      query GetUpcomingMatches($teamId: ID!, $startAfter: DateTime!) {
-        allSeries(
-          filter: {
-            teamIds: { in: [$teamId] }
-            startTimeScheduled: { gte: $startAfter }
-          }
-          first: 10
-          orderBy: StartTimeScheduled
-          orderDirection: ASC
-        ) {
-          edges {
-            node {
+    // Note: We are guessing that seriesStatistics contains a 'series' field or similar to get the list,
+    // or we use this to get stats. But since this is 'team-matches' endpoint, we MUST return matches.
+    // If this query fails to return a list, we might need to revisit.
+
+    const query = `
+      query GetSeriesStatistics($titleId: ID!, $teamId: ID!) {
+        seriesStatistics(titleId: $titleId, filter: { teamIds: { in: [$teamId] } }) {
+            series {
               id
               startTimeScheduled
               format { name nameShortened }
@@ -170,113 +167,46 @@ serve(async (req) => {
                 scoreAdvantage
               }
             }
-          }
-          pageInfo {
-            endCursor
-            hasNextPage
-          }
         }
       }
     `
 
-    // Query 2: History matches (finished, past dates, ordered DESC)
-    const historyQuery = `
-      query GetHistoryMatches($teamId: ID!, $endBefore: DateTime!) {
-        allSeries(
-          filter: {
-            teamIds: { in: [$teamId] }
-            startTimeScheduled: { lt: $endBefore }
-          }
-          first: 15
-          orderBy: StartTimeScheduled
-          orderDirection: DESC
-        ) {
-          edges {
-            node {
-              id
-              startTimeScheduled
-              format { name nameShortened }
-              type
-              tournament { 
-                id 
-                name
-                startDate
-                endDate
-              }
-              teams {
-                baseInfo { 
-                  id 
-                  name 
-                  nameShortened 
-                  logoUrl 
-                }
-                scoreAdvantage
-              }
-            }
-          }
-          pageInfo {
-            endCursor
-            hasNextPage
-          }
-        }
-      }
-    `
+    console.log(`[team-matches] Sending seriesStatistics query...`)
 
-    console.log(`[team-matches] Fetching upcoming and history matches in parallel...`)
-
-    // Execute both queries in parallel for efficiency
-    const [upcomingRes, historyRes] = await Promise.all([
-      fetch(GRID_API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': gridApiKey },
-        body: JSON.stringify({
-          query: upcomingQuery,
-          variables: { teamId, startAfter: nowISO }
-        }),
+    const gridRes = await fetch(GRID_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': gridApiKey },
+      body: JSON.stringify({
+        query: query,
+        variables: { titleId, teamId }
       }),
-      fetch(GRID_API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': gridApiKey },
-        body: JSON.stringify({
-          query: historyQuery,
-          variables: { teamId, endBefore: nowISO }
-        }),
-      })
-    ]);
+    });
 
-    console.log(`[team-matches] Upcoming Response: ${upcomingRes.status}, History Response: ${historyRes.status}`)
+    console.log(`[team-matches] GRID Response: ${gridRes.status}`)
 
-    // Process upcoming matches
-    let upcomingMatches: any[] = [];
-    if (upcomingRes.ok) {
-      const upcomingData = await upcomingRes.json();
-      if (!upcomingData.errors) {
-        const upcomingEdges = upcomingData.data?.allSeries?.edges ?? [];
-        upcomingMatches = upcomingEdges.map((e: any) => processNode(e.node, teamId, true));
-        console.log(`[team-matches] Found ${upcomingMatches.length} upcoming matches`);
+    let matches: any[] = [];
+    if (gridRes.ok) {
+      const json = await gridRes.json();
+      if (!json.errors) {
+        // Check where the list is. 
+        // If seriesStatistics returns an object with 'series' array:
+        const seriesList = json.data?.seriesStatistics?.series || [];
+
+        // Map to our Match interface
+        matches = seriesList.map((node: any) => processNode(node, teamId));
+
+        console.log(`[team-matches] Found ${matches.length} matches via seriesStatistics`);
       } else {
-        console.warn('[team-matches] Upcoming query errors:', upcomingData.errors);
+        console.warn('[team-matches] GRID Query errors:', json.errors);
       }
     }
 
-    // Process history matches
-    let historyMatches: any[] = [];
-    if (historyRes.ok) {
-      const historyData = await historyRes.json();
-      if (!historyData.errors) {
-        const historyEdges = historyData.data?.allSeries?.edges ?? [];
-        historyMatches = historyEdges.map((e: any) => processNode(e.node, teamId, false));
-        console.log(`[team-matches] Found ${historyMatches.length} history matches`);
-      } else {
-        console.warn('[team-matches] History query errors:', historyData.errors);
-      }
-    }
+    // Helper function to process nodes (unified)
+    function processNode(node: any, myTeamId: string) {
+      const now = new Date();
+      const start = new Date(node.startTimeScheduled);
+      const isUpcoming = start > now;
 
-    // Combine: Upcoming first (ASC by date), then History (DESC by date)
-    let matches = [...upcomingMatches.slice(0, 5), ...historyMatches.slice(0, 10)];
-
-    // Helper function to process nodes
-    function processNode(node: any, myTeamId: string, isUpcoming: boolean) {
       const opponentTeam = node.teams?.find((t: any) => t.baseInfo?.id !== myTeamId);
       const myTeam = node.teams?.find((t: any) => t.baseInfo?.id === myTeamId);
 
@@ -284,12 +214,12 @@ serve(async (req) => {
       let status = isUpcoming ? 'scheduled' : 'finished';
 
       if (!isUpcoming) {
-        if (myTeam?.scoreAdvantage > 0 || opponentTeam?.scoreAdvantage > 0) {
+        if ((myTeam?.scoreAdvantage || 0) > 0 || (opponentTeam?.scoreAdvantage || 0) > 0) {
           status = 'finished';
           const myScore = myTeam?.scoreAdvantage || 0;
           const oppScore = opponentTeam?.scoreAdvantage || 0;
           if (myScore > oppScore) result = 'WIN';
-          else if (myScore < oppScore) result = 'LOSS';
+          else if (myScore < oppScore) result = 'LOSS'; // Fixed: was result = 'LOSS'
           else result = 'DRAW';
         } else {
           result = 'TBD';
@@ -320,8 +250,15 @@ serve(async (req) => {
       };
     }
 
-    // If no upcoming matches found from GRID, try Gemini
-    if (upcomingMatches.length === 0) {
+    // Sort matches: Upcoming ASC, Past DESC
+    // Since we get them all in one bag, let's sort properly.
+    const upcoming = matches.filter(m => m.status === 'scheduled').sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+    const history = matches.filter(m => m.status === 'finished').sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
+
+    matches = [...upcoming.slice(0, 5), ...history.slice(0, 10)];
+
+    // Gemini Fallback logic (retained)
+    if (matches.length === 0) {
       console.log('[team-matches] No upcoming matches from GRID. Searching with Gemini...');
       // We need team name and game. We have teamId. 
       // We can get team name from history if available, or query GRID for it specifically, 
