@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useDashboardStore } from '../../stores/useDashboardStore';
 import { useSession } from '../../hooks/useAuth';
-import { useWorkspace, usePlayers, useMatches, useTeamProfile, useTeamStatistics } from '../../hooks/useDashboardQueries';
+import { useWorkspace, usePlayers, useMatches, useTeamProfile, useTeamStatistics, useHighImpactPlays } from '../../hooks/useDashboardQueries';
 import StrategyBriefModal from './modals/StrategyBriefModal';
 
 const DashboardOverview: React.FC = () => {
@@ -21,6 +21,10 @@ const DashboardOverview: React.FC = () => {
     const { data: teamProfile } = useTeamProfile(workspace?.id, workspace?.grid_team_id);
     const { data: allMatches = [], isLoading: isMatchesLoading } = useMatches(workspace?.grid_team_id, teamProfile?.game, teamProfile?.teamName);
     const { data: teamStats } = useTeamStatistics(workspace?.grid_team_id);
+
+    // Get latest completed match for AI insights
+    const recentMatch = allMatches.find(m => m.result === 'WIN' || m.result === 'LOSS');
+    const { data: highImpactPlays } = useHighImpactPlays(recentMatch?.id);
 
     const isLoading = isPlayersLoading || isMatchesLoading;
 
@@ -213,7 +217,23 @@ const DashboardOverview: React.FC = () => {
                             </div>
                         </div>
                         <div className="space-y-3 overflow-y-auto h-[calc(100%-2rem)] pr-2 custom-scrollbar">
-                            {teamProfile?.generated_reasoning ? (
+                            {highImpactPlays && highImpactPlays.length > 0 ? (
+                                highImpactPlays.map((play, idx) => (
+                                    <div key={idx} className="flex items-center p-3 hover:bg-white/5 rounded-xl transition group cursor-pointer border border-transparent hover:border-primary/20">
+                                        <div className="flex gap-4 w-full text-xs items-center">
+                                            <span className="font-mono text-gray-400 w-8">{play.time}</span>
+                                            <span className="text-white font-medium flex-1 group-hover:text-primary transition">{play.play}</span>
+                                            <span className="text-gray-400 w-20 text-right">{play.outcome}</span>
+                                            <span className={`font-mono font-bold w-12 text-right ${play.score >= 90 ? 'text-primary shadow-neon-text' :
+                                                play.score >= 80 ? 'text-green-400' :
+                                                    play.score >= 70 ? 'text-yellow-400' : 'text-gray-400'
+                                                }`}>
+                                                {play.score}
+                                            </span>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : teamProfile?.generated_reasoning ? (
                                 <div className="flex items-center p-3 hover:bg-white/5 rounded-xl transition group cursor-pointer border border-transparent hover:border-primary/20">
                                     <div className="w-10 h-10 rounded-lg bg-gray-900 flex items-center justify-center mr-4 relative border border-white/10">
                                         <span className="material-icons text-white opacity-70">psychology</span>
@@ -315,8 +335,8 @@ const DashboardOverview: React.FC = () => {
                             <div className="bg-surface-darker p-2 rounded-lg text-center border border-white/5">
                                 <p className="text-[9px] text-gray-400 mb-1 uppercase tracking-wider">Form</p>
                                 <p className={`text-sm font-bold ${teamStats?.form === 'DOMINANT' ? 'text-primary' :
-                                        teamStats?.form === 'HOT' ? 'text-green-400' :
-                                            teamStats?.form === 'STABLE' ? 'text-yellow-400' : 'text-red-400'
+                                    teamStats?.form === 'HOT' ? 'text-green-400' :
+                                        teamStats?.form === 'STABLE' ? 'text-yellow-400' : 'text-red-400'
                                     }`}>
                                     {teamStats?.form || '--'}
                                 </p>
