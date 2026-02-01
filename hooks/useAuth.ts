@@ -48,20 +48,40 @@ export function useProfile(userId: string | undefined) {
     });
 }
 
-// Hook to listen to auth changes (this is still effect-based but integrates with query)
+// Hook to listen to auth changes
 export function useAuthListener() {
     const queryClient = useQueryClient();
 
-    // We don't return anything, just set up the listener
-    // Typically called once in a top-level component or hook
     useQueryClientEffect(queryClient);
 }
 
 function useQueryClientEffect(queryClient: any) {
-    // This logic could live in the provider or a dedicated hook
-    // For now AuthGuard can handle the listener or we assume session check is enough
-    // Ideally, we want Supabase's onAuthStateChange to invalidate queries
+    // Set up singleton listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+        // console.log('Auth State Change:', event, session?.user?.id);
 
-    // We'll implement this manually inside AuthGuard or App if needed, 
-    // but standard react-query pattern often just relies on intervals or event invalidation
+        if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+            // Clear all data
+            queryClient.clear();
+            // Redirect to Auth if not already there (handled by Router usually, but we force it)
+            if (!window.location.pathname.startsWith('/auth')) {
+                window.location.href = '/auth';
+            }
+        }
+        else if (event === 'TOKEN_REFRESH_ROKEN') {
+            // Refresh failed (likely revoked or expired max age)
+            console.error('Token refresh failed. Redirecting to login.');
+            queryClient.clear();
+            window.location.href = '/auth';
+        }
+        else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+            // Invalidate session query to ensure fresh data
+            queryClient.invalidateQueries({ queryKey: authKeys.session });
+            queryClient.invalidateQueries({ queryKey: authKeys.profile(session?.user.id) });
+        }
+    });
+
+    return () => {
+        subscription.unsubscribe();
+    };
 }

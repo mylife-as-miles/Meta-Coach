@@ -39,7 +39,12 @@ const DashboardRoutes: React.FC = () => {
   );
 };
 
+import { useAuthListener } from './hooks/useAuth';
+
 const App: React.FC = () => {
+  // Initialize global auth listener
+  useAuthListener();
+
   // Default to true (dark mode) as per the design requirements
   const [isDark, setIsDark] = useState(true);
   const navigate = useNavigate();
