@@ -14,32 +14,19 @@ export function useGridTeams(titleId: string | null) {
         queryFn: async () => {
             if (!titleId) return [];
 
-            const { data: { session } } = await supabase.auth.getSession();
-            const token = session?.access_token;
-
-            const response = await fetch(`${supabase['supabaseUrl']}/functions/v1/grid-teams`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token || ''}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ titleId })
+            const { data, error } = await supabase.functions.invoke('grid-teams', {
+                body: { titleId }
             });
 
-            if (!response.ok) {
-                if (response.status === 401) {
-                    window.location.href = '/auth';
-                    throw new Error('Unauthorized');
-                }
-                throw new Error('Failed to fetch teams');
+            if (error) {
+                console.error('Grid Teams Error:', error);
+                throw error;
             }
 
-            const data = await response.json();
-            if (data.error) throw new Error(data.error);
             return data?.teams || [];
         },
         enabled: !!titleId,
-        staleTime: 1000 * 60 * 60, // 1 hour (teams don't change often)
+        staleTime: 1000 * 60 * 60, // 1 hour
     });
 }
 
@@ -53,39 +40,24 @@ export function useGridPlayers(teamId: string | null, titleId: string | null) {
             if (!teamId) return [];
             console.log('Fetching players for team:', teamId, 'with name:', teamName);
 
-            const { data: { session } } = await supabase.auth.getSession();
-            const token = session?.access_token;
-
-            const response = await fetch(`${supabase['supabaseUrl']}/functions/v1/grid-players`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token || ''}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
+            const { data, error } = await supabase.functions.invoke('grid-players', {
+                body: {
                     teamId,
                     titleId,
-                    teamName // Important for AI image search
-                })
+                    teamName
+                }
             });
 
-            if (!response.ok) {
-                if (response.status === 401) {
-                    window.location.href = '/auth';
-                    throw new Error('Unauthorized');
-                }
-                const errData = await response.json();
-                throw new Error(errData.error || 'Failed to fetch players');
+            if (error) {
+                console.error('Grid Players Error:', error);
+                throw error;
             }
-
-            const data = await response.json();
-            if (data.error) throw new Error(data.error);
 
             console.log('Players fetched:', data?.players?.length);
             return data?.players || [];
         },
         enabled: !!teamId,
         staleTime: 1000 * 60 * 5, // 5 minutes
-        retry: 1, // Retry once if AI search fails or timeouts
+        retry: 1,
     });
 }
