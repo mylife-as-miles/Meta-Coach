@@ -207,13 +207,13 @@ const DashboardOverview: React.FC = () => {
 
                     {/* AI Analysis List */}
                     <div className="bg-surface-dark rounded-2xl p-5 shadow-lg border border-white/5 flex-1 overflow-hidden h-[300px] lg:h-[40%]">
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="font-semibold text-white">AI Strategic Insights: High-Impact Plays</h3>
-                            <div className="flex gap-4 text-xs text-gray-500 font-mono">
-                                <span>Time</span>
-                                <span>Play</span>
-                                <span>Outcome</span>
-                                <span>AI Score</span>
+                        <div className="flex flex-col mb-2">
+                            <h3 className="font-semibold text-white mb-3">AI Strategic Insights: High-Impact Plays</h3>
+                            <div className="flex gap-4 text-xs text-gray-500 font-mono px-3">
+                                <span className="w-8">Time</span>
+                                <span className="flex-1">Play</span>
+                                <span className="w-24 text-right">Outcome</span>
+                                <span className="w-12 text-right">Score</span>
                             </div>
                         </div>
                         <div className="space-y-3 overflow-y-auto h-[calc(100%-2rem)] pr-2 custom-scrollbar">
@@ -223,7 +223,7 @@ const DashboardOverview: React.FC = () => {
                                         <div className="flex gap-4 w-full text-xs items-center">
                                             <span className="font-mono text-gray-400 w-8">{play.time}</span>
                                             <span className="text-white font-medium flex-1 group-hover:text-primary transition">{play.play}</span>
-                                            <span className="text-gray-400 w-20 text-right">{play.outcome}</span>
+                                            <span className="text-gray-400 w-24 text-right">{play.outcome}</span>
                                             <span className={`font-mono font-bold w-12 text-right ${play.score >= 90 ? 'text-primary shadow-neon-text' :
                                                 play.score >= 80 ? 'text-green-400' :
                                                     play.score >= 70 ? 'text-yellow-400' : 'text-gray-400'
