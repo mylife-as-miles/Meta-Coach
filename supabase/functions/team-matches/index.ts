@@ -187,6 +187,7 @@ serve(async (req) => {
     let matches: any[] = [];
     if (gridRes.ok) {
       const json = await gridRes.json();
+      console.log('[team-matches] Raw Response:', JSON.stringify(json).substring(0, 500));
       if (!json.errors) {
         // Check where the list is. 
         // If seriesStatistics returns an object with 'series' array:
@@ -198,6 +199,56 @@ serve(async (req) => {
         console.log(`[team-matches] Found ${matches.length} matches via seriesStatistics`);
       } else {
         console.warn('[team-matches] GRID Query errors:', json.errors);
+      }
+    }
+
+    // FALLBACK QUERY: Try fetching via 'team' connection if seriesStatistics failed/empty
+    if (matches.length === 0) {
+      console.log('[team-matches] matches empty, trying backup query: team.series');
+      const backupQuery = `
+          query GetTeamSeries($teamId: ID!) {
+            team(id: $teamId) {
+                series(first: 10, orderBy: StartTimeScheduled, orderDirection: DESC) {
+                    edges {
+                        node {
+                          id
+                          startTimeScheduled
+                          format { name nameShortened }
+                          type
+                          tournament { id name }
+                          teams {
+                            baseInfo { id name nameShortened logoUrl }
+                            scoreAdvantage
+                          }
+                        }
+                    }
+                }
+            }
+          }
+        `;
+
+      try {
+        const backupRes = await fetch(GRID_API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-api-key': gridApiKey },
+          body: JSON.stringify({
+            query: backupQuery,
+            variables: { teamId }
+          }),
+        });
+
+        if (backupRes.ok) {
+          const backupJson = await backupRes.json();
+          console.log('[team-matches] Backup Raw Response:', JSON.stringify(backupJson).substring(0, 200));
+
+          const edges = backupJson.data?.team?.series?.edges || [];
+          if (edges.length > 0) {
+            matches = edges.map((e: any) => processNode(e.node, teamId));
+            console.log(`[team-matches] Found ${matches.length} matches via team.series`);
+          }
+        }
+      } catch (e) {
+        console.error('[team-matches] Backup query failed:', e);
       }
     }
 
