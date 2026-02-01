@@ -46,8 +46,12 @@ const PlayerHub: React.FC = () => {
             role: player.role,
             overall: player.readiness_score || 85,
             stats: {
-                mechanics: 80, objectives: 80, macro: 80,
-                vision: 80, teamwork: 80, mental: 80
+                mechanics: player.analysis_data?.attributes?.mechanics || 80,
+                objectives: player.analysis_data?.attributes?.objectives || 80,
+                macro: player.analysis_data?.attributes?.macro || 80,
+                vision: player.analysis_data?.attributes?.vision || 80,
+                teamwork: player.analysis_data?.attributes?.teamwork || 80,
+                mental: player.analysis_data?.attributes?.mental || 80
             },
             gridId: player.grid_player_id, // GRID ID for stats
             imageUrl: player.metadata?.imageUrl || player.image_url,

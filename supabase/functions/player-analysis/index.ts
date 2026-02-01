@@ -48,6 +48,14 @@ serve(async (req) => {
       
       Output MUST be valid JSON with this structure:
       {
+        "attributes": {
+            "mechanics": 85,
+            "objectives": 75,
+            "macro": 80,
+            "vision": 70,
+            "teamwork": 90,
+            "mental": 88
+        },
         "synergies": [
            { "name": "Mid-Jungle", "partner": "Name", "score": 94, "description": "Short reasoning" },
            { "name": "Top Side", "partner": "Name", "score": 82, "description": "Short reasoning" },
@@ -62,7 +70,7 @@ serve(async (req) => {
       }
       
       Make up plausible partners if team roster isn't fully accurate in context, but prioritize famous players if unknown.
-      The scores should be realistic (0-100).
+      The scores should be realistic (0-100) based on the provided stats context.
     `
 
         // Generate Content
