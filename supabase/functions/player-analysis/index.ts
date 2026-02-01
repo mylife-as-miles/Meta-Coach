@@ -13,11 +13,28 @@ serve(async (req) => {
         const apiKey = Deno.env.get('GEMINI_API_KEY')
         if (!apiKey) throw new Error('GEMINI_API_KEY not configured')
 
+        // Initialize Gemini Client
         const client = new GoogleGenAI({ apiKey })
 
-        // Prompt design for "Gemini 3 Pro" (using 1.5 Pro model)
+        // Configuration for Gemini 3.0 Pro
+        const tools = [
+            { googleSearch: {} },
+        ];
+
+        const config = {
+            thinkingConfig: {
+                thinkingLevel: 'HIGH',
+            },
+            mediaResolution: 'MEDIA_RESOLUTION_HIGH',
+            tools,
+            responseMimeType: 'application/json',
+        };
+
+        const model = 'gemini-3-pro-preview';
+
+        // Contextual Prompt
         const prompt = `
-      You are an expert League of Legends esports analyst using the "Gemini 3 Pro" engine.
+      You are an expert League of Legends esports analyst using the Gemini 3 Pro engine.
       Analyze the potential and synergies for player: ${playerName} (${playerRole}).
       
       Recent Stats Context: ${JSON.stringify(recentStats || {})}
@@ -41,21 +58,23 @@ serve(async (req) => {
       The scores should be realistic (0-100).
     `
 
+        // Generate Content (Non-streaming for simpler Edge Function response)
         const response = await client.models.generateContent({
-            model: 'gemini-1.5-pro', // Using 1.5 Pro as "Gemini 3 Pro" equivalent for high reasoning
+            model,
+            config,
             contents: [{ role: 'user', parts: [{ text: prompt }] }],
-            config: { responseMimeType: 'application/json' }
         })
 
         const text = response.text()
-        console.log("Gemini Analysis:", text)
+        console.log("Gemini 3 Analysis:", text)
 
         return new Response(text, {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
 
     } catch (error) {
-        return new Response(JSON.stringify({ error: error.message }), {
+        console.error("Gemini Error:", error);
+        return new Response(JSON.stringify({ error: error.message || error.toString() }), {
             status: 500,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
