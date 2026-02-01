@@ -794,23 +794,22 @@ export interface ScenarioInput {
     goldAdvantage: number;
     playerFatigue: boolean;
     objectivesSecured?: string[];
-    draftAdvantage?: number;
-    towerCount?: { blue: number; red: number };
     dragonCount?: { blue: number; red: number };
     baronSecured?: { blue: boolean; red: boolean };
     teamKills?: { blue: number; red: number };
     teamDeaths?: { blue: number; red: number };
 }
 
-export function useScenarioPrediction(scenario: ScenarioInput) {
+export function useScenarioPrediction(input: ScenarioInput) {
     return useQuery({
-        queryKey: ['scenarioPrediction', scenario],
+        queryKey: ['scenarioPrediction', input],
         queryFn: async (): Promise<ScenarioPredictionData | null> => {
-            console.log('[useScenarioPrediction] Running scenario prediction');
+            // Debounce or skipping empty inputs could be handled here
+            console.log('[useScenarioPrediction] Calculating scenario');
 
             const { data, error } = await invokeWithTimeout<ScenarioPredictionData>(
                 'scenario-prediction',
-                scenario,
+                input,
                 8000
             );
 
@@ -821,8 +820,42 @@ export function useScenarioPrediction(scenario: ScenarioInput) {
 
             return data || null;
         },
-        staleTime: 1000 * 30, // Cache for 30 seconds
-        retry: 1,
+        enabled: !!input,
+        staleTime: 1000 * 60 * 2,
+    });
+}
+
+// High Impact Plays Types
+export interface HighImpactPlay {
+    time: string;
+    play: string;
+    outcome: string;
+    score: number;
+}
+
+export function useHighImpactPlays(matchId: string | undefined | null) {
+    return useQuery({
+        queryKey: ['highImpactPlays', matchId],
+        queryFn: async (): Promise<HighImpactPlay[]> => {
+            if (!matchId) return [];
+            console.log('[useHighImpactPlays] Analyzing match:', matchId);
+
+            const { data, error } = await invokeWithTimeout<{ plays: HighImpactPlay[] }>(
+                'high-impact-plays',
+                { matchId },
+                20000 // Longer timeout for AI generation
+            );
+
+            if (error) {
+                console.error('[useHighImpactPlays] Error:', error);
+                throw error;
+            }
+
+            return data?.plays || [];
+        },
+        enabled: !!matchId,
+        staleTime: Infinity, // These don't change for a completed match
+        retry: 1
     });
 }
 

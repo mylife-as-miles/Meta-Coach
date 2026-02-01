@@ -2,7 +2,52 @@ import React, { useState, useEffect } from 'react';
 import Modal from '../../ui/Modal';
 import { Match } from '../../../lib/mockData';
 import { useSession } from '../../../hooks/useAuth';
-import { useWorkspace, useTeamProfile, useMatchStats } from '../../../hooks/useDashboardQueries';
+import { useWorkspace, useTeamProfile, useMatchStats, useHighImpactPlays } from '../../../hooks/useDashboardQueries';
+
+const HighImpactPlaysSection: React.FC<{ matchId: string }> = ({ matchId }) => {
+    const { data: plays, isLoading } = useHighImpactPlays(matchId);
+
+    if (isLoading) return <div className="text-center py-4 text-gray-400 text-xs animate-pulse">Analyzing strategic impact...</div>;
+    if (!plays || plays.length === 0) return null;
+
+    return (
+        <div className="bg-surface-darker rounded-xl p-5 border border-white/5">
+            <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+                <span className="material-icons-outlined text-yellow-400 text-base">emoji_events</span>
+                AI Strategic Insights: High-Impact Plays
+            </h3>
+            <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left">
+                    <thead>
+                        <tr className="text-gray-500 text-xs uppercase border-b border-white/5">
+                            <th className="py-2 px-2">Time</th>
+                            <th className="py-2 px-2">Play</th>
+                            <th className="py-2 px-2">Outcome</th>
+                            <th className="py-2 px-2 text-right">AI Score</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {plays.map((play, idx) => (
+                            <tr key={idx} className="border-b border-white/5 hover:bg-white/5">
+                                <td className="py-2 px-2 font-mono text-gray-400">{play.time}</td>
+                                <td className="py-2 px-2 font-medium text-white">{play.play}</td>
+                                <td className="py-2 px-2 text-gray-300">{play.outcome}</td>
+                                <td className="py-2 px-2 text-right">
+                                    <span className={`font-mono font-bold ${play.score >= 90 ? 'text-primary shadow-neon-text' :
+                                            play.score >= 80 ? 'text-green-400' :
+                                                play.score >= 70 ? 'text-yellow-400' : 'text-gray-400'
+                                        }`}>
+                                        {play.score}
+                                    </span>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+};
 
 interface MatchDetailModalProps {
     isOpen: boolean;
@@ -228,6 +273,9 @@ const MatchDetailModal: React.FC<MatchDetailModalProps> = ({ isOpen, onClose, ma
                         </div>
                     </div>
                 </div>
+
+                {/* High-Impact Plays (New Section) */}
+                <HighImpactPlaysSection matchId={match.id} />
 
                 {/* Timeline placeholder */}
                 <div className="bg-surface-darker rounded-xl p-5 border border-white/5">
