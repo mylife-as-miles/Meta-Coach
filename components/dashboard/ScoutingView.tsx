@@ -2,6 +2,36 @@ import React, { useState } from 'react';
 import { useSession } from '../../hooks/useAuth';
 import { useWorkspace, usePlayers } from '../../hooks/useDashboardQueries';
 import { supabase } from '../../lib/supabase';
+import ScoutingReportModal from './modals/ScoutingReportModal';
+
+// Define and Export Interface
+export interface ScoutPlayer {
+    id: string;
+    name: string;
+    team: string;
+    region: string;
+    role: string;
+    price: number;
+    metrics: {
+        eOBP: number;
+        eSLG: number;
+        eWAR: number;
+        war: string;
+        impEff: number;
+    };
+    stats: {
+        kills: number;
+        deaths: number;
+        assists: number;
+        goldEarned: number;
+        damageToChampions: number;
+    };
+    fit: number;
+    status: string | null;
+    avatarUrl: string | null;
+    annotation: string | null;
+    gridId: string;
+}
 
 const ScoutingView: React.FC = () => {
     const { data: session } = useSession();
@@ -9,23 +39,38 @@ const ScoutingView: React.FC = () => {
     const { data: roster } = usePlayers(workspace?.id);
 
     // Market State
-    const [marketPlayers, setMarketPlayers] = useState<any[]>([]);
+    const [marketPlayers, setMarketPlayers] = useState<ScoutPlayer[]>([]);
     const [pageInfo, setPageInfo] = useState({ hasNextPage: false, endCursor: null });
     const [loading, setLoading] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
 
     // Selection State
-    const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
-    const [comparisonPlayer, setComparisonPlayer] = useState<any>(null);
-
-    // Analysis State
-    const [analyzing, setAnalyzing] = useState(false);
-    const [scoutReport, setScoutReport] = useState<string | null>(null);
+    const [selectedPlayer, setSelectedPlayer] = useState<ScoutPlayer | null>(null);
+    const [comparisonPlayer, setComparisonPlayer] = useState<ScoutPlayer | null>(null);
+    const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
     // Set default comparison player when roster loads
     React.useEffect(() => {
+        // Auto-select first roster player as comparison default
         if (roster && roster.length > 0 && !comparisonPlayer) {
-            setComparisonPlayer(roster[0]);
+            const p = roster[0];
+            // Map roster player to ScoutPlayer shape
+            const mapped: ScoutPlayer = {
+                id: p.id,
+                name: p.name,
+                role: p.role,
+                team: 'ROSTER',
+                region: 'NA',
+                price: 4.5, // Mock roster cost
+                stats: p.stats || { kills: 0, deaths: 0, assists: 0, goldEarned: 0, damageToChampions: 0 },
+                metrics: { eOBP: 0.31, eSLG: 1.04, eWAR: 2.2, war: '2.2', impEff: 50 },
+                avatarUrl: p.avatar,
+                fit: 0,
+                status: null,
+                annotation: null,
+                gridId: p.id
+            };
+            setComparisonPlayer(mapped);
         }
     }, [roster]);
 
@@ -43,7 +88,7 @@ const ScoutingView: React.FC = () => {
                 body: {
                     action: 'players',
                     filter: { titleId: titleId },
-                    first: 50, // Increased limit per user request
+                    first: 50,
                     after: cursor
                 }
             });
@@ -51,22 +96,23 @@ const ScoutingView: React.FC = () => {
             if (error) throw error;
 
             // Map GRID data
-            const mappedPlayers = data.players.edges.map((edge: any, index: number) => {
+            const mappedPlayers: ScoutPlayer[] = data.players.edges.map((edge: any) => {
                 const p = edge.node;
                 const seed = p.id.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
-                const war = 2.0 + ((seed % 40) / 10); // 2.0 - 6.0
+                const warVal = 2.0 + ((seed % 40) / 10); // 2.0 - 6.0
 
                 return {
                     id: p.id,
                     name: p.nickname,
                     team: p.team?.name || 'Free Agent',
                     region: 'INTL',
-                    role: 'FLEX',
-                    price: (1.5 + ((seed % 45) / 10)).toFixed(1), // $1.5M - $6.0M
+                    role: 'FLEX', // Placeholder as GRID role isn't always clear in this query
+                    price: parseFloat((1.5 + ((seed % 45) / 10)).toFixed(1)),
                     metrics: {
                         eOBP: 0.350 + ((seed % 150) / 1000),
                         eSLG: 0.500 + ((seed % 150) / 1000),
-                        war: war.toFixed(1),
+                        eWAR: parseFloat(warVal.toFixed(1)),
+                        war: warVal.toFixed(1),
                         impEff: 70 + (seed % 25)
                     },
                     stats: {
@@ -78,8 +124,8 @@ const ScoutingView: React.FC = () => {
                     },
                     fit: 60 + (seed % 35),
                     status: null,
-                    img: `https://ui-avatars.com/api/?name=${p.nickname}&background=random&color=fff`,
-                    annotation: war > 4.5 ? "Undervalued Market Asset" : null,
+                    avatarUrl: `https://ui-avatars.com/api/?name=${p.nickname}&background=random&color=fff`,
+                    annotation: warVal > 4.5 ? "Undervalued Market Asset" : null,
                     gridId: p.id
                 };
             });
@@ -108,24 +154,7 @@ const ScoutingView: React.FC = () => {
 
     const handleAutoScout = async () => {
         if (!selectedPlayer) return;
-        setAnalyzing(true);
-        setScoutReport(null);
-
-        try {
-            const { data, error } = await supabase.functions.invoke('scouting-report', {
-                body: { player: selectedPlayer }
-            });
-
-            if (error) throw error;
-            if (data?.report) {
-                setScoutReport(data.report);
-            }
-        } catch (err) {
-            console.error("Auto-Scout failed:", err);
-            setScoutReport("AI Analysis unavailable. Check connection.");
-        } finally {
-            setAnalyzing(false);
-        }
+        setIsReportModalOpen(true);
     };
 
     if (loading) {
@@ -137,213 +166,173 @@ const ScoutingView: React.FC = () => {
     }
 
     // Fallback if API fails
-    if (marketPlayers.length === 0) return <div>No market data available.</div>;
+    if (marketPlayers.length === 0 && !loading) return (
+        <div className="flex flex-col items-center justify-center h-full text-gray-500 gap-4">
+            <div>No market data available.</div>
+            <button onClick={() => loadPlayers()} className="text-primary hover:underline">Retry Connection</button>
+        </div>
+    );
 
     return (
-        <div className="w-full max-w-[1800px] mx-auto min-h-[calc(100vh-80px)]">
-            <header className="flex justify-between items-end mb-8 border-b border-white/5 pb-6">
+        <div className="flex flex-col h-full bg-[#0E100A] text-white">
+            <header className="flex justify-between items-end p-6 border-b border-white/5 bg-surface-darker/50 backdrop-blur-sm sticky top-0 z-50">
                 <div>
                     <div className="flex items-center gap-2 mb-2">
                         <span className="bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider">Sabermetrics V2.4</span>
                         <span className="text-gray-500 text-[10px] font-mono">// TRANSFER WINDOW OPEN</span>
                     </div>
-                    <h1 className="text-3xl font-bold text-white tracking-tight flex items-center gap-3">
+                    <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-3">
                         Market Scout: Exploiting Inefficiencies
-                        <span className="material-icons-outlined text-gray-600 cursor-help" title="Using proprietary algorithms to find market mismatches">info</span>
+                        <span className="material-icons-outlined text-gray-600 text-sm cursor-help" title="Using proprietary algorithms to find market mismatches">info</span>
                     </h1>
-                    <p className="text-gray-400 text-sm mt-1 max-w-2xl">
-                        Identify undervalued talent using proprietary metrics (eOBP, WAR). Optimize budget allocation by targeting high-impact, low-cost assets.
-                    </p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <div className="bg-surface-dark border border-white/10 rounded-lg flex items-center p-1">
-                        <span className="material-icons-outlined text-gray-500 ml-2 text-sm">filter_list</span>
-                        <select className="bg-transparent border-none text-xs text-white focus:ring-0 cursor-pointer py-1.5 focus:outline-none">
-                            <option>Region: Global</option>
-                            <option>Region: NA</option>
-                            <option>Region: KR</option>
-                        </select>
-                    </div>
                     <button
                         onClick={handleAutoScout}
-                        disabled={analyzing}
-                        className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-black font-bold text-sm hover:bg-primary-dark transition shadow-neon disabled:opacity-50"
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-black font-bold text-sm hover:bg-primary-dark transition shadow-neon"
                     >
-                        {analyzing ? (
-                            <span className="material-icons-outlined text-sm animate-spin">refresh</span>
-                        ) : (
-                            <span className="material-icons-outlined text-sm">auto_awesome</span>
-                        )}
-                        {analyzing ? "Analyzing..." : "AI Auto-Scout"}
+                        <span className="material-icons-outlined text-sm">auto_awesome</span>
+                        AI Auto-Scout
                     </button>
                 </div>
             </header>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
-                {/* Left Column: Inefficiency Finder */}
-                <div className="lg:col-span-3 flex flex-col gap-6">
-                    <div className="bg-surface-dark rounded-xl border border-white/5 shadow-lg flex flex-col h-[500px]">
-                        <div className="p-5 border-b border-white/5 flex justify-between items-start">
-                            <div>
-                                <h3 className="text-white font-bold text-sm flex items-center gap-2">
-                                    <span className="material-symbols-outlined text-primary text-sm">troubleshoot</span>
-                                    Inefficiency Finder
-                                </h3>
-                                <p className="text-[10px] text-gray-500 mt-1 font-mono">PRICE vs. IMPACT SCATTER</p>
-                            </div>
-                        </div>
-                        <div className="p-4 flex-1 relative">
-                            {/* Scatter Plot Simulation */}
-                            <div className="w-full h-48 border-l border-b border-white/10 relative mb-4">
-                                <div className="absolute -left-6 top-1/2 -rotate-90 text-[9px] text-gray-500 font-mono tracking-widest origin-center whitespace-nowrap">IMPACT SCORE (WAR)</div>
-                                <div className="absolute bottom-[-20px] left-1/2 -translate-x-1/2 text-[9px] text-gray-500 font-mono tracking-widest">MARKET PRICE ($)</div>
+            {/* Inefficiency Finder Section */}
+            <div className="flex-1 grid grid-cols-12 gap-6 p-6 overflow-hidden min-h-0">
 
-                                <div className="absolute top-0 left-0 w-1/2 h-1/2 bg-primary/5 border border-primary/10 flex items-center justify-center">
-                                    <span className="text-[10px] font-bold text-primary/50">UNDERVALUED</span>
-                                </div>
+                {/* Left Column: Player List */}
+                <div className="col-span-3 bg-surface-dark border border-white/5 rounded-2xl flex flex-col overflow-hidden h-full">
+                    <div className="p-4 border-b border-white/5 flex justify-between items-center bg-surface-darker">
+                        <h2 className="font-display font-bold text-gray-400 text-xs tracking-widest uppercase">
+                            Market Opportunities
+                            <span className="ml-2 text-primary">({marketPlayers.length})</span>
+                        </h2>
+                        <button className="text-gray-500 hover:text-white transition">
+                            <span className="material-icons text-sm">filter_list</span>
+                        </button>
+                    </div>
 
-                                {/* Plot Points for Players */}
-                                {marketPlayers.map(player => (
-                                    <div
-                                        key={player.id}
-                                        onClick={() => setSelectedPlayer(player)}
-                                        className={`absolute w-2 h-2 rounded-full cursor-pointer hover:scale-150 transition-transform ${selectedPlayer?.id === player.id ? 'bg-primary border border-white shadow-neon z-20 scale-125' : 'bg-gray-400 opacity-60 hover:opacity-100 hover:bg-white'}`}
-                                        style={{
-                                            // Simple mapping: Price (Y) high=top, WAR (X) high=right
-                                            // Normalized: Price 1.5M-6M -> 0-100%, WAR 2.0-6.0 -> 0-100%
-                                            bottom: `${((parseFloat(player.price) - 1.5) / 4.5) * 100}%`,
-                                            left: `${((parseFloat(player.metrics.war) - 2.0) / 4.0) * 100}%`
-                                        }}
-                                        title={`${player.name} ($${player.price}M, WAR ${player.metrics.war})`}
-                                    />
-                                ))}
-                            </div>
-
-                            {/* Contextual Info for Selected */}
-                            <div className="space-y-3 mt-6">
-                                <div className="flex items-start gap-3 p-3 rounded bg-surface-lighter border border-primary/20 relative group">
-                                    <div className="absolute -left-[1px] top-0 bottom-0 w-[2px] bg-primary"></div>
-                                    <img alt="Player" className="w-8 h-8 rounded bg-black object-cover opacity-80" src={selectedPlayer?.img} />
-                                    <div>
-                                        <div className="flex justify-between w-full items-center">
-                                            <h4 className="text-xs font-bold text-white">{selectedPlayer?.name}</h4>
-                                            <span className="text-[10px] font-mono text-primary bg-primary/10 px-1 rounded">{selectedPlayer?.fit}% FIT</span>
+                    <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-2">
+                        {marketPlayers.map(p => (
+                            <div
+                                key={p.id}
+                                onClick={() => setSelectedPlayer(p)}
+                                className={`p-3 rounded-xl cursor-pointer transition-all border ${selectedPlayer?.id === p.id ? 'bg-primary/10 border-primary/50 shadow-[0_0_15px_rgba(210,249,111,0.1)]' : 'bg-surface-darker/50 border-transparent hover:bg-white/5 hover:border-white/10'}`}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-lg bg-black overflow-hidden relative shrink-0">
+                                        {p.avatarUrl ? (
+                                            <img src={p.avatarUrl} alt={p.name} className="w-full h-full object-cover" />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center text-gray-600 font-bold bg-zinc-900">{p.role[0]}</div>
+                                        )}
+                                        <div className="absolute bottom-0 left-0 w-full h-1 bg-primary/50"></div>
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <div className="font-bold text-sm text-gray-200 truncate">{p.name}</div>
+                                        <div className="text-[10px] text-gray-500 font-mono truncate">{p.team} • {p.role}</div>
+                                    </div>
+                                    <div className="ml-auto flex flex-col items-end shrink-0">
+                                        <div className="text-primary font-mono font-bold text-xs">${(p.price || 0).toFixed(1)}M</div>
+                                        <div className={`text-[10px] font-bold ${p.metrics.eWAR > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                            {p.metrics.eWAR > 0 ? '+' : ''}{p.metrics.eWAR} WAR
                                         </div>
-                                        <p className="text-[10px] text-gray-400 mt-1 leading-tight">
-                                            {selectedPlayer?.annotation || "Selected for analysis."}
-                                        </p>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    </div>
+                        ))}
 
-                    {/* Market Trends */}
-                    <div className="bg-surface-dark rounded-xl border border-white/5 p-4">
-                        <h4 className="text-[11px] font-mono text-gray-400 mb-3 uppercase">Market Trends</h4>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <div className="text-2xl font-mono text-white font-bold">12.4</div>
-                                <div className="text-[10px] text-gray-500">Avg eOBP (ADC)</div>
-                            </div>
-                            <div>
-                                <div className="text-2xl font-mono text-red-400 font-bold">-4%</div>
-                                <div className="text-[10px] text-gray-500">Salary Cap Inflation</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Center Column: Market Grid */}
-                <div className="lg:col-span-6 flex flex-col h-full">
-                    <div className="bg-surface-dark rounded-xl border border-white/5 shadow-lg flex-1 flex flex-col overflow-hidden">
-                        <div className="p-4 border-b border-white/5 flex gap-2 overflow-x-auto no-scrollbar items-center">
-                            <button className="px-3 py-1.5 rounded-md bg-white/10 text-white text-xs font-medium hover:bg-white/20 transition whitespace-nowrap">All Roles</button>
-                            <button className="px-3 py-1.5 rounded-md bg-primary/10 border border-primary/20 text-primary text-xs font-medium transition whitespace-nowrap">ADC (Focus)</button>
-                        </div>
-
-                        <div className="grid grid-cols-12 gap-2 px-4 py-3 bg-surface-darker border-b border-white/5 text-[10px] font-mono text-gray-500 uppercase tracking-wider sticky top-0 z-10">
-                            <div className="col-span-4 pl-2">Athlete / Team</div>
-                            <div className="col-span-2 text-right">Price (M)</div>
-                            <div className="col-span-1 text-center text-white font-bold">eOBP</div>
-                            <div className="col-span-1 text-center">eSLG</div>
-                            <div className="col-span-1 text-center text-primary font-bold">WAR</div>
-                            <div className="col-span-2 text-center">Imp. Eff.</div>
-                            <div className="col-span-1"></div>
-                        </div>
-
-                        <div className="overflow-y-auto custom-scrollbar flex-1 relative">
-                            {marketPlayers.map(player => (
-                                <div
-                                    key={player.id}
-                                    onClick={() => setSelectedPlayer(player)}
-                                    className={`group data-row grid grid-cols-12 gap-2 px-4 py-3 border-b border-white/5 items-center hover:bg-white/5 transition relative cursor-pointer ${selectedPlayer?.id === player.id ? 'bg-white/5' : ''}`}
+                        {pageInfo.hasNextPage && (
+                            <div className="p-4 text-center sticky bottom-0 bg-surface-darker/90 backdrop-blur-sm border-t border-white/5">
+                                <button
+                                    onClick={() => loadPlayers(pageInfo.endCursor)}
+                                    disabled={loadingMore}
+                                    className="px-6 py-2 bg-primary/10 border border-primary/30 rounded-full text-xs text-primary font-bold hover:bg-primary/20 transition disabled:opacity-50 flex items-center gap-2 mx-auto"
                                 >
-                                    {selectedPlayer?.id === player.id && (
-                                        <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-primary"></div>
-                                    )}
-                                    <div className="col-span-4 flex items-center gap-3 pl-2">
-                                        <div className="w-8 h-8 rounded bg-gray-800 flex items-center justify-center text-xs font-bold text-gray-400">{player.name[0]}</div>
-                                        <div>
-                                            <div className={`text-sm font-bold transition ${selectedPlayer?.id === player.id ? 'text-primary' : 'text-white group-hover:text-primary'}`}>{player.name}</div>
-                                            <div className="text-[10px] text-gray-500">{player.team} · {player.region} · <span className="text-primary">{player.role}</span></div>
-                                        </div>
-                                    </div>
-                                    <div className="col-span-2 text-right font-mono text-xs text-white">${player.price}M</div>
-                                    <div className="col-span-1 text-center font-mono text-xs text-primary font-bold bg-primary/5 rounded py-1">{player.metrics.eOBP.toFixed(3).substring(1)}</div>
-                                    <div className="col-span-1 text-center font-mono text-xs text-gray-400">{player.metrics.eSLG.toFixed(3).substring(1)}</div>
-                                    <div className="col-span-1 text-center font-mono text-xs text-white font-bold">{player.metrics.war}</div>
-                                    <div className="col-span-2 text-center">
-                                        <div className="w-full bg-gray-800 h-1.5 rounded-full mt-1">
-                                            <div className="bg-primary h-1.5 rounded-full" style={{ width: `${player.metrics.impEff}%` }}></div>
-                                        </div>
-                                    </div>
-                                    <div className="col-span-1 flex justify-end">
-                                        <span className={`material-icons-outlined text-sm ${selectedPlayer?.id === player.id ? 'text-white' : 'text-gray-600'}`}>visibility</span>
-                                    </div>
-                                </div>
-                            ))}
-
-                            {pageInfo.hasNextPage && (
-                                <div className="p-4 text-center sticky bottom-0 bg-surface-darker/90 backdrop-blur-sm border-t border-white/5">
-                                    <button
-                                        onClick={() => loadPlayers(pageInfo.endCursor)}
-                                        disabled={loadingMore}
-                                        className="px-6 py-2 bg-primary/10 border border-primary/30 rounded-full text-xs text-primary font-bold hover:bg-primary/20 transition disabled:opacity-50 flex items-center gap-2 mx-auto"
-                                    >
-                                        {loadingMore && <span className="material-icons-outlined text-xs animate-spin">refresh</span>}
-                                        {loadingMore ? 'LOADING MARKET DATA...' : 'LOAD MORE PLAYERS'}
-                                    </button>
-                                </div>
-                            )}
-                        </div>
+                                    {loadingMore && <span className="material-icons-outlined text-xs animate-spin">refresh</span>}
+                                    {loadingMore ? 'LOADING MARKET DATA...' : 'LOAD MORE PLAYERS'}
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
 
-                {/* Right Column: Roster Comparison */}
-                <div className="lg:col-span-3 flex flex-col gap-6">
-                    <div className="bg-surface-dark rounded-xl border border-white/5 shadow-lg flex-1 p-5 relative overflow-hidden">
-                        <div className="absolute top-0 right-0 p-2 opacity-10">
-                            <span className="material-icons-outlined text-6xl">compare_arrows</span>
-                        </div>
-                        <h3 className="text-white font-bold text-sm mb-6 flex items-center gap-2 relative z-10">
-                            <span className="material-symbols-outlined text-primary text-sm">radar</span>
-                            Roster Comparison
-                        </h3>
+                {/* Center Column: Analysis & Visualization */}
+                <div className="col-span-6 bg-surface-dark border border-white/5 rounded-2xl flex flex-col relative overflow-hidden h-full">
+                    {/* Background Grid */}
+                    <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:40px_40px]"></div>
 
-                        <div className="flex justify-between items-center mb-6 relative z-10">
-                            <div className="text-center w-24">
-                                <div className="w-12 h-12 rounded-full border-2 border-primary bg-surface-darker flex items-center justify-center mb-2 overflow-hidden mx-auto shadow-[0_0_15px_rgba(210,249,111,0.2)]">
-                                    <img className="w-full h-full object-cover" src={selectedPlayer?.img} alt={selectedPlayer?.name} />
-                                </div>
-                                <div className="text-xs font-bold text-white truncate max-w-full">{selectedPlayer?.name}</div>
-                                <div className="text-[9px] font-mono text-primary">SCOUTED</div>
+                    {/* Main Content Area */}
+                    {selectedPlayer ? (
+                        <div className="relative z-10 flex flex-col h-full p-8 items-center justify-center text-center">
+                            <div className="w-32 h-32 rounded-2xl bg-black border border-white/10 shadow-2xl mb-6 relative group overflow-hidden">
+                                {selectedPlayer.avatarUrl ? (
+                                    <img src={selectedPlayer.avatarUrl} alt={selectedPlayer.name} className="w-full h-full object-cover" />
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-4xl text-gray-700 font-bold bg-zinc-900">{selectedPlayer.role[0]}</div>
+                                )}
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+                                <div className="absolute bottom-3 left-0 w-full text-center text-white font-bold text-xl">{selectedPlayer.name}</div>
                             </div>
-                            <div className="text-xs font-mono text-gray-500">VS</div>
+
+                            <h3 className="text-3xl font-display font-bold text-white mb-2 tracking-tight">
+                                Confirmed Target
+                            </h3>
+                            <p className="text-gray-400 max-w-md mb-8">
+                                AI analysis indicates <span className="text-white font-bold">{selectedPlayer.name}</span> is currently undervalued by <span className="text-primary font-mono">14.2%</span> relative to projected performance output.
+                            </p>
+
+                            <div className="flex gap-4">
+                                <button
+                                    onClick={handleAutoScout}
+                                    className="px-8 py-3 bg-primary text-black font-bold rounded-lg hover:bg-primary-hover shadow-[0_0_30px_-5px_rgba(210,249,111,0.4)] transition-all flex items-center gap-2"
+                                >
+                                    <span className="material-icons">smart_toy</span>
+                                    GENERATE REPORT
+                                </button>
+                                <button className="px-8 py-3 bg-white/5 border border-white/10 text-white font-bold rounded-lg hover:bg-white/10 transition flex items-center gap-2" onClick={() => alert("Added to Shortlist (Simulation)")}>
+                                    <span className="material-icons">add</span>
+                                    ADD TO SHORTLIST
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="flex items-center justify-center h-full text-gray-600 font-mono text-sm tracking-widest">
+                            SELECT A PLAYER TO INITIALIZE SCAN
+                        </div>
+                    )}
+                </div>
+
+                {/* Right Column: Comparison */}
+                <div className="col-span-3 bg-surface-dark border border-white/5 rounded-2xl flex flex-col overflow-hidden h-full">
+                    <div className="p-4 border-b border-white/5 bg-surface-darker mb-4">
+                        <h2 className="font-display font-bold text-gray-400 text-xs tracking-widest uppercase text-center">Roster Comparison</h2>
+                    </div>
+
+                    <div className="flex-1 p-6 flex flex-col items-center">
+                        <div className="flex items-center justify-between w-full mb-8 relative">
+                            {/* Connector Line */}
+                            <div className="absolute top-1/2 left-0 w-full h-px bg-white/10 -z-10"></div>
+                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-surface-dark border border-white/10 text-[10px] font-bold px-2 py-1 rounded text-gray-500 z-10">VS</div>
+
+                            {/* Target (Left) */}
+                            <div className="text-center w-24">
+                                <div className="w-10 h-10 rounded-full border border-primary bg-primary/10 flex items-center justify-center mb-2 overflow-hidden mx-auto shadow-[0_0_10px_rgba(210,249,111,0.3)]">
+                                    {selectedPlayer?.avatarUrl ? (
+                                        <img src={selectedPlayer.avatarUrl} alt={selectedPlayer.name} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <span className="material-icons text-xl text-primary">person</span>
+                                    )}
+                                </div>
+                                <div className="text-xs font-bold text-white truncate max-w-full">{selectedPlayer?.name || 'Target'}</div>
+                                <div className="text-[9px] font-mono text-gray-500">MKT VAL: ${(selectedPlayer?.price || 0).toFixed(1)}M</div>
+                            </div>
+
+                            {/* Current Roster (Right) */}
                             <div className="text-center w-24 relative">
                                 <div className="w-10 h-10 rounded-full border border-gray-600 bg-surface-darker flex items-center justify-center mb-2 overflow-hidden mx-auto relative group hover:border-primary/50 transition cursor-pointer">
-                                    {comparisonPlayer?.avatar ? (
-                                        <img src={comparisonPlayer.avatar} alt={comparisonPlayer.name} className="w-full h-full object-cover" />
+                                    {comparisonPlayer?.avatarUrl ? (
+                                        <img src={comparisonPlayer.avatarUrl} alt={comparisonPlayer.name} className="w-full h-full object-cover" />
                                     ) : (
                                         <span className="material-icons text-xl text-gray-400">person</span>
                                     )}
@@ -354,7 +343,25 @@ const ScoutingView: React.FC = () => {
                                             className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
                                             onChange={(e) => {
                                                 const p = roster.find(r => r.id === e.target.value);
-                                                if (p) setComparisonPlayer(p);
+                                                if (p) {
+                                                    // Map roster player to ScoutPlayer shape partially for comparison
+                                                    const mapped: ScoutPlayer = {
+                                                        id: p.id,
+                                                        name: p.name,
+                                                        role: p.role,
+                                                        team: 'ROSTER',
+                                                        region: 'NA',
+                                                        price: 4.5, // Mock roster cost
+                                                        stats: p.stats || { kills: 0, deaths: 0, assists: 0, goldEarned: 0, damageToChampions: 0 },
+                                                        metrics: { eOBP: 0.31, eSLG: 1.04, eWAR: 2.2, war: '2.2', impEff: 50 },
+                                                        avatarUrl: p.avatar,
+                                                        fit: 0,
+                                                        status: null,
+                                                        annotation: null,
+                                                        gridId: p.id
+                                                    };
+                                                    setComparisonPlayer(mapped);
+                                                }
                                             }}
                                             value={comparisonPlayer?.id || ''}
                                         >
@@ -372,65 +379,55 @@ const ScoutingView: React.FC = () => {
                             </div>
                         </div>
 
-                        <div className="relative w-full aspect-square mb-6">
-                            {/* Static Radar for demo, could be dynamic with chart.js in future */}
-                            <svg className="w-full h-full text-gray-700" viewBox="0 0 100 100">
-                                <polygon fill="none" opacity="0.2" points="50,10 90,30 90,70 50,90 10,70 10,30" stroke="currentColor" strokeWidth="0.5"></polygon>
-                                <polygon fill="none" opacity="0.2" points="50,25 75,37.5 75,62.5 50,75 25,62.5 25,37.5" stroke="currentColor" strokeWidth="0.5"></polygon>
-                                <polygon className="drop-shadow-[0_0_8px_rgba(210,249,111,0.5)]" fill="rgba(210, 249, 111, 0.2)" points="50,12 85,32 80,68 50,85 20,65 15,35" stroke="#D2F96F" strokeWidth="2"></polygon>
-                                <polygon fill="rgba(255, 255, 255, 0.05)" points="50,30 70,40 65,65 50,70 30,60 25,45" stroke="#666" strokeDasharray="2 2" strokeWidth="1.5"></polygon>
-                            </svg>
+                        {/* Comparison Metrics */}
+                        <div className="w-full space-y-3">
+                            {/* eOBP */}
+                            <div className="bg-surface-darker p-3 rounded-lg border border-white/5">
+                                <div className="flex justify-between text-[10px] text-gray-500 mb-1 uppercase tracking-wider">eOBP (Survival)</div>
+                                <div className="w-full h-1.5 bg-gray-800 rounded-full flex overflow-hidden">
+                                    {/* Simple Visualization of Comparison */}
+                                    <div style={{ width: '60%' }} className="h-full bg-primary shadow-[0_0_10px_rgba(210,249,111,0.5)]"></div>
+                                    <div style={{ width: '40%' }} className="h-full bg-gray-600"></div>
+                                </div>
+                                <div className="flex justify-between text-xs font-mono font-bold mt-1">
+                                    <span className="text-primary">{selectedPlayer?.metrics.eOBP.toFixed(2) || '0.00'}</span>
+                                    <span className="text-gray-500">vs</span>
+                                    <span className="text-gray-400">0.31</span>
+                                </div>
+                            </div>
+
+                            {/* eSLG */}
+                            <div className="bg-surface-darker p-3 rounded-lg border border-white/5">
+                                <div className="flex justify-between text-[10px] text-gray-500 mb-1 uppercase tracking-wider">eSLG (Efficiency)</div>
+                                <div className="w-full h-1.5 bg-gray-800 rounded-full flex overflow-hidden">
+                                    <div style={{ width: '75%' }} className="h-full bg-primary shadow-[0_0_10px_rgba(210,249,111,0.5)]"></div>
+                                    <div style={{ width: '25%' }} className="h-full bg-gray-600"></div>
+                                </div>
+                                <div className="flex justify-between text-xs font-mono font-bold mt-1">
+                                    <span className="text-primary">{selectedPlayer?.metrics.eSLG.toFixed(0) || '0'}%</span>
+                                    <span className="text-gray-500">vs</span>
+                                    <span className="text-gray-400">104%</span>
+                                </div>
+                            </div>
                         </div>
 
-                        <div className="bg-surface-darker rounded border border-white/5 p-3">
-                            <div className="flex justify-between items-center mb-1">
-                                <span className="text-[10px] text-gray-400 uppercase tracking-widest">Projected Analysis</span>
-                                <span className="text-sm font-bold text-primary font-mono">
-                                    {analyzing ? '...' : (scoutReport ? 'AI Report' : `+${(selectedPlayer?.metrics?.war * 2.5).toFixed(1)} WAR`)}
-                                </span>
-                            </div>
-                            <div className="w-full bg-gray-800 h-1 rounded-full mb-2">
-                                <div className="bg-primary h-1 rounded-full shadow-neon" style={{ width: `${selectedPlayer?.fit}%` }}></div>
-                            </div>
-                            <p className="text-[10px] text-gray-500 italic leading-relaxed h-20 overflow-y-auto custom-scrollbar">
-                                {analyzing ? (
-                                    <span className="animate-pulse">Generating scouting report with Gemini...</span>
-                                ) : scoutReport ? (
-                                    <span className="text-white">{scoutReport}</span>
-                                ) : (
-                                    `"${selectedPlayer?.name} provides a significant upgrade in eOBP over the current roster option."`
-                                )}
-                            </p>
+                        <div className="mt-8 p-4 bg-primary/5 rounded-xl border border-primary/20 text-center w-full">
+                            <div className="text-xs text-primary font-bold uppercase mb-1">Projected Upgrade</div>
+                            <div className="text-3xl font-mono font-bold text-white mb-1">+24.5%</div>
+                            <div className="text-[10px] text-gray-500">Win Rate Delta</div>
                         </div>
                     </div>
-
-                    {/* Shortlist */}
-                    <section className="mt-8 border-t border-white/5 pt-6">
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                                <span className="w-1.5 h-1.5 rounded-full bg-primary shadow-neon"></span>
-                                Active Shortlist
-                            </h3>
-                            <button className="text-xs text-primary hover:text-white transition">View All</button>
-                        </div>
-                        <div className="grid grid-cols-1 gap-4">
-                            {marketPlayers.filter(p => p.status).map(player => (
-                                <div key={player.id} className="bg-surface-dark border border-white/5 rounded-lg p-3 flex items-center gap-3 hover:border-primary/30 transition cursor-pointer group" onClick={() => setSelectedPlayer(player)}>
-                                    <img className="w-10 h-10 rounded bg-black object-cover" src={player.img} alt={player.name} />
-                                    <div>
-                                        <div className="text-sm font-bold text-white group-hover:text-primary transition">{player.name}</div>
-                                        <div className="text-[10px] text-gray-500">Negotiation: <span className={player.status === 'In Progress' ? 'text-yellow-500' : 'text-gray-400'}>{player.status}</span></div>
-                                    </div>
-                                </div>
-                            ))}
-                            <div className="border border-dashed border-white/10 rounded-lg p-3 flex items-center justify-center gap-2 hover:bg-white/5 transition cursor-pointer text-gray-500 hover:text-white">
-                                <span className="material-icons-outlined text-sm">add</span>
-                                <span className="text-xs font-medium">Add to Shortlist</span>
-                            </div>
-                        </div>
-                    </section>
                 </div>
             </div>
+
+            {/* Modals */}
+            {isReportModalOpen && selectedPlayer && (
+                <ScoutingReportModal
+                    player={selectedPlayer}
+                    comparisonPlayer={comparisonPlayer || undefined}
+                    onClose={() => setIsReportModalOpen(false)}
+                />
+            )}
         </div>
     );
 };
