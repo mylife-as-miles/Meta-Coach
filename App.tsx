@@ -16,6 +16,7 @@ import Settings from './components/dashboard/Settings';
 import CommunicationLogs from './components/dashboard/CommunicationLogs';
 import CoachProfile from './components/dashboard/CoachProfile';
 import ScoutingView from './components/dashboard/ScoutingView';
+import NotificationsView from './components/dashboard/NotificationsView';
 import { Sun, Moon } from './components/Icons';
 
 // Wrapper component for onboarding routes (protected)
@@ -91,6 +92,7 @@ const App: React.FC = () => {
           <Route path="profile" element={<CoachProfile />} />
           <Route path="settings" element={<Settings />} />
           <Route path="scout" element={<ScoutingView />} />
+          <Route path="notifications" element={<NotificationsView />} />
         </Route>
       </Routes>
 

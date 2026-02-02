@@ -150,7 +150,7 @@ const DashboardLayout: React.FC = () => {
                                     </div>
                                     <div className="p-2 border-t border-white/5 bg-[#141610] text-center">
                                         <Link
-                                            to="/dashboard/communication-logs"
+                                            to="/dashboard/notifications"
                                             onClick={() => setShowNotifications(false)}
                                             className="text-[10px] uppercase tracking-wider font-bold text-gray-500 hover:text-white py-1.5 w-full transition block"
                                         >
