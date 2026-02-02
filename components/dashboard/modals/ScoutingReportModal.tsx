@@ -62,7 +62,7 @@ const ScoutingReportModal: React.FC<ScoutingReportModalProps> = ({ player, compa
     }, [player, comparisonPlayer]);
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/80 backdrop-blur-md transition-opacity" onClick={onClose} />
 
             <div className="relative bg-[#0E100A] w-full max-w-6xl h-[90vh] rounded-lg shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in duration-300 border border-white/10">

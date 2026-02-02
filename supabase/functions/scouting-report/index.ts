@@ -85,30 +85,32 @@ serve(async (req) => {
             contents: [{ role: 'user', parts: [{ text: prompt }] }],
         })
 
-        // With responseMimeType: 'application/json', the text should be valid JSON
+        // Helper to extract text from various SDK response formats
+        const getResponseText = (resp: any): string => {
+            if (typeof resp.text === 'function') return resp.text();
+            if (typeof resp.text === 'string') return resp.text;
+            if (resp.candidates?.[0]?.content?.parts?.[0]?.text) return resp.candidates[0].content.parts[0].text;
+            if (resp.candidates?.[0]?.content?.parts?.[0]) {
+                const part = resp.candidates[0].content.parts[0]; // fallback for unstructured
+                return typeof part === 'string' ? part : JSON.stringify(part);
+            }
+            return "{}";
+        };
+
+        let reportText = getResponseText(response);
+        console.log("[scouting-report] Raw AI Response:", reportText.substring(0, 500) + "...");
+
+        // Clean markdown code blocks if present (Gemini might still add them despite JSON mode)
+        reportText = reportText.replace(/```json/g, '').replace(/```/g, '').trim();
+
         let reportData = {};
         try {
-            if (response.text) {
-                reportData = JSON.parse(response.text());
-            } else {
-                // Fallback if text() is not available or empty (streaming vs sync difference in SDK versions)
-                // Deno SDK generateContent typically returns .response object in previous versions, 
-                // but @google/genai syntax returns object with .text() method or .text property.
-                // The user code showed response as iterable/async stream. But generateContent is unary.
-                // We will try .text() first then .text
-                try {
-                    reportData = JSON.parse(response.text());
-                } catch (e) {
-                    if (response.text) {
-                        reportData = JSON.parse(response.text);
-                    }
-                }
-            }
+            reportData = JSON.parse(reportText);
         } catch (jsonError) {
-            console.error("Failed to parse JSON response:", response.text ? (typeof response.text === 'function' ? response.text() : response.text) : "Empty response");
+            console.error("[scouting-report] JSON Parse Error on text:", reportText);
             // Fallback simple error object
             reportData = {
-                executive_summary: { title: "Analysis Failed", text: "AI could not generate a structured report." },
+                executive_summary: { title: "Analysis Failed", text: "AI generated invalid JSON." },
                 metrics_analysis: { eobp_trend: "0%", eslg_trend: "0%", war_trend: "0.0" },
                 cost_analysis: { current_roster_cost: "$0M", target_acquisition_cost: "$0M", roi_percentage: "0%" }
             };
