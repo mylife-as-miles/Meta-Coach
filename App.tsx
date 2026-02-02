@@ -42,6 +42,8 @@ const DashboardRoutes: React.FC = () => {
 
 import { useAuthListener } from './hooks/useAuth';
 
+import AppTutorial from './components/dashboard/AppTutorial';
+
 const App: React.FC = () => {
   // Initialize global auth listener
   useAuthListener();
@@ -60,6 +62,7 @@ const App: React.FC = () => {
 
   return (
     <div className={`min-h-screen flex flex-col relative transition-colors duration-300 ${isDark ? 'bg-[#0E100A] text-white' : 'bg-gray-50 text-gray-900'}`}>
+      <AppTutorial />
 
       <Routes>
         {/* Public Routes */}

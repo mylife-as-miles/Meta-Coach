@@ -271,6 +271,72 @@ const AccountSettings: React.FC = () => {
                     </div>
                 </div>
 
+                {/* Data Synchronization */}
+                <div className="mb-8">
+                    <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                        <span className="material-symbols-outlined text-primary">sync</span>
+                        Data Synchronization
+                    </h3>
+                    <div className="bg-surface-darker rounded-xl border border-white/5 overflow-hidden">
+                        <div className="flex flex-col md:flex-row items-center justify-between p-6 gap-4">
+                            <div className="flex flex-col gap-1">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-white font-medium">Sync Canonical Match History</span>
+                                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">GRID API</span>
+                                </div>
+                                <span className="text-xs text-gray-500 max-w-lg">
+                                    Fetch and cache official Series, Matches, and Games from the Central Data Feed into your Supabase database.
+                                    This powers the <span className="text-gray-300">Auto-Scout Intelligence Engine</span>.
+                                </span>
+                            </div>
+                            <button
+                                id="sync-history-btn"
+                                onClick={async () => {
+                                    try {
+                                        setSaving(true);
+                                        setMessage({ type: 'success', text: 'Sync initiated... This may take a few minutes.' });
+
+                                        // Hardcoded date range for demo: Jan 1 2024 to Now
+                                        const now = new Date().toISOString();
+                                        const from = new Date(new Date().setFullYear(new Date().getFullYear() - 1)).toISOString();
+
+                                        const { data, error } = await supabase.functions.invoke('sync-historical-data', {
+                                            body: {
+                                                titleId: '6', // Generic Title ID or get from Workspace
+                                                from: from,
+                                                to: now
+                                            }
+                                        });
+
+                                        if (error) throw error;
+                                        setMessage({ type: 'success', text: `Sync Complete! Processed ${data.totalFound} series.` });
+
+                                    } catch (err: any) {
+                                        console.error(err);
+                                        setMessage({ type: 'error', text: 'Sync failed: ' + err.message });
+                                    } finally {
+                                        setSaving(false);
+                                    }
+                                }}
+                                disabled={saving}
+                                className="px-5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white text-sm font-bold transition flex items-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-wait"
+                            >
+                                {saving ? (
+                                    <>
+                                        <span className="material-icons animate-spin text-sm">refresh</span>
+                                        Syncing...
+                                    </>
+                                ) : (
+                                    <>
+                                        <span className="material-icons text-sm">cloud_download</span>
+                                        Sync History
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 {/* Security (Static) */}
                 <div className="mb-8">
                     <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
