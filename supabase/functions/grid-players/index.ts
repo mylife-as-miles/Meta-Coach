@@ -201,7 +201,6 @@ serve(async (req) => {
 
             // Default fallback for original team-based query (backward compatibility if needed, though we should migrate)
             default:
-            default:
                 if (params.teamId) {
                     // Legacy behavior for "list players by team"
                     query = `

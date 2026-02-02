@@ -48,31 +48,16 @@ const ScoutingView: React.FC = () => {
     const [selectedPlayer, setSelectedPlayer] = useState<ScoutPlayer | null>(null);
     const [comparisonPlayer, setComparisonPlayer] = useState<ScoutPlayer | null>(null);
     const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+    const [isComparisonDropdownOpen, setIsComparisonDropdownOpen] = useState(false);
 
-    // Set default comparison player when roster loads
+    // Set default comparison player when market players load
     React.useEffect(() => {
-        // Auto-select first roster player as comparison default
-        if (roster && roster.length > 0 && !comparisonPlayer) {
-            const p = roster[0];
-            // Map roster player to ScoutPlayer shape
-            const mapped: ScoutPlayer = {
-                id: p.id,
-                name: p.name,
-                role: p.role,
-                team: 'ROSTER',
-                region: 'NA',
-                price: 4.5, // Mock roster cost
-                stats: p.stats || { kills: 0, deaths: 0, assists: 0, goldEarned: 0, damageToChampions: 0 },
-                metrics: { eOBP: 0.31, eSLG: 1.04, eWAR: 2.2, war: '2.2', impEff: 50 },
-                avatarUrl: p.avatar,
-                fit: 0,
-                status: null,
-                annotation: null,
-                gridId: p.id
-            };
-            setComparisonPlayer(mapped);
+        if (marketPlayers.length > 1 && !comparisonPlayer && selectedPlayer) {
+            // Find first player that isn't the selected one
+            const other = marketPlayers.find(p => p.id !== selectedPlayer.id);
+            if (other) setComparisonPlayer(other);
         }
-    }, [roster]);
+    }, [marketPlayers, selectedPlayer]);
 
     // Fetch Players (Initial & Pagination)
     const loadPlayers = async (cursor: string | null = null) => {
@@ -224,7 +209,9 @@ const ScoutingView: React.FC = () => {
                                         {p.avatarUrl ? (
                                             <img src={p.avatarUrl} alt={p.name} className="w-full h-full object-cover" />
                                         ) : (
-                                            <div className="w-full h-full flex items-center justify-center text-gray-600 font-bold bg-zinc-900">{p.role[0]}</div>
+                                            <div className="w-full h-full flex items-center justify-center text-gray-400 font-bold bg-zinc-900 text-xs shadow-inner">
+                                                {p.name.substring(0, 2).toUpperCase()}
+                                            </div>
                                         )}
                                         <div className="absolute bottom-0 left-0 w-full h-1 bg-primary/50"></div>
                                     </div>
@@ -269,7 +256,9 @@ const ScoutingView: React.FC = () => {
                                 {selectedPlayer.avatarUrl ? (
                                     <img src={selectedPlayer.avatarUrl} alt={selectedPlayer.name} className="w-full h-full object-cover" />
                                 ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-4xl text-gray-700 font-bold bg-zinc-900">{selectedPlayer.role[0]}</div>
+                                    <div className="w-full h-full flex items-center justify-center text-4xl text-gray-700 font-bold bg-zinc-900">
+                                        {selectedPlayer.name.substring(0, 2).toUpperCase()}
+                                    </div>
                                 )}
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
                                 <div className="absolute bottom-3 left-0 w-full text-center text-white font-bold text-xl">{selectedPlayer.name}</div>
@@ -306,7 +295,7 @@ const ScoutingView: React.FC = () => {
                 {/* Right Column: Comparison */}
                 <div className="col-span-3 bg-surface-dark border border-white/5 rounded-2xl flex flex-col overflow-hidden h-full">
                     <div className="p-4 border-b border-white/5 bg-surface-darker mb-4">
-                        <h2 className="font-display font-bold text-gray-400 text-xs tracking-widest uppercase text-center">Roster Comparison</h2>
+                        <h2 className="font-display font-bold text-gray-400 text-xs tracking-widest uppercase text-center">Market Comparison</h2>
                     </div>
 
                     <div className="flex-1 p-6 flex flex-col items-center">
@@ -321,101 +310,115 @@ const ScoutingView: React.FC = () => {
                                     {selectedPlayer?.avatarUrl ? (
                                         <img src={selectedPlayer.avatarUrl} alt={selectedPlayer.name} className="w-full h-full object-cover" />
                                     ) : (
-                                        <span className="material-icons text-xl text-primary">person</span>
+                                        <span className="text-sm font-bold text-primary">
+                                            {selectedPlayer?.name.substring(0, 2).toUpperCase() || 'TP'}
+                                        </span>
                                     )}
                                 </div>
                                 <div className="text-xs font-bold text-white truncate max-w-full">{selectedPlayer?.name || 'Target'}</div>
                                 <div className="text-[9px] font-mono text-gray-500">MKT VAL: ${(selectedPlayer?.price || 0).toFixed(1)}M</div>
                             </div>
 
-                            {/* Current Roster (Right) */}
+                            {/* Market Comparison (Right) */}
                             <div className="text-center w-24 relative">
-                                <div className="w-10 h-10 rounded-full border border-gray-600 bg-surface-darker flex items-center justify-center mb-2 overflow-hidden mx-auto relative group hover:border-primary/50 transition cursor-pointer">
+                                <div
+                                    className="w-10 h-10 rounded-full border border-gray-600 bg-surface-darker flex items-center justify-center mb-2 overflow-hidden mx-auto relative group hover:border-primary/50 transition cursor-pointer"
+                                    onClick={() => setIsComparisonDropdownOpen(!isComparisonDropdownOpen)}
+                                >
                                     {comparisonPlayer?.avatarUrl ? (
                                         <img src={comparisonPlayer.avatarUrl} alt={comparisonPlayer.name} className="w-full h-full object-cover" />
                                     ) : (
-                                        <span className="material-icons text-xl text-gray-400">person</span>
-                                    )}
-
-                                    {/* Invisible Select Overlay */}
-                                    {roster && roster.length > 0 && (
-                                        <select
-                                            className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
-                                            onChange={(e) => {
-                                                const p = roster.find(r => r.id === e.target.value);
-                                                if (p) {
-                                                    // Map roster player to ScoutPlayer shape partially for comparison
-                                                    const mapped: ScoutPlayer = {
-                                                        id: p.id,
-                                                        name: p.name,
-                                                        role: p.role,
-                                                        team: 'ROSTER',
-                                                        region: 'NA',
-                                                        price: 4.5, // Mock roster cost
-                                                        stats: p.stats || { kills: 0, deaths: 0, assists: 0, goldEarned: 0, damageToChampions: 0 },
-                                                        metrics: { eOBP: 0.31, eSLG: 1.04, eWAR: 2.2, war: '2.2', impEff: 50 },
-                                                        avatarUrl: p.avatar,
-                                                        fit: 0,
-                                                        status: null,
-                                                        annotation: null,
-                                                        gridId: p.id
-                                                    };
-                                                    setComparisonPlayer(mapped);
-                                                }
-                                            }}
-                                            value={comparisonPlayer?.id || ''}
-                                        >
-                                            {roster.map(r => (
-                                                <option key={r.id} value={r.id}>{r.name}</option>
-                                            ))}
-                                        </select>
+                                        <span className="text-sm font-bold text-gray-400">
+                                            {comparisonPlayer?.name.substring(0, 2).toUpperCase() || 'CP'}
+                                        </span>
                                     )}
                                 </div>
-                                <div className="text-xs font-bold text-gray-400 truncate max-w-full flex items-center justify-center gap-1 group">
-                                    {comparisonPlayer?.name || 'Select Roster'}
+
+                                {/* Custom Dropdown */}
+                                {isComparisonDropdownOpen && (
+                                    <>
+                                        <div
+                                            className="fixed inset-0 z-40 bg-transparent"
+                                            onClick={() => setIsComparisonDropdownOpen(false)}
+                                        />
+                                        <div className="absolute right-0 top-full mt-2 w-48 max-h-60 overflow-y-auto bg-surface-darker border border-white/10 rounded-lg shadow-2xl z-50 py-1 custom-scrollbar">
+                                            {marketPlayers.map(p => (
+                                                <div
+                                                    key={p.id}
+                                                    onClick={() => {
+                                                        setComparisonPlayer(p);
+                                                        setIsComparisonDropdownOpen(false);
+                                                    }}
+                                                    className={`px-3 py-2 text-left hover:bg-white/5 cursor-pointer flex items-center gap-2 ${comparisonPlayer?.id === p.id ? 'text-primary' : 'text-gray-300'}`}
+                                                >
+                                                    <div className="w-6 h-6 rounded bg-black flex items-center justify-center overflow-hidden shrink-0 text-[9px] font-bold text-gray-500">
+                                                        {p.avatarUrl ? <img src={p.avatarUrl} className="w-full h-full object-cover" /> : p.name.substring(0, 2).toUpperCase()}
+                                                    </div>
+                                                    <div className="text-xs truncate">{p.name}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </>
+                                )}
+
+                                <div
+                                    className="text-xs font-bold text-gray-400 truncate max-w-full flex items-center justify-center gap-1 group cursor-pointer hover:text-white transition"
+                                    onClick={() => setIsComparisonDropdownOpen(!isComparisonDropdownOpen)}
+                                >
+                                    {comparisonPlayer?.name || 'Select Player'}
                                     <span className="material-icons-outlined text-[10px] opacity-0 group-hover:opacity-100 transition">arrow_drop_down</span>
                                 </div>
-                                <div className="text-[9px] font-mono text-gray-500">ROSTER SELECT</div>
+                                <div className="text-[9px] font-mono text-gray-500">MARKET COMP.</div>
                             </div>
                         </div>
 
                         {/* Comparison Metrics */}
-                        <div className="w-full space-y-3">
-                            {/* eOBP */}
-                            <div className="bg-surface-darker p-3 rounded-lg border border-white/5">
-                                <div className="flex justify-between text-[10px] text-gray-500 mb-1 uppercase tracking-wider">eOBP (Survival)</div>
-                                <div className="w-full h-1.5 bg-gray-800 rounded-full flex overflow-hidden">
-                                    {/* Simple Visualization of Comparison */}
-                                    <div style={{ width: '60%' }} className="h-full bg-primary shadow-[0_0_10px_rgba(210,249,111,0.5)]"></div>
-                                    <div style={{ width: '40%' }} className="h-full bg-gray-600"></div>
+                        {comparisonPlayer && selectedPlayer && (
+                            <div className="w-full space-y-3">
+                                {/* eOBP */}
+                                <div className="bg-surface-darker p-3 rounded-lg border border-white/5">
+                                    <div className="flex justify-between text-[10px] text-gray-500 mb-1 uppercase tracking-wider">eOBP (Survival)</div>
+                                    <div className="w-full h-1.5 bg-gray-800 rounded-full flex overflow-hidden">
+                                        <div style={{ width: '50%' }} className="h-full bg-primary shadow-[0_0_10px_rgba(210,249,111,0.5)]"></div>
+                                        <div style={{ width: '50%' }} className="h-full bg-gray-600"></div>
+                                    </div>
+                                    <div className="flex justify-between text-xs font-mono font-bold mt-1">
+                                        <span className="text-primary">{selectedPlayer.metrics.eOBP.toFixed(3)}</span>
+                                        <span className="text-gray-500">vs</span>
+                                        <span className="text-gray-400">{comparisonPlayer.metrics.eOBP.toFixed(3)}</span>
+                                    </div>
                                 </div>
-                                <div className="flex justify-between text-xs font-mono font-bold mt-1">
-                                    <span className="text-primary">{selectedPlayer?.metrics.eOBP.toFixed(2) || '0.00'}</span>
-                                    <span className="text-gray-500">vs</span>
-                                    <span className="text-gray-400">0.31</span>
+
+                                {/* eSLG */}
+                                <div className="bg-surface-darker p-3 rounded-lg border border-white/5">
+                                    <div className="flex justify-between text-[10px] text-gray-500 mb-1 uppercase tracking-wider">eSLG (Efficiency)</div>
+                                    <div className="w-full h-1.5 bg-gray-800 rounded-full flex overflow-hidden">
+                                        <div style={{ width: '50%' }} className="h-full bg-primary shadow-[0_0_10px_rgba(210,249,111,0.5)]"></div>
+                                        <div style={{ width: '50%' }} className="h-full bg-gray-600"></div>
+                                    </div>
+                                    <div className="flex justify-between text-xs font-mono font-bold mt-1">
+                                        <span className="text-primary">{selectedPlayer.metrics.eSLG.toFixed(3)}</span>
+                                        <span className="text-gray-500">vs</span>
+                                        <span className="text-gray-400">{comparisonPlayer.metrics.eSLG.toFixed(3)}</span>
+                                    </div>
+                                </div>
+
+                                <div className="mt-8 p-4 bg-primary/5 rounded-xl border border-primary/20 text-center w-full">
+                                    <div className="text-xs text-primary font-bold uppercase mb-1">Delta Analysis</div>
+                                    <div className="text-3xl font-mono font-bold text-white mb-1">
+                                        {((selectedPlayer.metrics.eWAR - comparisonPlayer.metrics.eWAR) > 0 ? '+' : '')}
+                                        {(selectedPlayer.metrics.eWAR - comparisonPlayer.metrics.eWAR).toFixed(1)}
+                                    </div>
+                                    <div className="text-[10px] text-gray-500">WAR Differential</div>
                                 </div>
                             </div>
+                        )}
 
-                            {/* eSLG */}
-                            <div className="bg-surface-darker p-3 rounded-lg border border-white/5">
-                                <div className="flex justify-between text-[10px] text-gray-500 mb-1 uppercase tracking-wider">eSLG (Efficiency)</div>
-                                <div className="w-full h-1.5 bg-gray-800 rounded-full flex overflow-hidden">
-                                    <div style={{ width: '75%' }} className="h-full bg-primary shadow-[0_0_10px_rgba(210,249,111,0.5)]"></div>
-                                    <div style={{ width: '25%' }} className="h-full bg-gray-600"></div>
-                                </div>
-                                <div className="flex justify-between text-xs font-mono font-bold mt-1">
-                                    <span className="text-primary">{selectedPlayer?.metrics.eSLG.toFixed(0) || '0'}%</span>
-                                    <span className="text-gray-500">vs</span>
-                                    <span className="text-gray-400">104%</span>
-                                </div>
+                        {!comparisonPlayer && (
+                            <div className="mt-8 text-center text-xs text-gray-500">
+                                Select a player to compare metrics.
                             </div>
-                        </div>
-
-                        <div className="mt-8 p-4 bg-primary/5 rounded-xl border border-primary/20 text-center w-full">
-                            <div className="text-xs text-primary font-bold uppercase mb-1">Projected Upgrade</div>
-                            <div className="text-3xl font-mono font-bold text-white mb-1">+24.5%</div>
-                            <div className="text-[10px] text-gray-500">Win Rate Delta</div>
-                        </div>
+                        )}
                     </div>
                 </div>
             </div>
