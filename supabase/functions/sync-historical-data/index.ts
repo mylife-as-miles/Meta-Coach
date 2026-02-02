@@ -173,7 +173,12 @@ serve(async (req) => {
         }
 
         return new Response(
-            JSON.stringify({ status: 'success', synced: syncedCount, totalFound: edges.length }),
+            JSON.stringify({
+                status: 'success',
+                synced: syncedCount,
+                totalFound: edges.length,
+                debug: { titleId, from, to }
+            }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
         )
 

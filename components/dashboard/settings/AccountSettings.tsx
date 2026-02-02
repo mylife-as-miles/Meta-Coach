@@ -296,9 +296,9 @@ const AccountSettings: React.FC = () => {
                                         setSaving(true);
                                         setMessage({ type: 'success', text: 'Sync initiated... This may take a few minutes.' });
 
-                                        // Hardcoded date range for demo: Jan 1 2024 to Now
+                                        // Hardcoded date range for demo: Last 5 Years to ensure data coverage
                                         const now = new Date().toISOString();
-                                        const from = new Date(new Date().setFullYear(new Date().getFullYear() - 1)).toISOString();
+                                        const from = new Date(new Date().setFullYear(new Date().getFullYear() - 5)).toISOString();
 
                                         const { data, error } = await supabase.functions.invoke('sync-historical-data', {
                                             body: {
