@@ -251,7 +251,7 @@ const ScoutingView: React.FC = () => {
 
                     {/* Main Content Area */}
                     {selectedPlayer ? (
-                        <div className="relative z-10 flex flex-col h-full p-8 items-center justify-center text-center">
+                        <div className="relative z-10 flex flex-col h-full p-8 items-center justify-start pt-20 text-center">
                             <div className="w-32 h-32 rounded-2xl bg-black border border-white/10 shadow-2xl mb-6 relative group overflow-hidden">
                                 {selectedPlayer.avatarUrl ? (
                                     <img src={selectedPlayer.avatarUrl} alt={selectedPlayer.name} className="w-full h-full object-cover" />
