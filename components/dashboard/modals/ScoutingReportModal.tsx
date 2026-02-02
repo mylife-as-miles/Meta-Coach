@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ScoutPlayer } from '../ScoutingView';
 import { supabase } from '../../../lib/supabase';
+import PerformanceTrendChart from '../PerformanceTrendChart';
 
 interface ScoutingReportModalProps {
     player: ScoutPlayer;
@@ -156,6 +157,25 @@ const ScoutingReportModal: React.FC<ScoutingReportModalProps> = ({ player, compa
                                         INITIALIZING DEEP MIND ANALYSIS...
                                     </div>
                                 )}
+                            </section>
+
+                            {/* Performance Trends (New) */}
+                            <section className="bg-surface-dark border border-white/10 p-6 rounded-lg">
+                                {/* Simulated Data Generator based on Player ID */}
+                                <div className="h-64">
+                                    <PerformanceTrendChart
+                                        data={(() => {
+                                            const seed = player.name.length + player.id.charCodeAt(0);
+                                            // Generate 10 plausible "Efficiency" scores
+                                            return Array.from({ length: 10 }, (_, i) => {
+                                                const base = 70 + (seed % 20);
+                                                const noise = Math.sin((i + seed) * 0.5) * 15;
+                                                return Math.min(100, Math.max(40, Math.round(base + noise + (i * 2)))); // Upward trend
+                                            });
+                                        })()}
+                                        trendValue={12.5}
+                                    />
+                                </div>
                             </section>
 
                             {/* Sabermetrics Breakdown */}
