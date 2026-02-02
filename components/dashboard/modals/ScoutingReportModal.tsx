@@ -28,11 +28,13 @@ interface ReportData {
 const ScoutingReportModal: React.FC<ScoutingReportModalProps> = ({ player, comparisonPlayer, onClose }) => {
     const [loading, setLoading] = useState(true);
     const [report, setReport] = useState<ReportData | null>(null);
+    const [retrospective, setRetrospective] = useState<any>(null); // Using any for brevity, or define interface
 
     useEffect(() => {
         const fetchReport = async () => {
             try {
-                const { data, error } = await supabase.functions.invoke('scouting-report', {
+                // Parallel fetching of Report and Retrospective
+                const reportPromise = supabase.functions.invoke('scouting-report', {
                     body: {
                         player: {
                             name: player.name,
@@ -47,12 +49,24 @@ const ScoutingReportModal: React.FC<ScoutingReportModalProps> = ({ player, compa
                     }
                 });
 
-                if (error) throw error;
-                if (data?.report) {
-                    setReport(data.report);
+                const retroPromise = supabase.functions.invoke('gemini-retrospective', {
+                    body: { teamId: player.team || 'generic' }
+                });
+
+                const [reportRes, retroRes] = await Promise.all([reportPromise, retroPromise]);
+
+                if (reportRes.error) console.error('Report Error:', reportRes.error);
+                if (reportRes.data?.report) {
+                    setReport(reportRes.data.report);
                 }
+
+                if (retroRes.error) console.error('Retro Error:', retroRes.error);
+                if (retroRes.data?.analysis) {
+                    setRetrospective(retroRes.data.analysis);
+                }
+
             } catch (err) {
-                console.error('Error fetching scout report:', err);
+                console.error('Error fetching data:', err);
             } finally {
                 setLoading(false);
             }
@@ -99,7 +113,6 @@ const ScoutingReportModal: React.FC<ScoutingReportModalProps> = ({ player, compa
                         </div>
                     ) : (
                         <>
-                            {/* Executive Summary */}
                             <section>
                                 <div className="flex items-center gap-2 mb-3">
                                     <span className="material-symbols-outlined text-primary">auto_awesome</span>
@@ -111,6 +124,38 @@ const ScoutingReportModal: React.FC<ScoutingReportModalProps> = ({ player, compa
                                         {report?.executive_summary.text}
                                     </p>
                                 </div>
+                            </section>
+
+                            {/* Gemini Retrospective (New) */}
+                            <section>
+                                <div className="flex items-center justify-between mb-3">
+                                    <div className="flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-purple-400">psychology_alt</span>
+                                        <h2 className="text-sm font-bold uppercase tracking-wider text-white">Gemini Retrospective</h2>
+                                    </div>
+                                    <span className="text-[10px] font-mono text-gray-500 bg-white/5 px-2 py-1 rounded">
+                                        MODEL: GEMINI-3-PRO
+                                    </span>
+                                </div>
+
+                                {retrospective ? (
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        {retrospective.patterns.map((pattern: any, idx: number) => (
+                                            <div key={idx} className="bg-surface-dark border border-white/10 p-4 rounded-lg hover:border-purple-500/30 transition group">
+                                                <div className="text-xs text-purple-400 font-bold uppercase mb-2 group-hover:text-purple-300">{pattern.title}</div>
+                                                <p className="text-sm text-gray-300 mb-3 min-h-[40px] leading-snug">{pattern.description}</p>
+                                                <div className="flex items-center gap-2 pt-3 border-t border-white/5">
+                                                    <span className="material-icons text-[10px] text-gray-500">analytics</span>
+                                                    <span className="text-xs font-mono font-bold text-white">{pattern.stat}</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="p-8 border border-dashed border-white/10 rounded-lg text-center text-gray-500 text-xs font-mono">
+                                        INITIALIZING DEEP MIND ANALYSIS...
+                                    </div>
+                                )}
                             </section>
 
                             {/* Sabermetrics Breakdown */}
