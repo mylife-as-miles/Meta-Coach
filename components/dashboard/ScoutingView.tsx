@@ -1,84 +1,109 @@
 import React, { useState } from 'react';
 import { useSession } from '../../hooks/useAuth';
-import { useWorkspace } from '../../hooks/useDashboardQueries';
+import { useWorkspace, usePlayers } from '../../hooks/useDashboardQueries';
 import { supabase } from '../../lib/supabase';
 
 const ScoutingView: React.FC = () => {
     const { data: session } = useSession();
     const { data: workspace } = useWorkspace(session?.user?.id);
+    const { data: roster } = usePlayers(workspace?.id);
+
+    // Market State
     const [marketPlayers, setMarketPlayers] = useState<any[]>([]);
-    const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
-    const [analyzing, setAnalyzing] = useState(false);
+    const [pageInfo, setPageInfo] = useState({ hasNextPage: false, endCursor: null });
     const [loading, setLoading] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
+
+    // Selection State
+    const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
+    const [comparisonPlayer, setComparisonPlayer] = useState<any>(null);
+
+    // Analysis State
+    const [analyzing, setAnalyzing] = useState(false);
     const [scoutReport, setScoutReport] = useState<string | null>(null);
 
-    // Fetch Players from GRID on mount or when workspace loads
+    // Set default comparison player when roster loads
     React.useEffect(() => {
-        const fetchPlayers = async () => {
-            // Wait for workspace to be loaded to get Title ID, fallback to 6 (Valorant) if not found but session exists
-            if (!session) return;
+        if (roster && roster.length > 0 && !comparisonPlayer) {
+            setComparisonPlayer(roster[0]);
+        }
+    }, [roster]);
 
-            const titleId = workspace?.grid_title_id || 6;
+    // Fetch Players (Initial & Pagination)
+    const loadPlayers = async (cursor: string | null = null) => {
+        if (!session) return;
+        const isLoadMore = !!cursor;
+        if (isLoadMore) setLoadingMore(true);
+        else setLoading(true);
 
-            try {
-                // Fetch players for dynamic Title ID
-                const { data, error } = await supabase.functions.invoke('grid-players', {
-                    body: {
-                        action: 'players',
-                        filter: { titleId: titleId },
-                        first: 20
-                    }
-                });
+        const titleId = workspace?.grid_title_id || 6;
 
-                if (error) throw error;
+        try {
+            const { data, error } = await supabase.functions.invoke('grid-players', {
+                body: {
+                    action: 'players',
+                    filter: { titleId: titleId },
+                    first: 50, // Increased limit per user request
+                    after: cursor
+                }
+            });
 
-                // Map GRID data to UI format with synthetic Moneyball metrics for visualization
-                const mappedPlayers = data.players.edges.map((edge: any, index: number) => {
-                    const p = edge.node;
-                    // Deterministic synthetic stats based on ID char codes for consistent demo UI
-                    const seed = p.id.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
-                    const eOBP = 0.350 + ((seed % 150) / 1000); // 0.350 - 0.500
-                    const eSLG = 0.500 + ((seed % 150) / 1000); // 0.500 - 0.650
-                    const war = 2.0 + ((seed % 40) / 10); // 2.0 - 6.0
+            if (error) throw error;
 
-                    return {
-                        id: p.id,
-                        name: p.nickname,
-                        team: p.team?.name || 'Free Agent',
-                        region: 'INTL', // GRID doesn't always return region in list
-                        role: 'FLEX',   // Defaulting role as it requires separate query or heuristic
-                        price: (1.5 + ((seed % 45) / 10)).toFixed(1), // $1.5M - $6.0M
-                        metrics: {
-                            eOBP,
-                            eSLG,
-                            war: war.toFixed(1),
-                            impEff: 70 + (seed % 25)
-                        },
-                        stats: { // Synthetic raw stats for AI Context
-                            kills: 10 + (seed % 20) * 10,
-                            deaths: 10 + (seed % 10) * 5,
-                            assists: 10 + (seed % 20) * 8,
-                            goldEarned: 10000 + (seed % 5000),
-                            damageToChampions: 20000 + (seed % 10000)
-                        },
-                        fit: 60 + (seed % 35),
-                        status: index === 0 ? 'In Progress' : null,
-                        img: `https://ui-avatars.com/api/?name=${p.nickname}&background=random&color=fff`,
-                        annotation: war > 4.5 ? "Undervalued Market Asset" : null,
-                        gridId: p.id
-                    };
-                });
+            // Map GRID data
+            const mappedPlayers = data.players.edges.map((edge: any, index: number) => {
+                const p = edge.node;
+                const seed = p.id.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
+                const war = 2.0 + ((seed % 40) / 10); // 2.0 - 6.0
 
+                return {
+                    id: p.id,
+                    name: p.nickname,
+                    team: p.team?.name || 'Free Agent',
+                    region: 'INTL',
+                    role: 'FLEX',
+                    price: (1.5 + ((seed % 45) / 10)).toFixed(1), // $1.5M - $6.0M
+                    metrics: {
+                        eOBP: 0.350 + ((seed % 150) / 1000),
+                        eSLG: 0.500 + ((seed % 150) / 1000),
+                        war: war.toFixed(1),
+                        impEff: 70 + (seed % 25)
+                    },
+                    stats: {
+                        kills: 10 + (seed % 20) * 10,
+                        deaths: 10 + (seed % 10) * 5,
+                        assists: 10 + (seed % 20) * 8,
+                        goldEarned: 10000 + (seed % 5000),
+                        damageToChampions: 20000 + (seed % 10000)
+                    },
+                    fit: 60 + (seed % 35),
+                    status: null,
+                    img: `https://ui-avatars.com/api/?name=${p.nickname}&background=random&color=fff`,
+                    annotation: war > 4.5 ? "Undervalued Market Asset" : null,
+                    gridId: p.id
+                };
+            });
+
+            if (isLoadMore) {
+                setMarketPlayers(prev => [...prev, ...mappedPlayers]);
+            } else {
                 setMarketPlayers(mappedPlayers);
                 if (mappedPlayers.length > 0) setSelectedPlayer(mappedPlayers[0]);
-            } catch (err) {
-                console.error("Failed to fetch GRID players:", err);
-            } finally {
-                setLoading(false);
             }
-        };
 
-        fetchPlayers();
+            setPageInfo(data.players.pageInfo || { hasNextPage: false, endCursor: null });
+
+        } catch (err) {
+            console.error("Failed to fetch GRID players:", err);
+        } finally {
+            setLoading(false);
+            setLoadingMore(false);
+        }
+    };
+
+    // Initial Load
+    React.useEffect(() => {
+        loadPlayers();
     }, [session, workspace]);
 
     const handleAutoScout = async () => {
@@ -278,6 +303,19 @@ const ScoutingView: React.FC = () => {
                                     </div>
                                 </div>
                             ))}
+
+                            {pageInfo.hasNextPage && (
+                                <div className="p-4 text-center sticky bottom-0 bg-surface-darker/90 backdrop-blur-sm border-t border-white/5">
+                                    <button
+                                        onClick={() => loadPlayers(pageInfo.endCursor)}
+                                        disabled={loadingMore}
+                                        className="px-6 py-2 bg-primary/10 border border-primary/30 rounded-full text-xs text-primary font-bold hover:bg-primary/20 transition disabled:opacity-50 flex items-center gap-2 mx-auto"
+                                    >
+                                        {loadingMore && <span className="material-icons-outlined text-xs animate-spin">refresh</span>}
+                                        {loadingMore ? 'LOADING MARKET DATA...' : 'LOAD MORE PLAYERS'}
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -294,20 +332,43 @@ const ScoutingView: React.FC = () => {
                         </h3>
 
                         <div className="flex justify-between items-center mb-6 relative z-10">
-                            <div className="text-center">
+                            <div className="text-center w-24">
                                 <div className="w-12 h-12 rounded-full border-2 border-primary bg-surface-darker flex items-center justify-center mb-2 overflow-hidden mx-auto shadow-[0_0_15px_rgba(210,249,111,0.2)]">
                                     <img className="w-full h-full object-cover" src={selectedPlayer?.img} alt={selectedPlayer?.name} />
                                 </div>
-                                <div className="text-xs font-bold text-white">{selectedPlayer?.name}</div>
+                                <div className="text-xs font-bold text-white truncate max-w-full">{selectedPlayer?.name}</div>
                                 <div className="text-[9px] font-mono text-primary">SCOUTED</div>
                             </div>
                             <div className="text-xs font-mono text-gray-500">VS</div>
-                            <div className="text-center opacity-60">
-                                <div className="w-10 h-10 rounded-full border border-gray-600 bg-surface-darker flex items-center justify-center mb-2 overflow-hidden mx-auto grayscale">
-                                    <span className="material-icons text-xl text-gray-400">person</span>
+                            <div className="text-center w-24 relative">
+                                <div className="w-10 h-10 rounded-full border border-gray-600 bg-surface-darker flex items-center justify-center mb-2 overflow-hidden mx-auto relative group hover:border-primary/50 transition cursor-pointer">
+                                    {comparisonPlayer?.avatar ? (
+                                        <img src={comparisonPlayer.avatar} alt={comparisonPlayer.name} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <span className="material-icons text-xl text-gray-400">person</span>
+                                    )}
+
+                                    {/* Invisible Select Overlay */}
+                                    {roster && roster.length > 0 && (
+                                        <select
+                                            className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
+                                            onChange={(e) => {
+                                                const p = roster.find(r => r.id === e.target.value);
+                                                if (p) setComparisonPlayer(p);
+                                            }}
+                                            value={comparisonPlayer?.id || ''}
+                                        >
+                                            {roster.map(r => (
+                                                <option key={r.id} value={r.id}>{r.name}</option>
+                                            ))}
+                                        </select>
+                                    )}
                                 </div>
-                                <div className="text-xs font-bold text-gray-400">Tactical</div>
-                                <div className="text-[9px] font-mono text-gray-500">ROSTER</div>
+                                <div className="text-xs font-bold text-gray-400 truncate max-w-full flex items-center justify-center gap-1 group">
+                                    {comparisonPlayer?.name || 'Select Roster'}
+                                    <span className="material-icons-outlined text-[10px] opacity-0 group-hover:opacity-100 transition">arrow_drop_down</span>
+                                </div>
+                                <div className="text-[9px] font-mono text-gray-500">ROSTER SELECT</div>
                             </div>
                         </div>
 

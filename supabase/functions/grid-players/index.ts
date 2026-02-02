@@ -32,8 +32,8 @@ serve(async (req) => {
             // ==========================================
             case 'players':
                 query = `
-                    query GetPlayers($filter: PlayerFilter, $first: Int) {
-                        players(filter: $filter, first: $first) {
+                    query GetPlayers($filter: PlayerFilter, $first: Int, $after: String) {
+                        players(filter: $filter, first: $first, after: $after) {
                             edges {
                                 node {
                                     id
@@ -46,12 +46,17 @@ serve(async (req) => {
                                     }
                                 }
                             }
+                            pageInfo {
+                                hasNextPage
+                                endCursor
+                            }
                         }
                     }
                 `;
                 variables = {
                     filter: params.filter || {},
-                    first: params.first || 20
+                    first: params.first || 50,
+                    after: params.after || null
                 };
                 break;
 
