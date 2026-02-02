@@ -102,21 +102,33 @@ const AppTutorial: React.FC = () => {
             styles={{
                 options: {
                     primaryColor: '#D2F96F',
-                    textColor: '#000',
-                    backgroundColor: '#fff',
-                    arrowColor: '#fff',
+                    textColor: '#FFFFFF',
+                    backgroundColor: '#1E201B', // Dark surface matching app cards
+                    arrowColor: '#1E201B',
+                    overlayColor: 'rgba(0, 0, 0, 0.85)',
+                    zIndex: 10000,
                 },
                 tooltip: {
-                    borderRadius: '12px',
-                    fontFamily: 'Inter, sans-serif'
+                    borderRadius: '16px',
+                    fontFamily: 'Inter, sans-serif',
+                    padding: '20px',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
                 },
                 buttonNext: {
                     borderRadius: '8px',
                     fontWeight: 'bold',
-                    color: '#000'
+                    color: '#000',
+                    outline: 'none',
+                    boxShadow: '0 0 15px rgba(210, 249, 111, 0.3)',
+                    padding: '10px 16px'
                 },
                 buttonBack: {
-                    color: '#666'
+                    color: '#9CA3AF',
+                    marginRight: '10px'
+                },
+                buttonSkip: {
+                    color: '#6B7280'
                 }
             }}
         />
