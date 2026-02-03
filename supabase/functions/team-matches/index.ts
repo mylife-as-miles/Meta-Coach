@@ -142,11 +142,24 @@ TASK:
 1. Search for each match by team, opponent, and date.
 2. Verify if it was a Win, Loss, or Draw for ${teamName}.
 3. Find the exact score (e.g., 2-1, 1-2).
-4. Return the data as a clean JSON array with updated "result" and "score" fields. Keep the same "id".
+4. GENERATE PERFORMANCE STATS:
+   - "macroControl": Estimate a percentage (0-100) based on dominance. (Stomp = 80+, Close Win = 60+, Loss = <50).
+   - "microErrorRate": Estimate "LOW", "MED", or "HIGH" based on result. (Win = LOW/MED, Loss = MED/HIGH).
+   - "reasoning": A 1-sentence explanation of why you gave these stats (e.g., "Sweeping 2-0 victory suggests superior macro play").
+5. Return the data as a clean JSON array with updated "result", "score" and "performance_summary" fields. Keep the same "id".
 
 OUTPUT SCHEMA:
 [
-  { "id": "original_id", "result": "Win" | "Loss" | "Draw", "score": "X-Y" }
+  { 
+    "id": "original_id", 
+    "result": "Win" | "Loss" | "Draw", 
+    "score": "X-Y",
+    "performance_summary": {
+        "macroControl": number,
+        "microErrorRate": "LOW" | "MED" | "HIGH",
+        "reasoning": string
+    }
+  }
 ]
 `;
 
@@ -160,6 +173,7 @@ OUTPUT SCHEMA:
         ...m,
         result: refined.result.toUpperCase(),
         score: refined.score,
+        performance_summary: refined.performance_summary || null, // Include AI stats
         source: 'grid_hybrid'
       };
     }
@@ -298,6 +312,7 @@ serve(async (req) => {
           type: 'Official',
           result: m.result,
           score: m.score,
+          performance_summary: m.performance_summary || null, // Map DB JSON to API
           opponent: {
             name: m.opponent_name || 'Unknown',
             logoUrl: m.opponent_logo
@@ -446,6 +461,7 @@ async function upsertMatchesToDB(supabase: any, matches: any[], teamId: string, 
       status: m.status,
       result: m.result,
       score: m.score,
+      performance_summary: m.performance_summary, // Upsert AI stats
       opponent_name: m.opponent.name,
       opponent_logo: m.opponent.logoUrl,
       sequence_number: 1
