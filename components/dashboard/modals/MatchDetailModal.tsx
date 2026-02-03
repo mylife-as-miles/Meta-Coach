@@ -177,6 +177,31 @@ const MatchDetailModal: React.FC<MatchDetailModalProps> = ({ isOpen, onClose, ma
                     </div>
                 </div>
 
+                {/* Map Breakdown (Detailed Area Scores) */}
+                {match.areaScores && match.areaScores.length > 0 && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        {match.areaScores.map((as, idx) => (
+                            <div key={idx} className={`p-4 rounded-xl border flex flex-col items-center justify-center relative overflow-hidden transition-all hover:border-primary/40 group ${as.won ? 'bg-green-500/5 border-green-500/20' : 'bg-red-500/5 border-red-500/20 opacity-80 hover:opacity-100'
+                                }`}>
+                                <div className={`absolute top-0 right-0 px-2 py-0.5 text-[8px] font-mono tracking-tighter uppercase ${as.won ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+                                    }`}>
+                                    Map {idx + 1}
+                                </div>
+                                <span className="text-[10px] font-bold text-gray-500 mb-1 uppercase tracking-widest">{as.map}</span>
+                                <div className="text-xl font-bold text-white font-mono flex items-center gap-2">
+                                    <span className={as.won ? 'text-green-400' : 'text-gray-400'}>{as.yourScore}</span>
+                                    <span className="text-gray-700 text-sm">/</span>
+                                    <span className={!as.won ? 'text-red-400' : 'text-gray-400'}>{as.opponentScore}</span>
+                                </div>
+                                <div className={`mt-2 text-[9px] font-black px-2 py-0.5 rounded ${as.won ? 'text-green-400 bg-green-400/10' : 'text-red-400 bg-red-400/10'
+                                    }`}>
+                                    {as.won ? 'VICTORY' : 'DEFEAT'}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
                 {/* Loading State */}
                 {isLoading && (
                     <div className="space-y-6 animate-pulse">
@@ -205,7 +230,7 @@ const MatchDetailModal: React.FC<MatchDetailModalProps> = ({ isOpen, onClose, ma
                     </div>
                 )}
 
-                {/* Player Stats Table (from series-state) */}
+                {/* Player Stats Table */}
                 {ourTeamStats && ourTeamStats.players && ourTeamStats.players.length > 0 && (
                     <div className="bg-surface-darker rounded-xl p-5 border border-white/5">
                         <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
@@ -226,7 +251,7 @@ const MatchDetailModal: React.FC<MatchDetailModalProps> = ({ isOpen, onClose, ma
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {ourTeamStats.players.map((player, idx) => (
+                                    {ourTeamStats.players.map((player: any, idx: number) => (
                                         <tr key={player.id || idx} className="border-b border-white/5 hover:bg-white/5">
                                             <td className="py-2 px-2 font-medium text-white">{player.name}</td>
                                             <td className="py-2 px-2 text-center text-green-400">{player.kills}</td>
@@ -243,7 +268,7 @@ const MatchDetailModal: React.FC<MatchDetailModalProps> = ({ isOpen, onClose, ma
                     </div>
                 )}
 
-                {/* Performance Metrics (fallback if no detailed data) */}
+                {/* Performance Metrics fallback */}
                 {!ourTeamStats && !isLoading && (
                     <div className="grid grid-cols-2 gap-4">
                         <div className="bg-surface-darker rounded-xl p-5 border border-white/5">
@@ -267,11 +292,6 @@ const MatchDetailModal: React.FC<MatchDetailModalProps> = ({ isOpen, onClose, ma
                             <span className={`text-2xl font-bold ${match.performance.microErrorRate === 'LOW' ? 'text-green-400' :
                                 match.performance.microErrorRate === 'MED' ? 'text-yellow-400' : 'text-red-400'
                                 }`}>{match.performance.microErrorRate}</span>
-                            <p className="text-xs text-gray-500 mt-2">
-                                {match.performance.microErrorRate === 'LOW' ? 'Minimal mechanical errors detected' :
-                                    match.performance.microErrorRate === 'MED' ? 'Some room for improvement' :
-                                        'Significant errors impacted gameplay'}
-                            </p>
                         </div>
                     </div>
                 )}
@@ -283,63 +303,19 @@ const MatchDetailModal: React.FC<MatchDetailModalProps> = ({ isOpen, onClose, ma
                         <h3 className="text-sm font-bold text-white">AI Analysis Insights</h3>
                     </div>
                     <div className="space-y-3">
-                        <div className="flex gap-3 items-start">
-                            <div className="w-1 h-full min-h-[40px] bg-primary/50 rounded-full" />
-                            <div>
-                                <p className="text-sm text-gray-300">
-                                    {isWin
-                                        ? 'Strong early game execution led to a gold lead that was maintained throughout.'
-                                        : 'Early game mistakes created a deficit that was difficult to recover from.'}
-                                </p>
-                            </div>
-                        </div>
-                        <div className="flex gap-3 items-start">
-                            <div className="w-1 h-full min-h-[40px] bg-blue-500/50 rounded-full" />
-                            <div>
-                                <p className="text-sm text-gray-300">
-                                    Vision control was {match.performance.macroControl >= 60 ? 'well-maintained' : 'lacking'} around key objectives.
-                                </p>
-                            </div>
-                        </div>
-                        <div className="flex gap-3 items-start">
-                            <div className="w-1 h-full min-h-[40px] bg-purple-500/50 rounded-full" />
-                            <div>
-                                <p className="text-sm text-gray-300">
-                                    Recommend focusing on {isWin ? 'maintaining this momentum in future games' : 'early game decision making and objective priority'}.
-                                </p>
-                            </div>
-                        </div>
+                        <p className="text-sm text-gray-300">
+                            {isWin
+                                ? 'Strong early game execution led to a gold lead that was maintained throughout.'
+                                : 'Early game mistakes created a deficit that was difficult to recover from.'}
+                        </p>
+                        <p className="text-sm text-gray-300">
+                            Vision control was {match.performance.macroControl >= 60 ? 'well-maintained' : 'lacking'} around key objectives.
+                        </p>
                     </div>
                 </div>
 
-                {/* High-Impact Plays (New Section) */}
+                {/* High-Impact Plays */}
                 <HighImpactPlaysSection matchId={match.id} />
-
-                {/* Timeline placeholder */}
-                <div className="bg-surface-darker rounded-xl p-5 border border-white/5">
-                    <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
-                        <span className="material-icons-outlined text-gray-400 text-base">timeline</span>
-                        Key Moments
-                    </h3>
-                    <div className="flex items-center gap-4 overflow-x-auto pb-2">
-                        <div className="flex-shrink-0 w-32 p-3 bg-surface-dark rounded-lg border border-white/5 text-center">
-                            <span className="text-xs text-gray-500 font-mono">03:24</span>
-                            <p className="text-xs text-gray-300 mt-1">First Blood</p>
-                        </div>
-                        <div className="flex-shrink-0 w-32 p-3 bg-surface-dark rounded-lg border border-white/5 text-center">
-                            <span className="text-xs text-gray-500 font-mono">12:45</span>
-                            <p className="text-xs text-gray-300 mt-1">Herald Take</p>
-                        </div>
-                        <div className="flex-shrink-0 w-32 p-3 bg-surface-dark rounded-lg border border-white/5 text-center">
-                            <span className="text-xs text-gray-500 font-mono">18:30</span>
-                            <p className="text-xs text-gray-300 mt-1">Dragon Soul</p>
-                        </div>
-                        <div className="flex-shrink-0 w-32 p-3 bg-surface-dark rounded-lg border border-primary/20 text-center">
-                            <span className="text-xs text-primary font-mono">24:15</span>
-                            <p className="text-xs text-primary mt-1">Baron</p>
-                        </div>
-                    </div>
-                </div>
 
                 {/* Actions */}
                 <div className="flex gap-3 pt-4 border-t border-white/5">

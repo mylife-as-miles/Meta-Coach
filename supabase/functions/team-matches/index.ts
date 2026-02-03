@@ -4,8 +4,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
-import { GoogleGenAI } from 'npm:@google/genai'
-
 import { GRID_URLS, getGridHeaders } from '../_shared/grid-config.ts'
 
 /* -------------------------------------------------------------------------- */
@@ -236,18 +234,14 @@ async function fetchMatchesFromGRID(apiKey: string, titleId: string | number, te
           teamIds: { in: [$teamId] }
         }
         first: 20
-        orderBy: StartTimeScheduled
-        orderDirection: DESC
       ) {
         edges {
           node {
             id
             startTimeScheduled
             tournament { id name }
-            format { name nameShortened }
             teams {
               baseInfo { id name logoUrl nameShortened }
-              scoreAdvantage
             }
           }
         }
@@ -255,20 +249,37 @@ async function fetchMatchesFromGRID(apiKey: string, titleId: string | number, te
     }
   `;
 
+  const requestBody = JSON.stringify({
+    query: gridQuery,
+    variables: {
+      titleId: String(titleId),
+      teamId: String(teamId)
+    }
+  });
+
   try {
+    console.log(`[team-matches] Fetching GRID data for TeamID: ${teamId}, TitleID: ${titleId}`);
+
     const res = await fetch(GRID_URLS.CENTRAL_DATA, {
       method: 'POST',
       headers: getGridHeaders(apiKey),
-      body: JSON.stringify({ query: gridQuery, variables: { titleId: String(titleId), teamId: String(teamId) } })
+      body: requestBody
     });
 
+    const json = await res.json();
+
+    if (json.errors) {
+      console.error('[team-matches] GRID GraphQL Errors:', JSON.stringify(json.errors));
+    }
+
     if (!res.ok) {
-      console.warn(`[team-matches] GRID Fetch failed: ${res.status}`);
+      console.warn(`[team-matches] GRID Fetch failed: ${res.status}`, JSON.stringify(json));
       return [];
     }
 
-    const json = await res.json();
     const edges = json.data?.allSeries?.edges || [];
+    console.log(`[team-matches] GRID returned ${edges.length} edges.`);
+
     return edges.map((e: any) => processGridNode(e.node, teamId));
   } catch (err) {
     console.error('[team-matches] GRID fetch error:', err);
@@ -496,9 +507,10 @@ async function upsertMatchesToDB(supabase: any, matches: any[], teamId: string, 
     // Upsert Series
     const { error: sErr } = await supabase.from('series').upsert({
       id: m.id,
-      title_id: Number(titleId),
+      title_id: titleId,
       start_time: m.startTime,
-      tournament_name: m.tournament.name,
+      tournament_id: m.tournament?.id,
+      tournament_name: m.tournament?.name,
       updated_at: new Date().toISOString()
     })
 
@@ -552,7 +564,10 @@ function processGridNode(node: any, myTeamId: string) {
       name: opponent.baseInfo.name,
       logoUrl: opponent.baseInfo.logoUrl
     } : { name: 'TBD' },
-    tournament: { name: node.tournament?.name || 'Unknown Tournament' },
+    tournament: {
+      id: node.tournament?.id,
+      name: node.tournament?.name || 'Unknown Tournament'
+    },
     source: 'grid'
   }
 }

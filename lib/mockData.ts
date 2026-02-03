@@ -20,6 +20,13 @@ export interface Player {
     gridId?: string; // GRID API player ID for stats lookup
 }
 
+export interface AreaScore {
+    map: string;
+    yourScore: number;
+    opponentScore: number;
+    won: boolean;
+}
+
 export interface Match {
     id: string;
     date: string;
@@ -45,6 +52,7 @@ export interface Match {
         reasoning?: string;
     };
     source?: 'grid' | 'gemini';
+    areaScores?: AreaScore[];
 }
 
 export interface Champion {

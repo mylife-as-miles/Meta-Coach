@@ -246,6 +246,46 @@ export function usePlayers(workspaceId: string | undefined) {
 // ============================================
 // Hook: useMatches
 // ============================================
+
+function generateMockAreaScores(format: string, result: string) {
+    // For finished Bo3 → most realistic is 2–1, 2–0 or occasionally 1–2
+    const isBo3 = format === "Bo3";
+
+    if (!isBo3) {
+        return [{ map: "Arena", yourScore: 13, opponentScore: 8, won: result === 'WIN' }]; // fallback
+    }
+
+    // Random realistic Bo3 outcomes
+    const outcomes = [
+        [13, 9, 13, 7],           // 2-0
+        [13, 11, 13, 10],         // 2-0 close
+        [11, 13, 13, 9, 13, 10],  // 2-1
+        [13, 8, 9, 13, 11, 13],   // 2-1 (they won map 2)
+        [13, 6, 13, 4],           // clean 2-0
+    ];
+
+    const chosen = outcomes[Math.floor(Math.random() * outcomes.length)];
+
+    // split into maps
+    const maps = ["Haven", "Bind", "Ascent", "Split", "Icebox", "Breeze", "Fracture"];
+    const mapResults = [];
+
+    let i = 0;
+    while (i < chosen.length) {
+        const your = chosen[i];
+        const opp = chosen[i + 1] ?? 0;  // safety
+        mapResults.push({
+            map: maps[Math.floor(Math.random() * maps.length)],
+            yourScore: your,
+            opponentScore: opp,
+            won: your > opp
+        });
+        i += 2;
+    }
+
+    return mapResults;
+}
+
 export function useMatches(gridTeamId: string | undefined, titleId: string | number = 3, gameTitle: string = 'Esports', teamName: string = 'Team', limit: number = 5) {
     return useQuery({
         queryKey: [...dashboardKeys.matches(gridTeamId), titleId, limit],
@@ -293,6 +333,7 @@ export function useMatches(gridTeamId: string | undefined, titleId: string | num
                 } : null,
                 performance: m.performance_summary || { macroControl: 50, microErrorRate: 'MED' },
                 source: m.source || 'grid', // Track data source
+                areaScores: generateMockAreaScores(m.format || 'Bo1', m.result || 'TBD') // Add mock detailed scores
             }));
         },
         enabled: !!gridTeamId,
