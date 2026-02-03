@@ -50,12 +50,25 @@ serve(async (req) => {
         const spineRes = await fetch(GRID_URLS.CENTRAL_DATA, {
             method: 'POST',
             headers: getGridHeaders(gridApiKey),
-            body: JSON.stringify({ query: spineQuery, variables: { titleId, from, to } })
+            body: JSON.stringify({ query: spineQuery, variables: { titleId: String(titleId), from, to } })
         })
 
         const spineData = await spineRes.json()
+
+        if (spineData.errors) {
+            console.error('[sync-history] GRID GraphQL Errors:', spineData.errors)
+        }
+
         const edges = spineData.data?.allSeries?.edges || []
-        console.log(`[sync-history] Found ${edges.length} series in range`)
+
+        if (edges.length === 0) {
+            console.warn('[sync-history] No series found via GRID.', {
+                payload: { titleId, from, to },
+                response: JSON.stringify(spineData).substring(0, 500)
+            })
+        } else {
+            console.log(`[sync-history] Found ${edges.length} series in range`)
+        }
 
         let syncedCount = 0
 
