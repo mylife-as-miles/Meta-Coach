@@ -32,41 +32,24 @@ async function fetchMatchesFromLeaguepedia(teamName: string): Promise<any[]> {
     ]
 
     const prompt = `
-You are a precise esports data extractor.
-Fetch and parse the Match History page for the team: ${teamName}
+You are a world-class esports research agent.
+YOUR GOAL: Find the most recent Match History for the team "${teamName}" in League of Legends.
 
-Target URL: ${url}
+STEPS:
+1. Use Google Search to find the team's Match History on Leaguepedia (lol.fandom.com) or liquipedia.
+2. Visit the URL and extract the "Match History" table. 
+3. If necessary, use Python (Pandas) to parse the HTML and find the table containing "Opponent", "Result", and "Score".
+4. Return the data as a clean JSON array.
 
-TASK:
-1. Access the URL (or search if 404).
-2. Use Python (pandas) to extract the "Match History" table.
-3. Return **only** valid JSON.
+OUTPUT SCHEMA (JSON Array):
+- date: ISO string or YYYY-MM-DD
+- tournament: Name of the event
+- opponent: Full name of the opposing team
+- result: "Win", "Loss", or "Draw"
+- score: String like "2-1" or "0-1"
+- type: Always "Official"
 
-PYTHON SCRIPT GUIDANCE:
-\`\`\`python
-import pandas as pd
-try:
-    # Use read_html to parse tables
-    dfs = pd.read_html("${url}")
-    # Find table with "Opponent", "Result", "Score" columns
-    matches = []
-    for df in dfs:
-        if "Opponent" in df.columns and "Result" in df.columns:
-            matches = df.to_dict(orient="records")
-            break
-    print(matches)
-except Exception as e:
-    print(e)
-\`\`\`
-
-OUTPUT FORMAT:
-Return a JSON array of objects with these fields (normalize to this schema):
-- date: string (YYYY-MM-DD or original)
-- tournament: string
-- opponent: string
-- result: "Win" | "Loss" | "Draw"
-- score: string (e.g. "2-1")
-- type: "Official"
+IMPORTANT: If you cannot find the specific team page, search for "Leaguepedia ${teamName} Match History" to locate it. Return ONLY the JSON array.
 `
 
     const apiKey = geminiApiKey;

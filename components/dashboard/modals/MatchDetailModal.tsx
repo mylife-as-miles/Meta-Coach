@@ -34,8 +34,8 @@ const HighImpactPlaysSection: React.FC<{ matchId: string }> = ({ matchId }) => {
                                 <td className="py-2 px-2 text-gray-300">{play.outcome}</td>
                                 <td className="py-2 px-2 text-right">
                                     <span className={`font-mono font-bold ${play.score >= 90 ? 'text-primary shadow-neon-text' :
-                                            play.score >= 80 ? 'text-green-400' :
-                                                play.score >= 70 ? 'text-yellow-400' : 'text-gray-400'
+                                        play.score >= 80 ? 'text-green-400' :
+                                            play.score >= 70 ? 'text-yellow-400' : 'text-gray-400'
                                         }`}>
                                         {play.score}
                                     </span>
@@ -152,9 +152,20 @@ const MatchDetailModal: React.FC<MatchDetailModalProps> = ({ isOpen, onClose, ma
 
                 {/* Loading State */}
                 {isLoading && (
-                    <div className="flex items-center justify-center py-8">
-                        <span className="material-icons animate-spin text-primary text-3xl">hourglass_top</span>
-                        <span className="ml-3 text-gray-400">Loading match details...</span>
+                    <div className="space-y-6 animate-pulse">
+                        <div className="p-5 rounded-xl border border-white/5 bg-white/5 flex flex-col gap-4">
+                            <div className="flex items-center gap-2">
+                                <span className="material-symbols-outlined text-purple-400 text-sm animate-pulse">auto_awesome</span>
+                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">AI Strategic Deep Scan in Progress...</span>
+                            </div>
+                            <div className="h-4 w-3/4 bg-white/10 rounded"></div>
+                            <div className="h-3 w-1/2 bg-white/5 rounded"></div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="h-32 bg-white/5 rounded-xl border border-white/5"></div>
+                            <div className="h-32 bg-white/5 rounded-xl border border-white/5"></div>
+                        </div>
+                        <div className="h-40 bg-white/5 rounded-xl border border-white/5"></div>
                     </div>
                 )}
 
