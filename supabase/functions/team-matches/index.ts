@@ -121,7 +121,13 @@ serve(async (req) => {
       throw new Error('Missing environment variables')
     }
 
-    const { teamId, titleId = '3', teamName } = await req.json()
+    const bodyText = await req.text()
+    if (!bodyText) {
+      console.warn('[team-matches] Received empty body')
+      return new Response(JSON.stringify({ error: 'Empty request body' }), { status: 400, headers: corsHeaders })
+    }
+
+    const { teamId, titleId = '3', teamName } = JSON.parse(bodyText)
 
     if (!teamId) {
       return new Response(JSON.stringify({ error: 'teamId is required' }), { status: 400, headers: corsHeaders })
