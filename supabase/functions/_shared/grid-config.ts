@@ -27,12 +27,10 @@ export const GRID_URLS = {
 /**
  * Get GRID API headers
  */
-export function getGridHeaders(apiKey: string = '') {
-    return {
-        'Content-Type': 'application/json',
-        'x-grid-api-key': apiKey,
-    };
-}
+return {
+    'Content-Type': 'application/json',
+    'x-api-key': apiKey,
+};
 
 /**
  * API usage guide:
