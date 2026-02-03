@@ -16,7 +16,7 @@ const MatchHistory: React.FC = () => {
     const userId = session?.user?.id;
     const { data: workspace } = useWorkspace(userId);
     const { data: teamProfile } = useTeamProfile(workspace?.id, workspace?.grid_team_id);
-    const { data: allMatches = [] } = useMatches(workspace?.grid_team_id, workspace?.title_id, teamProfile?.game, teamProfile?.teamName);
+    const { data: allMatches = [] } = useMatches(workspace?.grid_team_id, workspace?.grid_title_id, teamProfile?.game, teamProfile?.teamName);
 
     return (
         <div className="flex flex-col">

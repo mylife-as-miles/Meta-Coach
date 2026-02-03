@@ -4,7 +4,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
-import { GoogleGenAI } from 'npm:@google/genai@^1.0.0'
+import { GoogleGenAI } from 'npm:@google/genai'
 
 import { GRID_URLS, getGridHeaders } from '../_shared/grid-config.ts'
 
@@ -12,6 +12,7 @@ import { GRID_URLS, getGridHeaders } from '../_shared/grid-config.ts'
 /*                           Gemini Fallback Logic                            */
 /* -------------------------------------------------------------------------- */
 async function fetchMatchesFromLeaguepedia(teamName: string): Promise<any[]> {
+  console.log(`[team-matches] fetchMatchesFromLeaguepedia entered for: ${teamName}`)
   const geminiApiKey = Deno.env.get('GEMINI_API_KEY')
   if (!geminiApiKey) {
     console.warn('GEMINI_API_KEY missing')
@@ -68,20 +69,78 @@ Return a JSON array of objects with these fields (normalize to this schema):
 - type: "Official"
 `
 
-    const response = await ai.getGenerativeModel({
-      model: 'gemini-3-pro-preview',
-    }).generateContent({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }]
-    })
+    const apiKey = geminiApiKey;
+    const modelName = 'gemini-3-pro-preview'; // Explicitly requested by user
+    const baseUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
-    const text = response.response.text()
-    console.log('[team-matches] Gemini Raw Response:', text.substring(0, 200))
+    console.log(`[team-matches] Initializing Gemini 3 Deep Research for: ${teamName}...`)
 
-    const cleanJson = text.replace(/```json/g, '').replace(/```/g, '').trim()
+    const fetchResponse = await fetch(baseUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        tools: [
+          { googleSearch: {} },
+          { codeExecution: {} }
+        ],
+        generationConfig: {
+          responseMimeType: 'application/json',
+          // thinkingConfig is usually part of model config, for REST it might vary.
+          // We'll stick to a robust prompt and tools.
+        }
+      })
+    });
+
+    if (!fetchResponse.ok) {
+      const errorText = await fetchResponse.text();
+      // If gemini-3-pro-preview is not available or errors out, fallback to 1.5-pro
+      console.warn(`[team-matches] Gemini 3 error: ${fetchResponse.status}. Falling back to 1.5 Pro...`);
+
+      const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${apiKey}`;
+      const fallbackRes = await fetch(fallbackUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          tools: [{ googleSearch: {} }],
+          generationConfig: { responseMimeType: 'application/json' }
+        })
+      });
+
+      if (!fallbackRes.ok) {
+        throw new Error(`Gemini fallback also failed: ${fallbackRes.status}`);
+      }
+
+      const data = await fallbackRes.json();
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      return parseGeminiResult(text);
+    }
+
+    const data = await fetchResponse.json();
+    let text = "";
+
+    // Handle potential thinking model output (multiple parts)
+    if (data.candidates?.[0]?.content?.parts) {
+      const parts = data.candidates[0].content.parts;
+      const textPart = parts.find((p: any) => p.text);
+      text = textPart?.text || "";
+    }
+
+    console.log('[team-matches] Gemini 3 Research Complete.')
+    return parseGeminiResult(text);
+
+  } catch (e) {
+    console.error('[team-matches] fetchMatchesFromLeaguepedia FAILED:', e)
+    return []
+  }
+}
+
+function parseGeminiResult(text: string): any[] {
+  const cleanJson = text.replace(/```json/g, '').replace(/```/g, '').trim()
+  try {
     const result = JSON.parse(cleanJson)
-
     if (Array.isArray(result)) {
-      console.log(`[team-matches] Gemini parsed ${result.length} matches from Leaguepedia`)
       return result.map((m: any) => ({
         id: `lp-${Math.random().toString(36).substr(2, 9)}`,
         startTime: m.date || new Date().toISOString(),
@@ -89,7 +148,7 @@ Return a JSON array of objects with these fields (normalize to this schema):
         format: m.format || 'Bo3',
         type: 'Official',
         result: (m.result || 'TBD').toUpperCase(),
-        score: m.score || 'VS',
+        score: m.score || '0-0',
         opponent: {
           name: m.opponent || 'Unknown Opponent',
           logoUrl: null
@@ -98,12 +157,10 @@ Return a JSON array of objects with these fields (normalize to this schema):
         source: 'leaguepedia_gemini'
       }))
     }
-    return []
-
   } catch (e) {
-    console.error('[team-matches] Gemini Fallback Failed:', e)
-    return []
+    console.error('[team-matches] JSON parse error:', e);
   }
+  return []
 }
 
 /* -------------------------------------------------------------------------- */

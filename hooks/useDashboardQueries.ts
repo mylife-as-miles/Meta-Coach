@@ -21,10 +21,10 @@ export const dashboardKeys = {
 // ============================================
 // Helper: Invoke Edge Function with Timeout
 // ============================================
-async function invokeWithTimeout<T>(
+export async function invokeWithTimeout<T>(
     functionName: string,
     body: any,
-    timeoutMs: number = 10000
+    timeoutMs: number = 60000
 ): Promise<{ data: T | null; error: any }> {
     try {
         // 1. Get fresh session token explicitly (as requested)
