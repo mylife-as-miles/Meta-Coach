@@ -93,24 +93,68 @@ const AppTutorial: React.FC = () => {
         }
     ];
 
+    const historyTutorialSteps: Step[] = [
+        {
+            target: '#match-history-header',
+            content: (
+                <div className="text-left">
+                    <h3 className="text-lg font-bold mb-1 italic text-primary">Strategic Archive</h3>
+                    <p className="text-sm opacity-90">Explore your team's historical performance. Every match here is augmented with AI-driven summaries.</p>
+                </div>
+            ),
+            disableBeacon: true,
+        },
+        {
+            target: '#match-list-container',
+            content: 'The match list provides quick insights into results, scores, and AI performance metrics like Macro Control.',
+            placement: 'bottom',
+        },
+        {
+            target: '#performance-trends-card',
+            content: 'This chart tracks your strategic efficiency over the last 10 games, helping you spot form improvements or slumps.',
+            placement: 'left',
+        },
+        {
+            target: '#gemini-retrospective-card',
+            content: 'The Retrospective engine identifies recurring patterns and systemic weaknesses across your recent performance.',
+            placement: 'left',
+        },
+        {
+            target: '#performance-kpis',
+            content: 'Key metrics like Average Win Duration and First Blood percentage give you a baseline for your team\'s tempo.',
+            placement: 'top',
+        },
+        {
+            target: '#load-more-btn',
+            content: 'Need to go further back? Load more matches to expand your analysis.',
+            placement: 'top',
+        }
+    ];
+
     // Determine which steps to show based on URL
     const isDashboard = location.pathname === '/dashboard' || location.pathname === '/dashboard/';
-    const steps = isDashboard ? dashboardTutorialSteps : syncTutorialSteps;
+    const isHistory = location.pathname.includes('/match-history');
+
+    let steps = syncTutorialSteps;
+    if (isDashboard) steps = dashboardTutorialSteps;
+    else if (isHistory) steps = historyTutorialSteps;
 
     // Separate tracking for dashboard tutorial
     useEffect(() => {
         if (isDashboard) {
             const seenDashboard = localStorage.getItem('metacoach_dashboard_tutorial_seen');
-            if (!seenDashboard) {
-                setRun(true);
-            }
+            if (!seenDashboard) setRun(true);
+            else setRun(false);
+        } else if (isHistory) {
+            const seenHistory = localStorage.getItem('metacoach_history_tutorial_seen');
+            if (!seenHistory) setRun(true);
+            else setRun(false);
         } else {
             const hasSeenSync = localStorage.getItem('metacoach_sync_tutorial_seen');
-            if (!hasSeenSync) {
-                setRun(true);
-            }
+            if (!hasSeenSync) setRun(true);
+            else setRun(false);
         }
-    }, [location.pathname, isDashboard]);
+    }, [location.pathname, isDashboard, isHistory]);
 
     const handleJoyrideCallback = (data: CallBackProps) => {
         const { status, type, index, action } = data;
@@ -119,6 +163,8 @@ const AppTutorial: React.FC = () => {
             setRun(false);
             if (isDashboard) {
                 localStorage.setItem('metacoach_dashboard_tutorial_seen', 'true');
+            } else if (isHistory) {
+                localStorage.setItem('metacoach_history_tutorial_seen', 'true');
             } else {
                 localStorage.setItem('metacoach_sync_tutorial_seen', 'true');
             }

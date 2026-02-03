@@ -64,7 +64,7 @@ const MatchHistory: React.FC = () => {
     return (
         <div className="flex flex-col">
             <header className="flex flex-col lg:flex-row lg:items-end justify-between mb-8 gap-6">
-                <div>
+                <div id="match-history-header">
                     <div className="flex items-center gap-3 mb-2">
                         <h1 className="text-3xl font-bold text-white">Strategic Archive</h1>
                         {isLoading && (
@@ -86,7 +86,7 @@ const MatchHistory: React.FC = () => {
             </header>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-                <div className="lg:col-span-8 flex flex-col gap-4">
+                <div id="match-list-container" className="lg:col-span-8 flex flex-col gap-4">
                     {/* Dynamic Match List */}
                     {isLoading ? (
                         <div className="space-y-4">
@@ -231,14 +231,14 @@ const MatchHistory: React.FC = () => {
                     )}
 
                     <div className="flex justify-center mt-4">
-                        <button className="px-6 py-2 rounded-full border border-white/10 text-xs font-semibold text-gray-400 hover:text-white hover:border-primary/30 hover:bg-surface-dark transition cursor-pointer">Load More Matches</button>
+                        <button id="load-more-btn" className="px-6 py-2 rounded-full border border-white/10 text-xs font-semibold text-gray-400 hover:text-white hover:border-primary/30 hover:bg-surface-dark transition cursor-pointer">Load More Matches</button>
                     </div>
                 </div>
 
                 {/* Sidebar */}
                 <div className="lg:col-span-4 flex flex-col gap-6">
                     {/* Performance Trends */}
-                    <div className="bg-surface-dark rounded-2xl p-6 border border-white/5 shadow-lg relative overflow-hidden">
+                    <div id="performance-trends-card" className="bg-surface-dark rounded-2xl p-6 border border-white/5 shadow-lg relative overflow-hidden">
                         <div className="flex justify-between items-start mb-6">
                             <div>
                                 <h3 className="text-lg font-bold text-white">Performance Trends</h3>
@@ -285,7 +285,7 @@ const MatchHistory: React.FC = () => {
                     </div>
 
                     {/* Gemini Retrospective */}
-                    <div className="bg-gradient-to-br from-surface-dark to-surface-darker rounded-2xl p-0 border border-white/5 shadow-lg relative overflow-hidden group">
+                    <div id="gemini-retrospective-card" className="bg-gradient-to-br from-surface-dark to-surface-darker rounded-2xl p-0 border border-white/5 shadow-lg relative overflow-hidden group">
                         <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
                             <span className="material-symbols-outlined text-6xl text-purple-400">auto_awesome</span>
                         </div>
@@ -332,7 +332,7 @@ const MatchHistory: React.FC = () => {
                     </div>
 
                     {/* KPIs */}
-                    <div className="grid grid-cols-2 gap-4">
+                    <div id="performance-kpis" className="grid grid-cols-2 gap-4">
                         <div className="bg-surface-dark p-4 rounded-xl border border-white/5 text-center">
                             <span className="text-xs text-gray-500 uppercase tracking-wider block mb-1">Avg Win Duration</span>
                             <span className="text-lg font-bold text-white font-mono">29:14</span>
