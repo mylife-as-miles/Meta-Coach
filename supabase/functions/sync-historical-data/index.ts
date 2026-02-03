@@ -85,27 +85,19 @@ serve(async (req) => {
             const seriesId = node.id
 
             // Fetch Detail (Matches -> Games)
+            // Note: 'matches' field is currently undefined on Series in api-op.
+            // mapping participants -> teams
             const detailQuery = `
                 query SeriesDetail($seriesId: ID!) {
                   series(id: $seriesId) {
-                    matches {
-                      id
-                      status
-                      games {
-                        id
-                        sequenceNumber
-                        winner { id }
-                        status
-                        lengthMs
-                        finished
-                      }
-                    }
-                    participants {
-                      team { id name }
+                    teams {
+                      baseInfo { id name }
                     }
                   }
                 }
             `
+
+            await new Promise(resolve => setTimeout(resolve, 300)) // Rate Limit Protection
 
             const detailRes = await fetch(GRID_URLS.CENTRAL_DATA, {
                 method: 'POST',
@@ -136,43 +128,16 @@ serve(async (req) => {
                 updated_at: new Date().toISOString()
             }
 
-            // 2. Participants
-            const participantsPayload = seriesDetail.participants?.map((p: any) => ({
+            // 2. Participants (Mapped from teams)
+            const participantsPayload = seriesDetail.teams?.map((t: any) => ({
                 series_id: seriesId,
-                team_id: p.team?.id,
-                team_name: p.team?.name
+                team_id: t.baseInfo?.id,
+                team_name: t.baseInfo?.name
             })) || []
 
-            // 3. Matches & Games
+            // 3. Matches & Games (Skipped for now due to schema limitations)
             const matchesPayload: any[] = []
             const gamesPayload: any[] = []
-
-            if (seriesDetail.matches) {
-                seriesDetail.matches.forEach((m: any, idx: number) => {
-                    matchesPayload.push({
-                        id: m.id,
-                        series_id: seriesId,
-                        status: m.status,
-                        number: idx + 1,
-                        updated_at: new Date().toISOString()
-                    })
-
-                    if (m.games) {
-                        m.games.forEach((g: any) => {
-                            gamesPayload.push({
-                                id: g.id,
-                                match_id: m.id,
-                                sequence_number: g.sequenceNumber,
-                                winner_id: g.winner?.id,
-                                status: g.status,
-                                finished: g.finished,
-                                length_ms: g.lengthMs,
-                                updated_at: new Date().toISOString()
-                            })
-                        })
-                    }
-                })
-            }
 
             // Execute DB Upserts
             const { error: sErr } = await supabase.from('series').upsert(seriesPayload)
