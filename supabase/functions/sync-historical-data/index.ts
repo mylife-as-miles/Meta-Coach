@@ -113,6 +113,11 @@ serve(async (req) => {
             })
 
             const detailData = await detailRes.json()
+
+            if (detailData.errors) {
+                console.warn(`[sync-history] Detail Error (Series ${seriesId}):`, detailData.errors)
+            }
+
             const seriesDetail = detailData.data?.series
             if (!seriesDetail) continue
 
