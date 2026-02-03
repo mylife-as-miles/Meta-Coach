@@ -31,6 +31,7 @@ export function getGridHeaders(apiKey: string = '', titleId?: string | number) {
     const headers: Record<string, string> = {
         'Content-Type': 'application/json',
         'x-api-key': apiKey,
+        'x-grid-api-key': apiKey, // Required by some GRID gateways
     };
 
     if (titleId) {
