@@ -16,13 +16,21 @@ const MatchHistory: React.FC = () => {
     const userId = session?.user?.id;
     const { data: workspace } = useWorkspace(userId);
     const { data: teamProfile } = useTeamProfile(workspace?.id, workspace?.grid_team_id);
-    const { data: allMatches = [] } = useMatches(workspace?.grid_team_id, workspace?.grid_title_id, teamProfile?.game, teamProfile?.teamName);
+    const { data: allMatches = [], isLoading } = useMatches(workspace?.grid_team_id, workspace?.grid_title_id, teamProfile?.game, teamProfile?.teamName);
 
     return (
         <div className="flex flex-col">
             <header className="flex flex-col lg:flex-row lg:items-end justify-between mb-8 gap-6">
                 <div>
-                    <h1 className="text-3xl font-bold mb-2 text-white">Strategic Archive</h1>
+                    <div className="flex items-center gap-3 mb-2">
+                        <h1 className="text-3xl font-bold text-white">Strategic Archive</h1>
+                        {isLoading && (
+                            <div className="px-3 py-1 bg-primary/10 border border-primary/20 rounded-full flex items-center gap-2 animate-pulse">
+                                <span className="material-symbols-outlined text-primary text-[14px]">auto_awesome</span>
+                                <span className="text-[10px] font-bold text-primary uppercase tracking-widest">AI Researching Live matches</span>
+                            </div>
+                        )}
+                    </div>
                     <p className="text-gray-400 text-sm">Review past performance, analyze key turning points, and identify patterns.</p>
                 </div>
                 {/* Filters */}
@@ -31,24 +39,42 @@ const MatchHistory: React.FC = () => {
                         <span className="material-icons-outlined text-gray-500 mr-2 text-lg">search</span>
                         <input className="bg-transparent border-none focus:ring-0 text-sm w-full text-white placeholder-gray-500 p-0 outline-none" placeholder="Search team, champion..." type="text" />
                     </div>
-                    <div className="flex gap-3 overflow-x-auto pb-1 md:pb-0">
-                        <button className="flex items-center gap-2 bg-surface-dark px-4 py-2.5 rounded-xl border border-white/10 text-sm text-gray-300 hover:text-white hover:border-primary/30 transition whitespace-nowrap cursor-pointer">
-                            <span className="material-icons-outlined text-base">videogame_asset</span>
-                            Game Mode
-                            <span className="material-icons-outlined text-base ml-1">expand_more</span>
-                        </button>
-                    </div>
                 </div>
             </header>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                 <div className="lg:col-span-8 flex flex-col gap-4">
                     {/* Dynamic Match List */}
-                    {allMatches.length === 0 ? (
+                    {isLoading ? (
+                        <div className="space-y-4">
+                            {[1, 2, 3].map((i) => (
+                                <div key={i} className="bg-surface-dark rounded-2xl p-0 border border-white/5 h-32 overflow-hidden animate-pulse">
+                                    <div className="grid grid-cols-12 h-full">
+                                        <div className="col-span-2 bg-white/5 flex flex-col items-center justify-center border-r border-white/5">
+                                            <div className="w-12 h-6 bg-white/10 rounded mb-2"></div>
+                                            <div className="w-8 h-3 bg-white/5 rounded"></div>
+                                        </div>
+                                        <div className="col-span-5 flex items-center justify-center gap-6">
+                                            <div className="w-10 h-10 rounded-full bg-white/10"></div>
+                                            <div className="w-16 h-8 bg-white/10 rounded-lg"></div>
+                                            <div className="w-10 h-10 rounded-full bg-white/10"></div>
+                                        </div>
+                                        <div className="col-span-3 flex flex-col justify-center p-5 space-y-2">
+                                            <div className="w-full h-2 bg-white/5 rounded"></div>
+                                            <div className="w-2/3 h-2 bg-white/5 rounded"></div>
+                                        </div>
+                                        <div className="col-span-2 bg-white/5 flex items-center justify-center">
+                                            <div className="w-16 h-8 bg-white/10 rounded-lg"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : allMatches.length === 0 ? (
                         <div className="bg-surface-dark rounded-2xl p-10 border border-white/5 text-center">
                             <span className="material-icons-outlined text-4xl text-gray-600 mb-4">sports_esports</span>
                             <h3 className="text-lg font-bold text-white">No matches found</h3>
-                            <p className="text-gray-400 text-sm mt-2">Play some games to see your history here.</p>
+                            <p className="text-gray-400 text-sm mt-2">GRID returned zero results and AI recovery found nothing.</p>
                         </div>
                     ) : (
                         allMatches.map(match => (
