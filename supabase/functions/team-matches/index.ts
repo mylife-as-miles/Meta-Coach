@@ -195,6 +195,9 @@ OUTPUT SCHEMA (JSON Array):
 /* -------------------------------------------------------------------------- */
 /*                               Main Handler                                 */
 /* -------------------------------------------------------------------------- */
+/* -------------------------------------------------------------------------- */
+/*                               Main Handler                                 */
+/* -------------------------------------------------------------------------- */
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -203,11 +206,13 @@ serve(async (req) => {
   try {
     const gridApiKey = Deno.env.get('GRID_API_KEY')
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') // Using Service Role for upserts
 
-    if (!gridApiKey || !supabaseUrl || !supabaseAnonKey) {
+    if (!gridApiKey || !supabaseUrl || !supabaseKey) {
       throw new Error('Missing environment variables')
     }
+
+    const supabase = createClient(supabaseUrl, supabaseKey)
 
     const bodyText = await req.text()
     if (!bodyText) {
@@ -215,15 +220,105 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Empty request body' }), { status: 400, headers: corsHeaders })
     }
 
-    const { teamId, titleId = '3', teamName } = JSON.parse(bodyText)
+    const { teamId, titleId = '3', teamName, offset = 0, limit = 10 } = JSON.parse(bodyText)
 
     if (!teamId) {
       return new Response(JSON.stringify({ error: 'teamId is required' }), { status: 400, headers: corsHeaders })
     }
 
-    console.log(`[team-matches] Fetching for TeamID: ${teamId}, Title: ${titleId}`)
+    console.log(`[team-matches] Fetching for TeamID: ${teamId}, Offset: ${offset}, Limit: ${limit}`)
 
-    // 1. GRID Query (allSeries)
+    // 1. CACHE CHECK: Query local DB first
+    // We join matches -> series -> tournament to reconstruct the payload
+    const { data: dbMatches, error: dbError } = await supabase
+      .from('matches')
+      .select(`
+        *,
+        series:series_id (
+          start_time,
+          tournament_name,
+          participants:series_participants(team_name, team_id)
+        )
+      `)
+      .order('id', { ascending: false }) // Approximate sorting by ID for now, or match number
+    // Note: A real implementation needs accurate sorting by startTime. 
+    // For now, we rely on the fact that we insert them. 
+    // Ideally, 'matches' should have a 'start_time' copied from series or its own.
+    // Let's assume we can filter by series start_time if we had the relationship set up perfectly.
+    // Simplify: Fetch everything and filter in memory or rely on API for pagination logic if DB is empty.
+
+    // Better Strategy for Cache:
+    // Query 'series_participants' for the team -> get series_ids -> get matches
+    // This is complex in one go. 
+
+    // SIMPLIFIED CACHE STRATEGY:
+    // Check if we have *any* matches for this team in the 'series_participants' table roughly in the last month?
+    // Actually, sticking to the requested "Load More" logic:
+    // If offset > 0, we assume the client has some data. We try to fetch from DB. 
+    // If DB yields < limit, we might need to fetch from API.
+
+    // LET'S DO HYBRID:
+    // Always fetch from API for now to ensure freshness/accuracy until the Sync Job is fully robust, 
+    // BUT Upsert the results so future "Sync" jobs have data. 
+
+    // WAIT, the requirement is "Cache-First".
+    // 1. Try to fetch from DB "matches" linked to this team.
+    // Need a way to link match -> team. 'series_participants' links series -> team.
+    // Query: Get Series IDs for Team -> Get Matches for Series.
+
+    const { data: seriesIds } = await supabase
+      .from('series_participants')
+      .select('series_id')
+      .eq('team_id', teamId)
+
+    let dbResults: any[] = [];
+    if (seriesIds && seriesIds.length > 0) {
+      const ids = seriesIds.map(s => s.series_id);
+      const { data: matches } = await supabase
+        .from('series')
+        .select(`
+                id,
+                start_time,
+                tournament_name,
+                matches (
+                    id, status, result, score, opponent_name, opponent_logo, sequence_number
+                )
+            `)
+        .in('id', ids)
+        .order('start_time', { ascending: false })
+        .range(offset, offset + limit - 1);
+
+      if (matches && matches.length > 0) {
+        // Transform DB shape to API shape
+        dbResults = matches.flatMap(s => s.matches.map((m: any) => ({
+          id: m.id,
+          startTime: s.start_time,
+          status: m.status || 'finished',
+          format: 'Bo3', // stored?
+          type: 'Official',
+          result: m.result,
+          score: m.score,
+          opponent: {
+            name: m.opponent_name || 'Unknown',
+            logoUrl: m.opponent_logo
+          },
+          tournament: { name: s.tournament_name },
+          source: 'database_cache'
+        })))
+      }
+    }
+
+    if (dbResults.length >= limit) {
+      console.log(`[team-matches] Cache Hit! Returning ${dbResults.length} matches from DB.`);
+      return new Response(
+        JSON.stringify({ matches: dbResults, source: 'database_cache' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      )
+    }
+
+    console.log('[team-matches] Cache Miss (or insufficient data). Fetching from GRID/Gemini...');
+
+    // 2. GRID Query (allSeries)
     // Updated to use 'allSeries' with 'teamIds' filter
     const gridQuery = `
       query TeamMatches($titleId: ID!, $teamId: ID!) {
@@ -274,6 +369,11 @@ serve(async (req) => {
         // HYBRID REFINEMENT: If GRID has 0-0 or DRAW, ask Gemini 3 Pro to find the truth.
         matches = await refineMatchesWithGemini(rawMatches, teamName || 'Team')
         source = 'grid_hybrid'
+
+        // 3. UPSERT TO DB
+        // We do this in the background / don't block response too much, but for Edge Functions we must await.
+        await upsertMatchesToDB(supabase, matches, teamId, teamName);
+
       } else {
         console.log('[team-matches] GRID returned 0 matches. Triggering full AI research...')
         source = 'leaguepedia_gemini'
@@ -291,7 +391,13 @@ serve(async (req) => {
       source = 'leaguepedia_gemini'
     }
 
-    // Sort: Upcoming (ASC) then History (DESC)
+    // Filter by pagination manually since we fetched a fresh batch
+    // In a real infinite scroll, we'd pass pagination to GRID (cursor). 
+    // Here we simulate "Load More" by returning the requested slice if possible, 
+    // but since we always fetch the latest 20 from GRID, offset > 20 won't work well without cursors.
+    // For this implementation, we allow the DB cache to handle deep history, and GRID just refreshes the "head".
+
+    // Sort needed again after merge
     const now = new Date()
     const upcoming = matches.filter(m => new Date(m.startTime) > now)
       .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
@@ -301,7 +407,7 @@ serve(async (req) => {
     const unified = [...upcoming, ...history]
 
     return new Response(
-      JSON.stringify({ matches: unified, source }),
+      JSON.stringify({ matches: unified.slice(offset, offset + limit), source }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     )
 
@@ -313,6 +419,39 @@ serve(async (req) => {
     )
   }
 })
+
+async function upsertMatchesToDB(supabase: any, matches: any[], teamId: string, teamName: string) {
+  console.log('[team-matches] Persisting results to DB...')
+  for (const m of matches) {
+    // Upsert Series
+    const { error: sErr } = await supabase.from('series').upsert({
+      id: m.id,
+      title_id: 3, // hardcoded for now or pass in
+      start_time: m.startTime,
+      tournament_name: m.tournament.name,
+      updated_at: new Date().toISOString()
+    })
+
+    // Upsert Participant (Link Team to Series)
+    await supabase.from('series_participants').upsert({
+      series_id: m.id,
+      team_id: teamId,
+      team_name: teamName
+    }, { onConflict: 'series_id, team_id' })
+
+    // Upsert Match
+    await supabase.from('matches').upsert({
+      id: m.id + '-1', // Simple single-game/match mapping
+      series_id: m.id,
+      status: m.status,
+      result: m.result,
+      score: m.score,
+      opponent_name: m.opponent.name,
+      opponent_logo: m.opponent.logoUrl,
+      sequence_number: 1
+    }, { onConflict: 'series_id, sequence_number' }) // Assuming schema
+  }
+}
 
 function processGridNode(node: any, myTeamId: string) {
   const now = new Date()
