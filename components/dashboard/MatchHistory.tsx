@@ -3,6 +3,35 @@ import { useDashboardStore } from '../../stores/useDashboardStore';
 import { useSession } from '../../hooks/useAuth';
 import { useWorkspace, useMatches, useTeamProfile } from '../../hooks/useDashboardQueries';
 import MatchDetailModal from './modals/MatchDetailModal';
+import { Match } from '../../lib/mockData';
+
+const LogoWithFallback: React.FC<{ src?: string | null; alt: string; fallbackText: string; className: string; color?: string }> = ({ src, alt, fallbackText, className, color }) => {
+    const [error, setError] = React.useState(false);
+
+    if (!src || error) {
+        return (
+            <div className={`w-14 h-14 rounded-full border flex items-center justify-center p-2 overflow-hidden ${color === 'red' ? 'bg-red-900/20 border-red-500/30' : color === 'blue' ? 'bg-blue-900/20 border-blue-500/30' : 'bg-orange-900/20 border-orange-500/30'}`}>
+                <span className={`font-bold text-lg ${color === 'red' ? 'text-red-400' : color === 'blue' ? 'text-blue-400' : 'text-orange-400'}`}>
+                    {fallbackText}
+                </span>
+            </div>
+        );
+    }
+
+    return (
+        <div className={`w-14 h-14 rounded-full bg-surface-darker/50 border border-white/10 flex items-center justify-center p-1.5 overflow-hidden`}>
+            <img
+                src={src}
+                alt={alt}
+                className="w-full h-full object-contain"
+                onError={() => {
+                    console.warn(`Logo failed to load: ${src}`);
+                    setError(true);
+                }}
+            />
+        </div>
+    );
+};
 
 const MatchHistory: React.FC = () => {
     // UI State from Zustand
@@ -107,13 +136,13 @@ const MatchHistory: React.FC = () => {
                                     <div className="col-span-12 md:col-span-5 p-5 flex items-center justify-center relative">
                                         <div className="flex items-center gap-6 w-full justify-center">
                                             <div className="flex flex-col items-center gap-2">
-                                                <div className="w-14 h-14 rounded-full bg-blue-900/20 border border-blue-500/30 flex items-center justify-center p-2 shadow-[0_0_15px_rgba(59,130,246,0.1)] overflow-hidden">
-                                                    {teamProfile?.logoUrl ? (
-                                                        <img src={teamProfile.logoUrl} alt={teamProfile.teamName} className="w-full h-full object-cover" />
-                                                    ) : (
-                                                        <span className="font-bold text-blue-400 text-lg">{teamProfile?.teamName?.substring(0, 2).toUpperCase() || 'YOU'}</span>
-                                                    )}
-                                                </div>
+                                                <LogoWithFallback
+                                                    src={teamProfile?.logoUrl}
+                                                    alt={teamProfile?.teamName || 'Your Team'}
+                                                    fallbackText={teamProfile?.teamName?.substring(0, 2).toUpperCase() || 'YOU'}
+                                                    className="w-14 h-14"
+                                                    color="blue"
+                                                />
                                                 <span className="text-xs font-bold text-gray-300">{teamProfile?.teamName || 'Your Team'}</span>
                                             </div>
                                             <div className="flex flex-col items-center">
@@ -123,13 +152,13 @@ const MatchHistory: React.FC = () => {
                                                 <span className="text-[10px] text-gray-500 mt-1 uppercase tracking-wider">{match.format}</span>
                                             </div>
                                             <div className="flex flex-col items-center gap-2">
-                                                <div className={`w-14 h-14 rounded-full border flex items-center justify-center p-2 overflow-hidden ${match.opponent.color === 'red' ? 'bg-red-900/20 border-red-500/30' : 'bg-orange-900/20 border-orange-500/30'}`}>
-                                                    {match.opponent.logoUrl ? (
-                                                        <img src={match.opponent.logoUrl} alt={match.opponent.name} className="w-full h-full object-contain" />
-                                                    ) : (
-                                                        <span className={`font-bold text-lg ${match.opponent.color === 'red' ? 'text-red-400' : 'text-orange-400'}`}>{match.opponent.abbreviation}</span>
-                                                    )}
-                                                </div>
+                                                <LogoWithFallback
+                                                    src={match.opponent.logoUrl}
+                                                    alt={match.opponent.name}
+                                                    fallbackText={match.opponent.abbreviation || match.opponent.name.substring(0, 2).toUpperCase()}
+                                                    className="w-14 h-14"
+                                                    color={match.opponent.color || 'orange'}
+                                                />
                                                 <span className="text-xs font-bold text-gray-300">{match.opponent.name}</span>
                                             </div>
                                         </div>

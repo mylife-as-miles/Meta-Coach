@@ -4,6 +4,34 @@ import { Match } from '../../../lib/mockData';
 import { useSession } from '../../../hooks/useAuth';
 import { useWorkspace, useTeamProfile, useMatchStats, useHighImpactPlays } from '../../../hooks/useDashboardQueries';
 
+const LogoWithFallback: React.FC<{ src?: string | null; alt: string; fallbackText: string; className?: string; color?: string; size?: string }> = ({ src, alt, fallbackText, className, color, size = "w-14 h-14" }) => {
+    const [error, setError] = React.useState(false);
+
+    if (!src || error) {
+        return (
+            <div className={`${size} rounded-full border flex items-center justify-center mb-2 overflow-hidden ${color === 'red' ? 'bg-red-900/20 border-red-500/30' : color === 'blue' ? 'bg-blue-900/20 border-blue-500/30' : color === 'orange' ? 'bg-orange-900/20 border-orange-500/30' : 'bg-yellow-900/20 border-yellow-500/30'}`}>
+                <span className={`font-bold ${size === 'w-14 h-14' ? 'text-lg' : 'text-base'} ${color === 'red' ? 'text-red-400' : color === 'blue' ? 'text-blue-400' : color === 'orange' ? 'text-orange-400' : 'text-yellow-400'}`}>
+                    {fallbackText}
+                </span>
+            </div>
+        );
+    }
+
+    return (
+        <div className={`${size} rounded-full bg-surface-darker/50 border border-white/10 flex items-center justify-center p-1.5 overflow-hidden mb-2`}>
+            <img
+                src={src}
+                alt={alt}
+                className="w-full h-full object-contain"
+                onError={() => {
+                    console.warn(`Logo failed to load: ${src}`);
+                    setError(true);
+                }}
+            />
+        </div>
+    );
+};
+
 const HighImpactPlaysSection: React.FC<{ matchId: string }> = ({ matchId }) => {
     const { data: plays, isLoading } = useHighImpactPlays(matchId);
 
@@ -118,9 +146,12 @@ const MatchDetailModal: React.FC<MatchDetailModalProps> = ({ isOpen, onClose, ma
                     }`}>
                     <div className="flex items-center gap-6">
                         <div className="text-center">
-                            <div className="w-14 h-14 rounded-full bg-blue-900/20 border border-blue-500/30 flex items-center justify-center mb-2">
-                                <span className="font-bold text-blue-400 text-lg">{teamAbbr}</span>
-                            </div>
+                            <LogoWithFallback
+                                src={teamProfile?.logoUrl}
+                                alt={teamName}
+                                fallbackText={teamAbbr}
+                                color="blue"
+                            />
                             <span className="text-xs text-gray-400">{teamName}</span>
                         </div>
                         <div className="text-center">
@@ -130,15 +161,12 @@ const MatchDetailModal: React.FC<MatchDetailModalProps> = ({ isOpen, onClose, ma
                             </span>
                         </div>
                         <div className="text-center">
-                            <div className={`w-14 h-14 rounded-full border flex items-center justify-center mb-2 ${match.opponent.color === 'red' ? 'bg-red-900/20 border-red-500/30' :
-                                match.opponent.color === 'orange' ? 'bg-orange-900/20 border-orange-500/30' :
-                                    'bg-yellow-900/20 border-yellow-500/30'
-                                }`}>
-                                <span className={`font-bold text-lg ${match.opponent.color === 'red' ? 'text-red-400' :
-                                    match.opponent.color === 'orange' ? 'text-orange-400' :
-                                        'text-yellow-400'
-                                    }`}>{match.opponent.abbreviation}</span>
-                            </div>
+                            <LogoWithFallback
+                                src={match.opponent.logoUrl}
+                                alt={match.opponent.name}
+                                fallbackText={match.opponent.abbreviation || match.opponent.name.substring(0, 2).toUpperCase()}
+                                color={match.opponent.color || 'orange'}
+                            />
                             <span className="text-xs text-gray-400">{match.opponent.name}</span>
                         </div>
                     </div>

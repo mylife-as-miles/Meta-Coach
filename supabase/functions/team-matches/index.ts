@@ -9,55 +9,25 @@ import { GoogleGenAI } from 'npm:@google/genai'
 import { GRID_URLS, getGridHeaders } from '../_shared/grid-config.ts'
 
 /* -------------------------------------------------------------------------- */
-/*                           Gemini Fallback Logic                            */
+/*                           Gemini Intelligence Layer                        */
 /* -------------------------------------------------------------------------- */
-async function fetchMatchesFromLeaguepedia(teamName: string): Promise<any[]> {
-  console.log(`[team-matches] fetchMatchesFromLeaguepedia entered for: ${teamName}`)
+
+/**
+ * Strategy: Calls Gemini 3 Pro to research and verify match results.
+ * Can be used for full research (if no GRID data) or refinement (if GRID has 0-0).
+ */
+async function callGeminiResearch(prompt: string): Promise<any[]> {
   const geminiApiKey = Deno.env.get('GEMINI_API_KEY')
   if (!geminiApiKey) {
     console.warn('GEMINI_API_KEY missing')
     return []
   }
 
-  const url = `https://lol.fandom.com/wiki/${encodeURIComponent(teamName.replace(/ /g, '_'))}/Match_History`
-  console.log(`[team-matches] Fallback: Searching Leaguepedia: ${url}`)
+  const apiKey = geminiApiKey;
+  const modelName = 'gemini-3-pro-preview';
+  const baseUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
   try {
-    const ai = new GoogleGenAI({ apiKey: geminiApiKey })
-
-    // User requested code execution for robustness
-    const tools = [
-      { codeExecution: {} },
-      { googleSearch: {} }
-    ]
-
-    const prompt = `
-You are a world-class esports research agent.
-YOUR GOAL: Find the most recent Match History for the team "${teamName}" in League of Legends.
-
-STEPS:
-1. Use Google Search to find the team's Match History on Leaguepedia (lol.fandom.com) or liquipedia.
-2. Visit the URL and extract the "Match History" table. 
-3. If necessary, use Python (Pandas) to parse the HTML and find the table containing "Opponent", "Result", and "Score".
-4. Return the data as a clean JSON array.
-
-OUTPUT SCHEMA (JSON Array):
-- date: ISO string or YYYY-MM-DD
-- tournament: Name of the event
-- opponent: Full name of the opposing team
-- result: "Win", "Loss", or "Draw"
-- score: String like "2-1" or "0-1"
-- type: Always "Official"
-
-IMPORTANT: If you cannot find the specific team page, search for "Leaguepedia ${teamName} Match History" to locate it. Return ONLY the JSON array.
-`
-
-    const apiKey = geminiApiKey;
-    const modelName = 'gemini-3-pro-preview'; // Explicitly requested by user
-    const baseUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
-
-    console.log(`[team-matches] Initializing Gemini 3 Deep Research for: ${teamName}...`)
-
     const fetchResponse = await fetch(baseUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -68,18 +38,16 @@ IMPORTANT: If you cannot find the specific team page, search for "Leaguepedia ${
           { codeExecution: {} }
         ],
         generationConfig: {
-          responseMimeType: 'application/json',
-          // thinkingConfig is usually part of model config, for REST it might vary.
-          // We'll stick to a robust prompt and tools.
+          responseMimeType: 'application/json'
         }
       })
     });
 
     if (!fetchResponse.ok) {
       const errorText = await fetchResponse.text();
-      // If gemini-3-pro-preview is not available or errors out, fallback to 1.5-pro
       console.warn(`[team-matches] Gemini 3 error: ${fetchResponse.status}. Falling back to 1.5 Pro...`);
 
+      // Fallback to 1.5 Pro if 3 is unavailable
       const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${apiKey}`;
       const fallbackRes = await fetch(fallbackUrl, {
         method: 'POST',
@@ -91,30 +59,21 @@ IMPORTANT: If you cannot find the specific team page, search for "Leaguepedia ${
         })
       });
 
-      if (!fallbackRes.ok) {
-        throw new Error(`Gemini fallback also failed: ${fallbackRes.status}`);
-      }
-
+      if (!fallbackRes.ok) throw new Error(`Gemini fallback failed: ${fallbackRes.status}`);
       const data = await fallbackRes.json();
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-      return parseGeminiResult(text);
+      return parseGeminiResult(data.candidates?.[0]?.content?.parts?.[0]?.text || "");
     }
 
     const data = await fetchResponse.json();
     let text = "";
-
-    // Handle potential thinking model output (multiple parts)
     if (data.candidates?.[0]?.content?.parts) {
       const parts = data.candidates[0].content.parts;
       const textPart = parts.find((p: any) => p.text);
       text = textPart?.text || "";
     }
-
-    console.log('[team-matches] Gemini 3 Research Complete.')
     return parseGeminiResult(text);
-
   } catch (e) {
-    console.error('[team-matches] fetchMatchesFromLeaguepedia FAILED:', e)
+    console.error('[team-matches] Gemini Research Failed:', e)
     return []
   }
 }
@@ -125,7 +84,7 @@ function parseGeminiResult(text: string): any[] {
     const result = JSON.parse(cleanJson)
     if (Array.isArray(result)) {
       return result.map((m: any) => ({
-        id: `lp-${Math.random().toString(36).substr(2, 9)}`,
+        id: m.id || `lp-${Math.random().toString(36).substr(2, 9)}`,
         startTime: m.date || new Date().toISOString(),
         status: 'finished',
         format: m.format || 'Bo3',
@@ -134,7 +93,7 @@ function parseGeminiResult(text: string): any[] {
         score: m.score || '0-0',
         opponent: {
           name: m.opponent || 'Unknown Opponent',
-          logoUrl: null
+          logoUrl: m.logoUrl || null
         },
         tournament: { name: m.tournament || 'Unknown Tournament' },
         source: 'leaguepedia_gemini'
@@ -144,6 +103,86 @@ function parseGeminiResult(text: string): any[] {
     console.error('[team-matches] JSON parse error:', e);
   }
   return []
+}
+
+/**
+ * Verifies and fills in scores for matches that were returned with 0-0/DRAW from GRID.
+ */
+async function refineMatchesWithGemini(matches: any[], teamName: string): Promise<any[]> {
+  // Only refine finished matches with 0-0 score or DRAW result
+  const needsRefinement = matches.filter(m => m.status === 'finished' && (m.score === '0-0' || m.result === 'DRAW'));
+
+  if (needsRefinement.length === 0) return matches;
+
+  console.log(`[team-matches] Refining ${needsRefinement.length} matches for ${teamName} using Gemini 3 Pro...`);
+
+  const skeleton = needsRefinement.map(m => ({
+    id: m.id,
+    date: m.startTime,
+    opponent: m.opponent.name,
+    tournament: m.tournament.name
+  }));
+
+  const prompt = `
+You are a world-class esports data researcher.
+INPUT: A list of matches for team "${teamName}" from an API that has missing or placeholder scores (0-0/DRAW).
+GOAL: Use Google Search and Code Execution (Python/Pandas) to find the ACTUAL results and scores on Leaguepedia or Liquipedia.
+
+MATCHES TO RESEARCH:
+${JSON.stringify(skeleton, null, 2)}
+
+TASK:
+1. Search for each match by team, opponent, and date.
+2. Verify if it was a Win, Loss, or Draw for ${teamName}.
+3. Find the exact score (e.g., 2-1, 1-2).
+4. Return the data as a clean JSON array with updated "result" and "score" fields. Keep the same "id".
+
+OUTPUT SCHEMA:
+[
+  { "id": "original_id", "result": "Win" | "Loss" | "Draw", "score": "X-Y" }
+]
+`;
+
+  const refinedData = await callGeminiResearch(prompt);
+
+  // Map the refined results back to the original list
+  return matches.map(m => {
+    const refined = refinedData.find(r => r.id === m.id);
+    if (refined) {
+      return {
+        ...m,
+        result: refined.result.toUpperCase(),
+        score: refined.score,
+        source: 'grid_hybrid'
+      };
+    }
+    return m;
+  });
+}
+
+/**
+ * Full research if GRID returns nothing.
+ */
+async function fetchMatchesFromLeaguepedia(teamName: string): Promise<any[]> {
+  const prompt = `
+You are a world-class esports research agent.
+YOUR GOAL: Find the most recent Match History (past 10 matches) for the team "${teamName}" in League of Legends.
+
+STEPS:
+1. Use Google Search to find the team's Match History on Leaguepedia (lol.fandom.com) or liquipedia.
+2. Visit the URL and extract the "Match History" table. 
+3. Use Python (Pandas) to parse the HTML and find the table containing "Opponent", "Result", and "Score".
+4. Return ONLY the data as a clean JSON array.
+
+OUTPUT SCHEMA (JSON Array):
+- date: ISO string
+- tournament: string
+- opponent: string
+- result: "Win", "Loss", or "Draw"
+- score: "2-1", "0-1" etc.
+- type: "Official"
+`;
+  return await callGeminiResearch(prompt);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -218,35 +257,31 @@ serve(async (req) => {
 
     if (gridRes.ok) {
       const json = await gridRes.json()
-      console.log('[team-matches] GRID/Central-Data Response:', JSON.stringify(json).substring(0, 500)) // Log first 500 chars
+      console.log('[team-matches] GRID/Central-Data Response:', JSON.stringify(json).substring(0, 500))
       const edges = json.data?.allSeries?.edges || []
 
       if (edges.length > 0) {
-        console.log(`[team-matches] GRID found ${edges.length} matches`)
-        matches = edges.map((e: any) => processGridNode(e.node, teamId))
+        console.log(`[team-matches] GRID found ${edges.length} matches. Entering Hybrid Refinement...`)
+        const rawMatches = edges.map((e: any) => processGridNode(e.node, teamId))
+
+        // HYBRID REFINEMENT: If GRID has 0-0 or DRAW, ask Gemini 3 Pro to find the truth.
+        matches = await refineMatchesWithGemini(rawMatches, teamName || 'Team')
+        source = 'grid_hybrid'
       } else {
-        console.log('[team-matches] GRID returned 0 matches. Triggering fallback...')
-        source = 'fallback_leaguepedia'
+        console.log('[team-matches] GRID returned 0 matches. Triggering full AI research...')
+        source = 'leaguepedia_gemini'
       }
     } else {
       console.error(`[team-matches] GRID Error: ${gridRes.status}`)
       source = 'fallback_grid_error'
     }
 
-    // 2. Fallback: Gemini + Leaguepedia
+    // 2. Fallback: Gemini + Leaguepedia (Full Research if matches still empty)
     if (matches.length === 0) {
-      const effectiveName = teamName || 'Cloud9' // Use Cloud9 as a test fallback if name is null, just to see it work
-      console.log(`[team-matches] Triggering Fallback for Team: ${effectiveName}`)
-
-      const lpMatches = await fetchMatchesFromLeaguepedia(effectiveName)
-      if (lpMatches.length > 0) {
-        matches = lpMatches
-        source = 'leaguepedia_gemini'
-        console.log(`[team-matches] Fallback successful. Switched to ${source}`)
-      } else {
-        console.warn(`[team-matches] Fallback yield 0 matches for ${effectiveName}`)
-        source = 'fallback_empty'
-      }
+      const effectiveName = teamName || 'Cloud9'
+      console.log(`[team-matches] Triggering Full AI Research for Team: ${effectiveName}`)
+      matches = await fetchMatchesFromLeaguepedia(effectiveName)
+      source = 'leaguepedia_gemini'
     }
 
     // Sort: Upcoming (ASC) then History (DESC)
