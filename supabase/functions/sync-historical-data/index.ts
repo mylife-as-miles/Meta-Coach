@@ -26,7 +26,8 @@ serve(async (req) => {
 
         console.log(`[sync-history] Syncing series for Title ${titleId} from ${from} to ${to}`)
 
-        // Step 1: Query AllSeries (The Spine)
+        // Step 1: Query AllSeries (The Spine + Teams)
+        // Optimized to fetch teams in a single request to avoid N+1 Rate Limits
         const spineQuery = `
             query HistoricalSeries($titleId: ID!, $from: String!, $to: String!) {
               allSeries(
@@ -41,6 +42,9 @@ serve(async (req) => {
                     id
                     startTimeScheduled
                     tournament { id name }
+                    teams {
+                      baseInfo { id name }
+                    }
                   }
                 }
               }
@@ -77,43 +81,11 @@ serve(async (req) => {
         }
 
         let syncedCount = 0
-        const detailErrors: any[] = []
 
-        // Step 2: Iterate and Expand
+        // Step 2: Iterate and Upsert (Local Processing Only)
         for (const edge of edges) {
             const node = edge.node
             const seriesId = node.id
-
-            // Fetch Detail (Matches -> Games)
-            // Note: 'matches' field is currently undefined on Series in api-op.
-            // mapping participants -> teams
-            const detailQuery = `
-                query SeriesDetail($seriesId: ID!) {
-                  series(id: $seriesId) {
-                    teams {
-                      baseInfo { id name }
-                    }
-                  }
-                }
-            `
-
-            await new Promise(resolve => setTimeout(resolve, 300)) // Rate Limit Protection
-
-            const detailRes = await fetch(GRID_URLS.CENTRAL_DATA, {
-                method: 'POST',
-                headers: getGridHeaders(gridApiKey),
-                body: JSON.stringify({ query: detailQuery, variables: { seriesId } })
-            })
-
-            const detailData = await detailRes.json()
-
-            if (detailData.errors) {
-                console.warn(`[sync-history] Detail Error (Series ${seriesId}):`, detailData.errors)
-                detailErrors.push({ seriesId, errors: detailData.errors })
-            }
-
-            const seriesDetail = detailData.data?.series
-            if (!seriesDetail) continue
 
             // Prepare Data for Upsert
             // 1. Series
@@ -121,21 +93,21 @@ serve(async (req) => {
                 id: seriesId,
                 title_id: titleId,
                 start_time: node.startTimeScheduled,
-                end_time: null, // Field not available in Series node
-                status: null,   // Field not available in Series node
+                end_time: null,
+                status: null,
                 tournament_id: node.tournament?.id,
                 tournament_name: node.tournament?.name,
                 updated_at: new Date().toISOString()
             }
 
-            // 2. Participants (Mapped from teams)
-            const participantsPayload = seriesDetail.teams?.map((t: any) => ({
+            // 2. Participants (Mapped from teams in main query)
+            const participantsPayload = node.teams?.map((t: any) => ({
                 series_id: seriesId,
                 team_id: t.baseInfo?.id,
                 team_name: t.baseInfo?.name
             })) || []
 
-            // 3. Matches & Games (Skipped for now due to schema limitations)
+            // 3. Matches & Games (Currently unavailable in api-op schema)
             const matchesPayload: any[] = []
             const gamesPayload: any[] = []
 
