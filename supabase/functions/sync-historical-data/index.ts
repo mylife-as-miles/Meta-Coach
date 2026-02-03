@@ -77,6 +77,7 @@ serve(async (req) => {
         }
 
         let syncedCount = 0
+        const detailErrors: any[] = []
 
         // Step 2: Iterate and Expand
         for (const edge of edges) {
@@ -116,6 +117,7 @@ serve(async (req) => {
 
             if (detailData.errors) {
                 console.warn(`[sync-history] Detail Error (Series ${seriesId}):`, detailData.errors)
+                detailErrors.push({ seriesId, errors: detailData.errors })
             }
 
             const seriesDetail = detailData.data?.series
@@ -199,7 +201,8 @@ serve(async (req) => {
                 status: 'success',
                 synced: syncedCount,
                 totalFound: edges.length,
-                gridErrors: spineData.errors, // Expose errors if any
+                gridErrors: spineData.errors, // Main query errors
+                detailErrors: detailErrors.length > 0 ? detailErrors : undefined, // Detail query errors
                 debug: { titleId, from, to }
             }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
