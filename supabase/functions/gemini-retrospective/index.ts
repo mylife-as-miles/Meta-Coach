@@ -19,41 +19,31 @@ serve(async (req) => {
             Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
         )
 
-        // 1. Fetch Last 5 Matches (Real Data)
-        // We try to find games where this team played.
-        // Since our sync might not have exact team IDs mapped, we'll try a loose search or fallback.
-        // For the purpose of this demo, if teamId is generic, we might fetch ANY recent 5 games.
-
-        // Attempt to fetch games for the specific team if possible
-        let query = supabase
-            .from('games')
+        // 1. Fetch Last 10 Matches (Real Data)
+        const { data: matches, error: dbError } = await supabase
+            .from('matches')
             .select(`
-            id, 
-            winner_id,
-            length_ms,
-            match_id,
-            matches (
-                series (
+                id, 
+                result,
+                score,
+                performance_summary,
+                series!inner(
                     tournament_name,
-                    start_time
+                    start_time,
+                    series_participants!inner(team_id)
                 )
-            )
-        `)
+            `)
+            .eq('series.series_participants.team_id', teamId)
             .order('updated_at', { ascending: false })
-            .limit(5);
-
-        // If we had a reliable team_id filter, we'd add .eq('winner_id', teamId) or similar, 
-        // but our sync logic was series-based. We'll proceed with the latest 5 games as "Context".
-
-        const { data: games, error: dbError } = await query;
+            .limit(10);
 
         // Construct Context for Gemini
         let matchContext = "No specific match history found.";
-        if (games && games.length > 0) {
-            matchContext = games.map((g, i) => {
-                const result = g.winner_id === teamId ? "WIN" : "LOSS";
-                const duration = g.length_ms ? Math.round(g.length_ms / 60000) : 30;
-                return `Match ${i + 1}: ${result} in ${duration} mins. Tournament: ${g.matches?.series?.tournament_name}`;
+        if (matches && matches.length > 0) {
+            matchContext = matches.map((m, i) => {
+                const perf = m.performance_summary;
+                const stats = perf ? ` (Macro: ${perf.macroControl}%, Error: ${perf.microErrorRate})` : "";
+                return `Match ${i + 1}: ${m.result} (${m.score}) in ${m.series?.tournament_name}${stats}`;
             }).join("\n");
         }
 

@@ -26,88 +26,80 @@ serve(async (req) => {
 
         console.log(`[auto-scout] Generating intelligence for Team ${teamId}`)
 
-        // Step 1: Fetch Historical Data from Local Cache (The "Canonical" DB)
-        const { data: participation, error: partError } = await supabase
-            .from('series_participants')
-            .select('series_id, team_name')
-            .eq('team_id', teamId)
-            .limit(50) // Analyze last 50 series
+        // Step 1: Fetch Historical Data from Local Cache
+        const { data: matches, error: matchesError } = await supabase
+            .from('matches')
+            .select('*, series!inner(series_participants!inner(team_id))')
+            .eq('series.series_participants.team_id', teamId)
+            .order('series(start_time)', { ascending: false })
+            .limit(20)
 
-        if (partError) throw partError;
+        if (matchesError) throw matchesError;
 
-        const seriesIds = participation.map((p: any) => p.series_id);
-
-        // Deep fetch games for these series
-        const { data: games, error: gamesError } = await supabase
-            .from('games')
-            .select('*, matches!inner(series_id)')
-            .in('matches.series_id', seriesIds)
-
-        if (gamesError) throw gamesError;
-
-        console.log(`[auto-scout] Analyzing ${games.length} games...`)
+        console.log(`[auto-scout] Analyzing ${matches.length} matches...`)
 
         // Step 2: Feature Extraction (The "AI" part - calculating signals)
-        // Simple derived metrics for now (until we have Gold@10 in DB)
-
         let wins = 0;
-        let totalTime = 0;
-        let gameDurations: number[] = [];
+        let totalMacro = 0;
+        let macroCount = 0;
+        let errors = { LOW: 0, MED: 0, HIGH: 0 };
+        let results = { WIN: 0, LOSS: 0 };
 
-        games.forEach((g: any) => {
-            if (g.winner_id === teamId) wins++;
-            if (g.length_ms) {
-                totalTime += g.length_ms;
-                gameDurations.push(g.length_ms / 60000); // Minutes
+        matches.forEach((m: any) => {
+            if (m.result === 'WIN') {
+                wins++;
+                results.WIN++;
+            } else {
+                results.LOSS++;
+            }
+
+            if (m.performance_summary) {
+                if (typeof m.performance_summary.macroControl === 'number') {
+                    totalMacro += m.performance_summary.macroControl;
+                    macroCount++;
+                }
+                const rate = m.performance_summary.microErrorRate as keyof typeof errors;
+                if (errors[rate] !== undefined) errors[rate]++;
             }
         });
 
-        const winRate = games.length > 0 ? (wins / games.length) : 0;
-        const avgDuration = gameDurations.length > 0 ? (totalTime / gameDurations.length / 60000) : 0;
-
-        // Calculate Volatility (Std Dev of Game Length)
-        const mean = avgDuration;
-        const squareDiffs = gameDurations.map((val: number) => {
-            const diff = val - mean;
-            return diff * diff;
-        });
-        const avgSquareDiff = squareDiffs.length > 0 ? (squareDiffs.reduce((a: number, b: number) => a + b, 0) / squareDiffs.length) : 0;
-        const stdDev = Math.sqrt(avgSquareDiff);
+        const winRate = matches.length > 0 ? (wins / matches.length) : 0;
+        const avgMacro = macroCount > 0 ? (totalMacro / macroCount) : 50;
 
         // Classify Signals
         const signals = {
-            winRate: winRate.toFixed(2),
-            avgDuration: avgDuration.toFixed(1) + "m",
-            volatilityScore: stdDev,
-            earlyGameImplication: avgDuration < 32 ? "High Aggression" : "Scaling",
-            sampleSize: games.length
+            winRate: (winRate * 100).toFixed(1) + "%",
+            avgMacroControl: avgMacro.toFixed(1) + "%",
+            errorDistribution: errors,
+            sampleSize: matches.length
         };
 
         // Step 3: Generative strategic Profile (LLM Layer)
         const inputPrompt = `
         You are Auto-Scout, an elite esports intelligence engine.
-        Analyze the following statistical signals for a professional team to generate a Strategic Profile.
+        Analyze the following AI-generated performance signals for a professional team to synthesize a "Strategic Profile".
 
-        SIGNALS:
-        - Win Rate: ${(winRate * 100).toFixed(1)}%
-        - Average Game Duration: ${avgDuration.toFixed(1)} minutes (Benchmark: <30m is Fast/Aggressive, >35m is Slow/Scaling)
-        - Game Length Volatility (StdDev): ${stdDev.toFixed(1)} (Benchmark: >8.0 is Chaos/High Volatility, <5.0 is Controlled/Structured)
-        - Sample Size: ${games.length} Games
-
+        SIGNALS (Last ${matches.length} Matches):
+        - Overall Win Rate: ${signals.winRate}
+        - Average Macro Control: ${signals.avgMacroControl} (Higher = better map control/objectives)
+        - Micro Error Rate Distribution: LOW:${errors.LOW}, MED:${errors.MED}, HIGH:${errors.HIGH}
+        
         TASK:
-        Generate a JSON intelligence report.
+        Generate a JSON intelligence report that captures the team's "Identity".
+        - If Macro is high (>70) but Error Rate is MED/HIGH, they are an "Aggressive but Chaotic" team.
+        - If Macro is low (<50) but Error Rate is LOW, they are a "Passive/Reactive" team.
         
         REQUIRED JSON STRUCTURE:
         {
             "playstyle": {
-                "earlyGamePressure": "Integer 0-100 (Estimate based on duration)",
-                "scalingPotential": "Integer 0-100 (Inversely proportional to early pressure usually)",
+                "earlyGamePressure": "Integer 0-100",
+                "scalingPotential": "Integer 0-100",
                 "volatility": "String (Low/Medium/High/Chaos)"
             },
-            "keyPattern": "String (One sentence observation, e.g. 'Wins are heavily front-loaded...')",
-            "weakness": "String (One specific weakness derived from the profile, e.g. 'Struggles to close out long games')",
-            "focusPlayer": "String (Name of a likely carry - just pick 'Core Player' if unknown)",
-            "recommendation": "String (Strategic counter-tactic)"
+            "keyPattern": "String (One specific strategic observation)",
+            "weakness": "String (A critical vulnerability to exploit)",
+            "focusPlayer": "String (Roles or playstyle to target)",
+            "recommendation": "String (One clear tactical counter-play)"
         }
         `;
 

@@ -51,7 +51,7 @@ const ScoutingReportModal: React.FC<ScoutingReportModalProps> = ({ player, compa
                 });
 
                 const retroPromise = supabase.functions.invoke('gemini-retrospective', {
-                    body: { teamId: player.team || 'generic' }
+                    body: { teamId: player.teamId || 'generic' }
                 });
 
                 const [reportRes, retroRes] = await Promise.all([reportPromise, retroPromise]);

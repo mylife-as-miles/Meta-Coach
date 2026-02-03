@@ -291,7 +291,7 @@ export function useMatches(gridTeamId: string | undefined, titleId: string | num
                     startDate: m.tournament.startDate,
                     endDate: m.tournament.endDate,
                 } : null,
-                performance: { macroControl: 50, microErrorRate: 'MED' },
+                performance: m.performance_summary || { macroControl: 50, microErrorRate: 'MED' },
                 source: m.source || 'grid', // Track data source
             }));
         },

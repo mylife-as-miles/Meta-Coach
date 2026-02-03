@@ -178,30 +178,43 @@ const MatchHistory: React.FC = () => {
                                         </div>
                                     </div>
                                     <div className="col-span-12 md:col-span-3 p-5 flex flex-col justify-center border-t md:border-t-0 md:border-l border-white/5 bg-white/[0.01]">
-                                        <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-2 font-semibold">AI Performance Summary</p>
-                                        <div className="space-y-2">
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-xs text-gray-400">Macro Control</span>
-                                                <span className={`text-xs font-mono font-bold ${match.performance.macroControl >= 70 ? 'text-primary' : match.performance.macroControl >= 50 ? 'text-yellow-400' : 'text-red-400'}`}>
-                                                    {match.performance.macroControl}%
-                                                </span>
+                                        <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-2 font-semibold flex items-center gap-1">
+                                            AI Performance Summary
+                                            {match.performance?.reasoning && (
+                                                <span className="material-icons-outlined text-[10px] text-gray-500 cursor-help" title={match.performance.reasoning}>info</span>
+                                            )}
+                                        </p>
+
+                                        {!match.performance ? (
+                                            <div className="flex flex-col gap-2 items-center justify-center h-full opacity-50">
+                                                <span className="material-symbols-outlined text-lg animate-spin text-gray-500">hourglass_top</span>
+                                                <span className="text-[10px] text-gray-500">Analysis Pending...</span>
                                             </div>
-                                            <div className="w-full h-1 bg-gray-800 rounded-full overflow-hidden">
-                                                <div
-                                                    className={`h-full w-[${match.performance.macroControl}%] ${match.performance.macroControl >= 70 ? 'bg-primary shadow-neon' : match.performance.macroControl >= 50 ? 'bg-yellow-400' : 'bg-red-500'}`}
-                                                    style={{ width: `${match.performance.macroControl}%` }}
-                                                ></div>
+                                        ) : (
+                                            <div className="space-y-2">
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-xs text-gray-400">Macro Control</span>
+                                                    <span className={`text-xs font-mono font-bold ${match.performance.macroControl >= 75 ? 'text-primary' : match.performance.macroControl >= 50 ? 'text-yellow-400' : 'text-red-400'}`}>
+                                                        {match.performance.macroControl}%
+                                                    </span>
+                                                </div>
+                                                <div className="w-full h-1 bg-gray-800 rounded-full overflow-hidden">
+                                                    <div
+                                                        className={`h-full ${match.performance.macroControl >= 75 ? 'bg-primary shadow-neon' : match.performance.macroControl >= 50 ? 'bg-yellow-400' : 'bg-red-500'}`}
+                                                        style={{ width: `${match.performance.macroControl}%` }}
+                                                    ></div>
+                                                </div>
+                                                <div className="flex justify-between items-center mt-1">
+                                                    <span className="text-xs text-gray-400">Micro Error Rate</span>
+                                                    <span className={`text-[10px] font-bold px-1.5 rounded ${match.performance.microErrorRate === 'LOW' ? 'text-green-400 bg-green-400/10' :
+                                                        match.performance.microErrorRate === 'MED' ? 'text-yellow-400 bg-yellow-400/10' :
+                                                            'text-red-400 bg-red-400/10'
+                                                        }`}>
+                                                        {match.performance.microErrorRate}
+                                                    </span>
+                                                </div>
                                             </div>
-                                            <div className="flex justify-between items-center mt-1">
-                                                <span className="text-xs text-gray-400">Micro Error Rate</span>
-                                                <span className={`text-[10px] font-bold px-1.5 rounded ${match.performance.microErrorRate === 'LOW' ? 'text-green-400 bg-green-400/10' :
-                                                    match.performance.microErrorRate === 'MED' ? 'text-yellow-400 bg-yellow-400/10' :
-                                                        'text-red-400 bg-red-400/10'
-                                                    }`}>
-                                                    {match.performance.microErrorRate}
-                                                </span>
-                                            </div>
-                                        </div>
+                                        )}
                                     </div>
                                     <div className="col-span-12 md:col-span-2 p-4 flex items-center justify-center border-t md:border-t-0 md:border-l border-white/5 bg-surface-darker/50">
                                         <button

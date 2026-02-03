@@ -31,6 +31,7 @@ export interface ScoutPlayer {
     avatarUrl: string | null;
     annotation: string | null;
     gridId: string;
+    teamId: string | null;
 }
 
 interface AutoScoutProfile {
@@ -76,10 +77,11 @@ const ScoutingView: React.FC = () => {
 
             setAutoScoutLoading(true);
             try {
-                // If we had real team IDs from GRID, we'd use them. 
-                // For now, if it's not a free agent, we simulate a team ID request.
-                // In a real scenario: const teamId = selectedPlayer.teamId;
-                const teamId = selectedPlayer.team === 'Fnatic' ? 'team_123' : 'team_456';
+                const teamId = selectedPlayer.teamId;
+                if (!teamId) {
+                    setAutoScoutProfile(null);
+                    return;
+                }
 
                 const { data, error } = await supabase.functions.invoke('auto-scout', {
                     body: { teamId: teamId }
@@ -91,14 +93,8 @@ const ScoutingView: React.FC = () => {
                 }
             } catch (err) {
                 console.error("Auto-Scout failed:", err);
-                // Fallback Mock for Demo if Function fails or no data
-                setAutoScoutProfile({
-                    playstyle: { earlyGamePressure: 78, scalingPotential: 45, volatility: 'High' },
-                    keyPattern: `${selectedPlayer.team} relies heavily on early skirmishes but falters in late game.`,
-                    weakness: "Late game macro decision making.",
-                    focusPlayer: selectedPlayer.name,
-                    recommendation: "Stall the game and force split map pressure."
-                });
+                // No fallback needed if we want it to show "Analysis Pending" or handle errors gracefully
+                setAutoScoutProfile(null);
             } finally {
                 setAutoScoutLoading(false);
             }
@@ -168,7 +164,8 @@ const ScoutingView: React.FC = () => {
                     status: null,
                     avatarUrl: `https://ui-avatars.com/api/?name=${p.nickname}&background=random&color=fff`,
                     annotation: warVal > 4.5 ? "Undervalued Market Asset" : null,
-                    gridId: p.id
+                    gridId: p.id,
+                    teamId: p.team?.id || null
                 };
             });
 

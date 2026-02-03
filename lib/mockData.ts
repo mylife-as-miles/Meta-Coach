@@ -39,9 +39,10 @@ export interface Match {
     tournament?: {
         name: string;
     };
-    performance: {
+    performance?: {
         macroControl: number;
         microErrorRate: 'LOW' | 'MED' | 'HIGH';
+        reasoning?: string;
     };
     source?: 'grid' | 'gemini';
 }
