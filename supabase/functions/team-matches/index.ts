@@ -69,7 +69,7 @@ Return a JSON array of objects with these fields (normalize to this schema):
 `
 
     const response = await ai.getGenerativeModel({
-      model: 'gemini-2.0-flash',
+      model: 'gemini-3-pro-preview',
     }).generateContent({
       contents: [{ role: 'user', parts: [{ text: prompt }] }]
     })
