@@ -137,14 +137,14 @@ serve(async (req) => {
 
     // 1. GRID Query (allSeries)
     // Updated to use 'allSeries' with 'teamIds' filter
+    // DEBUG PROBE: Fetch ANY matches for this Title to check data availability/structure
     const gridQuery = `
-      query TeamMatches($titleId: ID!, $teamId: ID!) {
+      query LinkProbe($titleId: ID!) {
         allSeries(
           filter: {
             titleId: $titleId
-            teamIds: { in: [$teamId] }
           }
-          first: 20
+          first: 5
           orderBy: StartTimeScheduled
           orderDirection: DESC
         ) {
@@ -153,17 +153,15 @@ serve(async (req) => {
             node {
               id
               startTimeScheduled
-              tournament { id name }
-              format { name nameShortened }
               teams {
-                baseInfo { id name logoUrl nameShortened }
-                scoreAdvantage
+                baseInfo { id name }
               }
             }
           }
         }
       }
     `
+    console.log('[team-matches] RUNNING PROBE QUERY (No Team Filter)...')
 
     const gridRes = await fetch(GRID_URLS.CENTRAL_DATA, {
       method: 'POST',
