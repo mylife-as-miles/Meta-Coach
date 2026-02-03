@@ -133,8 +133,8 @@ async function refineMatchesWithGemini(matches: any[], teamName: string): Promis
 
   if (needsRefinement.length === 0) return matches;
 
-  // Take top 5
-  needsRefinement = needsRefinement.slice(0, 5);
+  // Take top 3 to save memory/resources
+  needsRefinement = needsRefinement.slice(0, 3);
 
   console.log(`[team-matches] Refining ${needsRefinement.length} matches for ${teamName} using Gemini 3 Pro...`);
 
@@ -451,14 +451,19 @@ serve(async (req) => {
 
     console.log('[team-matches] Cache Miss (or insufficient data). Triggering DUAL-SOURCE Fetch...');
 
-    // 2. Dual-Source Fetch (GRID + Gemini Research in Parallel)
-    const gridPromise = fetchMatchesFromGRID(gridApiKey, titleId, teamId);
-    const aiPromise = fetchMatchesFromLeaguepedia(teamName || 'Team', titleId);
+    // 2. Dual-Source Fetch (GRID -> Gemini Research)
+    // We execute sequentially to stay within WORKER_LIMIT (memory/CPU)
+    console.log('[team-matches] Fetching GRID...');
+    const gridResults = await fetchMatchesFromGRID(gridApiKey, titleId, teamId).catch(err => {
+      console.error('[team-matches] GRID Fail:', err);
+      return [];
+    });
 
-    const [gridResults, aiResults] = await Promise.all([
-      gridPromise.catch(err => { console.error('[team-matches] GRID Parallel Fail:', err); return []; }),
-      aiPromise.catch(err => { console.error('[team-matches] AI Parallel Fail:', err); return []; })
-    ]);
+    console.log('[team-matches] Fetching Leaguepedia (Gemini)...');
+    const aiResults = await fetchMatchesFromLeaguepedia(teamName || 'Team', titleId).catch(err => {
+      console.error('[team-matches] AI Fail:', err);
+      return [];
+    });
 
     console.log(`[team-matches] Parallel Fetch Done. GRID: ${gridResults.length}, AI: ${aiResults.length}`);
 
@@ -502,37 +507,51 @@ serve(async (req) => {
 })
 
 async function upsertMatchesToDB(supabase: any, matches: any[], teamId: string, teamName: string, titleId: string | number) {
-  console.log('[team-matches] Persisting results to DB...')
-  for (const m of matches) {
-    // Upsert Series
-    const { error: sErr } = await supabase.from('series').upsert({
-      id: m.id,
-      title_id: titleId,
-      start_time: m.startTime,
-      tournament_id: m.tournament?.id,
-      tournament_name: m.tournament?.name,
-      updated_at: new Date().toISOString()
-    })
+  console.log(`[team-matches] Persisting ${matches.length} results to DB (Batch Mode)...`)
 
-    // Upsert Participant (Link Team to Series)
-    await supabase.from('series_participants').upsert({
-      series_id: m.id,
-      team_id: teamId,
-      team_name: teamName
-    }, { onConflict: 'series_id, team_id' })
+  const seriesData = matches.map(m => ({
+    id: m.id,
+    title_id: titleId,
+    start_time: m.startTime,
+    tournament_id: m.tournament?.id,
+    tournament_name: m.tournament?.name,
+    updated_at: new Date().toISOString()
+  }))
 
-    // Upsert Match
-    await supabase.from('matches').upsert({
-      id: m.id + '-1', // Simple single-game/match mapping
-      series_id: m.id,
-      status: m.status,
-      result: m.result,
-      score: m.score,
-      performance_summary: m.performance_summary, // Upsert AI stats
-      opponent_name: m.opponent.name,
-      opponent_logo: m.opponent.logoUrl,
-      sequence_number: 1
-    }, { onConflict: 'series_id, sequence_number' }) // Assuming schema
+  const participantData = matches.map(m => ({
+    series_id: m.id,
+    team_id: teamId,
+    team_name: teamName
+  }))
+
+  const matchData = matches.map(m => ({
+    id: m.id + '-1',
+    series_id: m.id,
+    status: m.status,
+    result: m.result,
+    score: m.score,
+    performance_summary: m.performance_summary,
+    opponent_name: m.opponent.name,
+    opponent_logo: m.opponent.logoUrl,
+    sequence_number: 1
+  }))
+
+  try {
+    // 1. Batch Series Upsert
+    const { error: sErr } = await supabase.from('series').upsert(seriesData)
+    if (sErr) console.error('[team-matches] Series Batch Error:', sErr)
+
+    // 2. Batch Participant Upsert
+    const { error: pErr } = await supabase.from('series_participants').upsert(participantData, { onConflict: 'series_id, team_id' })
+    if (pErr) console.error('[team-matches] Participant Batch Error:', pErr)
+
+    // 3. Batch Match Upsert
+    const { error: mErr } = await supabase.from('matches').upsert(matchData, { onConflict: 'series_id, sequence_number' })
+    if (mErr) console.error('[team-matches] Matches Batch Error:', mErr)
+
+    console.log('[team-matches] Batch Persistence Complete.')
+  } catch (err) {
+    console.error('[team-matches] Critical Upsert Error:', err)
   }
 }
 
