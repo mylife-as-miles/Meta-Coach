@@ -6,7 +6,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
 import { GoogleGenAI } from 'npm:@google/genai@^1.0.0'
 
-const GRID_API_URL = 'https://api.grid.gg/central-data/graphql'
+const GRID_API_URL = 'https://api-op.grid.gg/central-data/graphql'
 
 /* -------------------------------------------------------------------------- */
 /*                           Gemini Fallback Logic                            */

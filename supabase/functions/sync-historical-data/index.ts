@@ -55,7 +55,7 @@ serve(async (req) => {
 
         const spineRes = await fetch(GRID_URLS.CENTRAL_DATA, {
             method: 'POST',
-            headers: getGridHeaders(gridApiKey, titleId),
+            headers: getGridHeaders(gridApiKey),
             body: requestBody
         })
 
@@ -108,7 +108,7 @@ serve(async (req) => {
 
             const detailRes = await fetch(GRID_URLS.CENTRAL_DATA, {
                 method: 'POST',
-                headers: getGridHeaders(gridApiKey, titleId),
+                headers: getGridHeaders(gridApiKey),
                 body: JSON.stringify({ query: detailQuery, variables: { seriesId } })
             })
 
