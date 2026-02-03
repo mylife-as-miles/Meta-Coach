@@ -31,17 +31,15 @@ serve(async (req) => {
             query HistoricalSeries($titleId: ID!, $from: DateTime!, $to: DateTime!) {
               allSeries(
                 filter: {
-                  titleId: { equalTo: $titleId }
+                  titleId: $titleId
                   startTimeScheduled: { gte: $from, lte: $to }
                 }
-                first: 100
+                first: 50
               ) {
                 edges {
                   node {
                     id
                     startTimeScheduled
-                    endTimeScheduled
-                    status
                     tournament { id name }
                   }
                 }
@@ -105,8 +103,8 @@ serve(async (req) => {
                 id: seriesId,
                 title_id: titleId,
                 start_time: node.startTimeScheduled,
-                end_time: node.endTimeScheduled,
-                status: node.status,
+                end_time: null, // Field not available in Series node
+                status: null,   // Field not available in Series node
                 tournament_id: node.tournament?.id,
                 tournament_name: node.tournament?.name,
                 updated_at: new Date().toISOString()

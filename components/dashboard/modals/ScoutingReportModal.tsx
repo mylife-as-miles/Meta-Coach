@@ -121,7 +121,7 @@ const ScoutingReportModal: React.FC<ScoutingReportModalProps> = ({ player, compa
                                 </div>
                                 <div className="bg-primary/5 p-5 rounded-lg border border-primary/20">
                                     <h3 className="font-bold text-primary mb-2 text-lg">{report?.executive_summary.title}</h3>
-                                    <p className="text-sm text-gray-300 leading-relaxed font-light">
+                                    <p className="text-sm text-gray-200 leading-relaxed font-light">
                                         {report?.executive_summary.text}
                                     </p>
                                 </div>
