@@ -7,8 +7,8 @@ const AppTutorial: React.FC = () => {
     const location = useLocation();
     const navigate = useNavigate();
 
-    // Tutorial Steps
-    const steps: Step[] = [
+    // Define different tutorials
+    const syncTutorialSteps: Step[] = [
         {
             target: 'body',
             placement: 'center',
@@ -24,15 +24,10 @@ const AppTutorial: React.FC = () => {
             disableBeacon: true,
         },
         {
-            target: 'nav a[href="/settings"]', // Assuming sidebar link
+            target: 'nav a[href="/dashboard/settings"]', // Updated selector
             content: 'First, head over to the Settings page.',
             spotlightClicks: true,
             disableBeacon: true,
-            styles: {
-                options: {
-                    zIndex: 10000,
-                },
-            },
         },
         {
             target: '#sync-history-btn',
@@ -48,45 +43,94 @@ const AppTutorial: React.FC = () => {
             ),
             placement: 'top',
             spotlightClicks: true,
-            styles: {
-                options: {
-                    zIndex: 10000,
-                },
-            },
         },
         {
-            target: 'nav a[href="/scouting"]',
+            target: 'nav a[href="/dashboard/scout"]', // Updated selector
             content: 'Once synced, go to the Market/Scouting page to see the AI in action!',
         }
     ];
 
-    // Auto-start on load (for demo) or check local storage
-    useEffect(() => {
-        const hasSeenTutorial = localStorage.getItem('metacoach_sync_tutorial_seen');
-        if (!hasSeenTutorial) {
-            setRun(true);
+    const dashboardTutorialSteps: Step[] = [
+        {
+            target: '#dashboard-header',
+            content: (
+                <div className="text-left">
+                    <h3 className="text-lg font-bold mb-1 italic text-primary">Live Operations Dashboard</h3>
+                    <p className="text-sm opacity-90">Welcome to your tactical nerve center. Here we synthesize real-time data into strategic intelligence.</p>
+                </div>
+            ),
+            disableBeacon: true,
+        },
+        {
+            target: '#upcoming-match-card',
+            content: 'Your next opponent is automatically analyzed. Use the "Strategy Brief" to see current win-conditions based on historical trends.',
+            placement: 'right',
+        },
+        {
+            target: '#recent-matches-card',
+            content: 'Review previous results. Notice the AI Performance Summary bars indicating macro control and micro consistency.',
+            placement: 'right',
+        },
+        {
+            target: '#strategic-projection-map',
+            content: 'This projection visualizes predicted rotations and high-impact zones for your next matchup.',
+            placement: 'left',
+        },
+        {
+            target: '#high-impact-plays-list',
+            content: 'Detailed AI breakdown of specific game-turning moments. Higher scores indicate superior execution.',
+            placement: 'top',
+        },
+        {
+            target: '#active-roster-sidebar',
+            content: 'Monitor your squad. Synergy ratings are calculated from dual-source historical synergies and current form.',
+            placement: 'left',
+        },
+        {
+            target: '#launch-strategy-lab-btn',
+            content: 'Ready for deep dive? Launch the Strategy Lab for 3D simulation and draft planning.',
+            placement: 'top',
         }
-    }, []);
+    ];
+
+    // Determine which steps to show based on URL
+    const isDashboard = location.pathname === '/dashboard' || location.pathname === '/dashboard/';
+    const steps = isDashboard ? dashboardTutorialSteps : syncTutorialSteps;
+
+    // Separate tracking for dashboard tutorial
+    useEffect(() => {
+        if (isDashboard) {
+            const seenDashboard = localStorage.getItem('metacoach_dashboard_tutorial_seen');
+            if (!seenDashboard) {
+                setRun(true);
+            }
+        } else {
+            const hasSeenSync = localStorage.getItem('metacoach_sync_tutorial_seen');
+            if (!hasSeenSync) {
+                setRun(true);
+            }
+        }
+    }, [location.pathname, isDashboard]);
 
     const handleJoyrideCallback = (data: CallBackProps) => {
         const { status, type, index, action } = data;
 
         if ([STATUS.FINISHED, STATUS.SKIPPED].includes(status as any)) {
             setRun(false);
-            localStorage.setItem('metacoach_sync_tutorial_seen', 'true');
+            if (isDashboard) {
+                localStorage.setItem('metacoach_dashboard_tutorial_seen', 'true');
+            } else {
+                localStorage.setItem('metacoach_sync_tutorial_seen', 'true');
+            }
         }
 
-        // Navigation logic for steps
-        if (type === 'step:after') {
-            if (index === 0) {
-                // Creating a custom event to navigate or just letting user click if spotlight is enabled?
-                // Ideally we navigate them programmatically if they click "Next"
-            }
+        // Navigation logic for sync tutorial
+        if (!isDashboard && type === 'step:after') {
             if (index === 1 && action === 'next') {
-                navigate('/settings');
+                navigate('/dashboard/settings');
             }
             if (index === 2 && action === 'next') {
-                navigate('/scouting');
+                navigate('/dashboard/scout');
             }
         }
     };
