@@ -25,7 +25,7 @@ const LogoWithFallback: React.FC<{ src?: string | null; alt: string; fallbackTex
                 alt={alt}
                 className="w-full h-full object-contain"
                 onError={() => {
-                    console.warn(`Logo failed to load: ${src}`);
+                    // GRID CDN often times out or has 404s. We fail silently to the fallback UI.
                     setError(true);
                 }}
             />

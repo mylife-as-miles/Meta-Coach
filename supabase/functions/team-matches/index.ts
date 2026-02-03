@@ -110,9 +110,16 @@ function parseGeminiResult(text: string): any[] {
  */
 async function refineMatchesWithGemini(matches: any[], teamName: string): Promise<any[]> {
   // Only refine finished matches with 0-0 score or DRAW result
-  const needsRefinement = matches.filter(m => m.status === 'finished' && (m.score === '0-0' || m.result === 'DRAW'));
+  // LIMIT: Requesting research for too many matches causes Edge Function timeout.
+  // We limit to the most recent 5 finished matches.
+  let needsRefinement = matches
+    .filter(m => m.status === 'finished' && (m.score === '0-0' || m.result === 'DRAW'))
+    .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
 
   if (needsRefinement.length === 0) return matches;
+
+  // Take top 5
+  needsRefinement = needsRefinement.slice(0, 5);
 
   console.log(`[team-matches] Refining ${needsRefinement.length} matches for ${teamName} using Gemini 3 Pro...`);
 
@@ -125,7 +132,7 @@ async function refineMatchesWithGemini(matches: any[], teamName: string): Promis
 
   const prompt = `
 You are a world-class esports data researcher.
-INPUT: A list of matches for team "${teamName}" from an API that has missing or placeholder scores (0-0/DRAW).
+INPUT: A list of ${needsRefinement.length} matches for team "${teamName}" from an API that has missing or placeholder scores (0-0/DRAW).
 GOAL: Use Google Search and Code Execution (Python/Pandas) to find the ACTUAL results and scores on Leaguepedia or Liquipedia.
 
 MATCHES TO RESEARCH:

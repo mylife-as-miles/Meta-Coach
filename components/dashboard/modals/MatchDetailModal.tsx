@@ -24,7 +24,6 @@ const LogoWithFallback: React.FC<{ src?: string | null; alt: string; fallbackTex
                 alt={alt}
                 className="w-full h-full object-contain"
                 onError={() => {
-                    console.warn(`Logo failed to load: ${src}`);
                     setError(true);
                 }}
             />
