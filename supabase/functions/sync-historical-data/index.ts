@@ -47,10 +47,16 @@ serve(async (req) => {
             }
         `
 
+        const requestBody = JSON.stringify({ query: spineQuery, variables: { titleId: String(titleId), from, to } });
+        console.log(`[sync-history] Sending Request to ${GRID_URLS.CENTRAL_DATA}`, {
+            keyPrefix: gridApiKey.substring(0, 5) + '...',
+            body: requestBody
+        });
+
         const spineRes = await fetch(GRID_URLS.CENTRAL_DATA, {
             method: 'POST',
             headers: getGridHeaders(gridApiKey),
-            body: JSON.stringify({ query: spineQuery, variables: { titleId: String(titleId), from, to } })
+            body: requestBody
         })
 
         const spineData = await spineRes.json()
