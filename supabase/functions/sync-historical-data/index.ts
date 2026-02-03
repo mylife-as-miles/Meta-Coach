@@ -194,6 +194,7 @@ serve(async (req) => {
                 status: 'success',
                 synced: syncedCount,
                 totalFound: edges.length,
+                gridErrors: spineData.errors, // Expose errors if any
                 debug: { titleId, from, to }
             }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
