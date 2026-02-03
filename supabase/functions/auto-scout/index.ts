@@ -36,7 +36,10 @@ serve(async (req) => {
 
         if (matchesError) throw matchesError;
 
-        console.log(`[auto-scout] Analyzing ${matches.length} matches...`)
+        console.log(`[auto-scout] Analyzing ${matches?.length || 0} matches for Team ${teamId}...`)
+        if (!matches || matches.length === 0) {
+            console.warn(`[auto-scout] No matches found in DB for Team ${teamId}. Strategic profile will be generic.`);
+        }
 
         // Step 2: Feature Extraction (The "AI" part - calculating signals)
         let wins = 0;

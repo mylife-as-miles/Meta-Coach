@@ -184,10 +184,11 @@ OUTPUT SCHEMA:
 /**
  * Full research if GRID returns nothing.
  */
-async function fetchMatchesFromLeaguepedia(teamName: string): Promise<any[]> {
+async function fetchMatchesFromLeaguepedia(teamName: string, titleId: string | number = '3'): Promise<any[]> {
+  const gameName = String(titleId) === '6' ? 'Dota 2' : 'League of Legends';
   const prompt = `
 You are a world-class esports research agent.
-YOUR GOAL: Find the most recent Match History (past 10 matches) for the team "${teamName}" in League of Legends.
+YOUR GOAL: Find the most recent Match History (past 10 matches) for the team "${teamName}" in ${gameName}.
 
 STEPS:
 1. Use Google Search to find the team's Match History on Leaguepedia (lol.fandom.com) or liquipedia.
@@ -386,24 +387,38 @@ serve(async (req) => {
         source = 'grid_hybrid'
 
         // 3. UPSERT TO DB
-        // We do this in the background / don't block response too much, but for Edge Functions we must await.
         await upsertMatchesToDB(supabase, matches, teamId, teamName);
 
       } else {
-        console.log('[team-matches] GRID returned 0 matches. Triggering full AI research...')
+        console.warn(`[team-matches] No matches found in GRID for TeamID: ${teamId} (Title: ${titleId}). Falling back to AI...`)
         source = 'leaguepedia_gemini'
       }
     } else {
-      console.error(`[team-matches] GRID Error: ${gridRes.status}`)
+      console.error(`[team-matches] GRID Error: ${gridRes.status}. Triggering AI research fallback.`)
       source = 'fallback_grid_error'
     }
 
     // 2. Fallback: Gemini + Leaguepedia (Full Research if matches still empty)
     if (matches.length === 0) {
       const effectiveName = teamName || 'Cloud9'
-      console.log(`[team-matches] Triggering Full AI Research for Team: ${effectiveName}`)
-      matches = await fetchMatchesFromLeaguepedia(effectiveName)
-      source = 'leaguepedia_gemini'
+      console.log(`[team-matches] STARTING Full AI Research for Team: "${effectiveName}" (TeamID: ${teamId})`)
+
+      try {
+        const researchStart = Date.now()
+        matches = await fetchMatchesFromLeaguepedia(effectiveName, titleId)
+        console.log(`[team-matches] AI Research finished in ${Date.now() - researchStart}ms. Found ${matches.length} matches.`)
+      } catch (err) {
+        console.error(`[team-matches] AI Research crashed:`, err)
+      }
+
+      if (matches.length > 0) {
+        source = 'leaguepedia_gemini'
+        // Optionally upsert these too? 
+        // For now, let's just return them. 
+        // Note: Full AI research results might not have sequence_numbers etc perfectly.
+      } else {
+        console.warn(`[team-matches] AI Research returned 0 matches for "${effectiveName}". Nothing left to try.`)
+      }
     }
 
     // Filter by pagination manually since we fetched a fresh batch
