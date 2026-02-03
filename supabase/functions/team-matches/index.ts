@@ -176,6 +176,7 @@ serve(async (req) => {
 
     if (gridRes.ok) {
       const json = await gridRes.json()
+      console.log('[team-matches] GRID/Central-Data Response:', JSON.stringify(json).substring(0, 500)) // Log first 500 chars
       const edges = json.data?.allSeries?.edges || []
 
       if (edges.length > 0) {
