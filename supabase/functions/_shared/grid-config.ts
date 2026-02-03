@@ -11,7 +11,8 @@
 
 export const GRID_URLS = {
     // Titles, Teams, Players, Tournaments, Series IDs
-    CENTRAL_DATA: 'https://api-op.grid.gg/central-data/graphql',
+    // Titles, Teams, Players, Tournaments, Series IDs
+    CENTRAL_DATA: 'https://api.grid.gg/central-data/graphql',
 
     // Post-match results, player stats, team outcomes
     SERIES_STATE: 'https://api-op.grid.gg/live-data-feed/series-state/graphql',

@@ -28,7 +28,7 @@ serve(async (req) => {
 
         // Step 1: Query AllSeries (The Spine)
         const spineQuery = `
-            query HistoricalSeries($titleId: ID!, $from: DateTime!, $to: DateTime!) {
+            query HistoricalSeries($titleId: ID!, $from: String!, $to: String!) {
               allSeries(
                 filter: {
                   titleId: $titleId
