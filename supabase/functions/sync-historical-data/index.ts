@@ -139,7 +139,6 @@ serve(async (req) => {
                 synced: syncedCount,
                 totalFound: edges.length,
                 gridErrors: spineData.errors, // Main query errors
-                detailErrors: detailErrors.length > 0 ? detailErrors : undefined, // Detail query errors
                 debug: { titleId, from, to }
             }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
