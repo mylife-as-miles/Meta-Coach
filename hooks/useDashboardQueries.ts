@@ -259,7 +259,8 @@ export function useMatches(gridTeamId: string | undefined, titleId: string | num
                 teamId: gridTeamId,
                 titleId: titleId,
                 game: gameTitle,
-                teamName: teamName
+                teamName: teamName,
+                limit: limit
             });
 
             if (error || !matchesData?.matches || matchesData.matches.length === 0) {

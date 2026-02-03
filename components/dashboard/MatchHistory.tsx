@@ -45,7 +45,21 @@ const MatchHistory: React.FC = () => {
     const userId = session?.user?.id;
     const { data: workspace } = useWorkspace(userId);
     const { data: teamProfile } = useTeamProfile(workspace?.id, workspace?.grid_team_id);
-    const { data: allMatches = [], isLoading } = useMatches(workspace?.grid_team_id, workspace?.grid_title_id, teamProfile?.game, teamProfile?.teamName);
+
+    // Pagination State
+    const [visibleCount, setVisibleCount] = React.useState(5);
+
+    const { data: allMatches = [], isLoading, isFetching } = useMatches(
+        workspace?.grid_team_id,
+        workspace?.grid_title_id,
+        teamProfile?.game,
+        teamProfile?.teamName,
+        visibleCount // Pass dynamic limit
+    );
+
+    const handleLoadMore = () => {
+        setVisibleCount(prev => prev + 5);
+    };
 
     return (
         <div className="flex flex-col">
