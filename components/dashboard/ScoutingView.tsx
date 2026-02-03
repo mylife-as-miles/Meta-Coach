@@ -215,7 +215,7 @@ const ScoutingView: React.FC = () => {
     return (
         <div className="flex flex-col h-full bg-[#0E100A] text-white">
             <header className="flex justify-between items-end p-6 border-b border-white/5 bg-surface-darker/50 backdrop-blur-sm sticky top-0 z-50">
-                <div>
+                <div id="scout-header">
                     <div className="flex items-center gap-2 mb-2">
                         <span className="bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider">Sabermetrics V2.4</span>
                         <span className="text-gray-500 text-[10px] font-mono">// TRANSFER WINDOW OPEN</span>
@@ -240,7 +240,7 @@ const ScoutingView: React.FC = () => {
             <div className="flex-1 grid grid-cols-12 gap-6 p-6 overflow-hidden min-h-0">
 
                 {/* Left Column: Player List */}
-                <div className="col-span-3 bg-surface-dark border border-white/5 rounded-2xl flex flex-col overflow-hidden h-full">
+                <div id="market-opportunities-list" className="col-span-3 bg-surface-dark border border-white/5 rounded-2xl flex flex-col overflow-hidden h-full">
                     <div className="p-4 border-b border-white/5 flex justify-between items-center bg-surface-darker">
                         <h2 className="font-display font-bold text-gray-400 text-xs tracking-widest uppercase">
                             Market Opportunities
@@ -299,7 +299,7 @@ const ScoutingView: React.FC = () => {
                 </div>
 
                 {/* Center Column: Analysis & Visualization */}
-                <div className="col-span-6 bg-surface-dark border border-white/5 rounded-2xl flex flex-col relative overflow-hidden h-full">
+                <div id="scout-analysis-center" className="col-span-6 bg-surface-dark border border-white/5 rounded-2xl flex flex-col relative overflow-hidden h-full">
                     {/* Background Grid */}
                     <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:40px_40px]"></div>
 
@@ -332,7 +332,7 @@ const ScoutingView: React.FC = () => {
                                     <div className="h-6 w-32 bg-white/10 rounded"></div>
                                 </div>
                             ) : autoScoutProfile ? (
-                                <div className="mb-8 w-full max-w-md bg-surface-darker/50 p-4 rounded-xl border border-white/5 animate-in fade-in slide-in-from-bottom-4">
+                                <div id="auto-scout-intelligence" className="mb-8 w-full max-w-md bg-surface-darker/50 p-4 rounded-xl border border-white/5 animate-in fade-in slide-in-from-bottom-4">
                                     <div className="flex items-center gap-2 mb-3">
                                         <span className="material-icons-outlined text-primary text-sm">psychology</span>
                                         <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Auto-Scout Intelligence</span>
@@ -353,6 +353,7 @@ const ScoutingView: React.FC = () => {
 
                             <div className="flex gap-4">
                                 <button
+                                    id="ai-scout-report-btn"
                                     onClick={handleAutoScout}
                                     className="px-8 py-3 bg-primary text-black font-bold rounded-lg hover:bg-primary-hover shadow-[0_0_30px_-5px_rgba(210,249,111,0.4)] transition-all flex items-center gap-2"
                                 >
@@ -374,7 +375,7 @@ const ScoutingView: React.FC = () => {
                 </div>
 
                 {/* Right Column: Comparison */}
-                <div className="col-span-3 bg-surface-dark border border-white/5 rounded-2xl flex flex-col overflow-hidden h-full">
+                <div id="market-comparison-sidebar" className="col-span-3 bg-surface-dark border border-white/5 rounded-2xl flex flex-col overflow-hidden h-full">
                     <div className="p-4 border-b border-white/5 bg-surface-darker mb-4">
                         <h2 className="font-display font-bold text-gray-400 text-xs tracking-widest uppercase text-center">Market Comparison</h2>
                     </div>

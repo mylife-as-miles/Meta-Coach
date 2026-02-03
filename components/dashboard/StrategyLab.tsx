@@ -203,7 +203,7 @@ const StrategyLab: React.FC = () => {
             <div className="grid grid-cols-12 gap-6 px-4 pb-6 flex-1 overflow-hidden">
 
                 {/* LEFT COLUMN: Draft Simulator */}
-                <aside className="col-span-12 lg:col-span-3 flex flex-col h-full overflow-hidden">
+                <aside id="draft-simulator-section" className="col-span-12 lg:col-span-3 flex flex-col h-full overflow-hidden">
                     <div className="bg-surface-card rounded-2xl border border-white/5 p-5 h-full flex flex-col shadow-xl">
                         <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2 uppercase tracking-wider">
                             <span className="material-icons-outlined text-primary text-base">psychology</span>
@@ -291,7 +291,7 @@ const StrategyLab: React.FC = () => {
                 </aside>
 
                 {/* MIDDLE COLUMN: Tactical Map 3D */}
-                <section className="col-span-12 lg:col-span-6 flex flex-col gap-4 h-full relative">
+                <section id="tactical-map-container" className="col-span-12 lg:col-span-6 flex flex-col gap-4 h-full relative">
                     <div className="flex-1 bg-black rounded-xl border border-white/10 relative overflow-hidden shadow-2xl group">
                         <div className="absolute top-4 left-4 z-10 flex gap-2">
                             <div className="px-3 py-1 rounded bg-black/60 backdrop-blur border border-white/10 text-xs font-mono text-primary flex items-center gap-2">
@@ -318,7 +318,7 @@ const StrategyLab: React.FC = () => {
                     </div>
 
                     {/* Console - Briefing */}
-                    <div className="h-40 bg-[#0a0c08] rounded-xl border border-white/10 p-4 font-mono text-sm relative overflow-hidden shadow-lg flex flex-col">
+                    <div id="tactical-briefing-console" className="h-40 bg-[#0a0c08] rounded-xl border border-white/10 p-4 font-mono text-sm relative overflow-hidden shadow-lg flex flex-col">
                         <div className="flex items-center justify-between mb-2">
                             <span className="text-primary font-bold text-xs tracking-wider">GEMINI_TACTICAL_BRIEFING</span>
                             <span className="text-[10px] text-gray-600">v2.0.4</span>
@@ -334,7 +334,7 @@ const StrategyLab: React.FC = () => {
                 </section>
 
                 {/* Scenario Variables (Right Sidebar) */}
-                <aside className="col-span-12 lg:col-span-3 flex flex-col gap-4 h-full">
+                <aside id="scenario-variables-sidebar" className="col-span-12 lg:col-span-3 flex flex-col gap-4 h-full">
                     <div className="bg-surface-dark rounded-2xl border border-white/10 p-5 flex-1 shadow-lg relative overflow-y-auto custom-scrollbar">
                         <div className="flex justify-between items-center mb-6">
                             <h2 className="text-white font-bold flex items-center gap-2">
@@ -433,6 +433,7 @@ const StrategyLab: React.FC = () => {
                         </div>
                         <div className="mt-6">
                             <button
+                                id="run-simulation-btn"
                                 onClick={runSimulation}
                                 disabled={simulationRunning}
                                 className={`w-full py-3 rounded-xl text-black font-bold text-sm transition shadow-neon flex items-center justify-center gap-2 cursor-pointer ${simulationRunning

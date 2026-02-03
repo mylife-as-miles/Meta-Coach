@@ -115,7 +115,7 @@ const PlayerHub: React.FC = () => {
     return (
         <div className="flex flex-col min-h-[calc(100vh-90px)]">
             <header className="flex flex-col md:flex-row justify-between items-start md:items-end mb-10 gap-4">
-                <div>
+                <div id="player-hub-header">
                     <div className="flex items-center gap-2 mb-1">
                         <span className="text-primary font-mono text-xs uppercase tracking-wider">Roster Management</span>
                         <span className="w-1 h-1 rounded-full bg-gray-500"></span>
@@ -142,7 +142,7 @@ const PlayerHub: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-12">
                 {/* Gemini Potential Card */}
                 <div className="lg:col-span-3 flex flex-col gap-6">
-                    <div className="bg-surface-dark rounded-2xl p-6 border border-white/5 shadow-lg h-full relative overflow-hidden group">
+                    <div id="gemini-potential-card" className="bg-surface-dark rounded-2xl p-6 border border-white/5 shadow-lg h-full relative overflow-hidden group">
                         <div className="absolute top-0 right-0 p-3 opacity-20">
                             <span className="material-symbols-outlined text-4xl text-purple-400">auto_awesome</span>
                         </div>
@@ -195,7 +195,7 @@ const PlayerHub: React.FC = () => {
                     <div className="absolute w-[500px] h-[500px] bg-primary/5 rounded-full blur-[100px] top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
 
                     {/* Player Card */}
-                    <div className="relative w-full max-w-[320px] h-[480px] shrink-0 z-10 perspective-1000 group">
+                    <div id="player-card-container" className="relative w-full max-w-[320px] h-[480px] shrink-0 z-10 perspective-1000 group">
                         <div className="w-full h-full relative transition-transform duration-500 transform group-hover:scale-105">
                             <div className="absolute inset-0 bg-gradient-to-br from-yellow-100/20 via-primary/10 to-black rounded-t-2xl rounded-b-[4rem] border border-primary/40 shadow-[0_0_10px_rgba(210,249,111,0.5),0_0_30px_rgba(210,249,111,0.2)] backdrop-blur-sm"></div>
                             <div className="absolute inset-1 bg-gradient-to-b from-[#1F221B] via-[#0E100A] to-[#050604] rounded-t-xl rounded-b-[3.8rem] overflow-hidden flex flex-col">
@@ -252,7 +252,7 @@ const PlayerHub: React.FC = () => {
                     </div>
 
                     {/* Hex Chart */}
-                    <div className="flex-1 w-full max-w-[300px] h-[300px] relative flex items-center justify-center">
+                    <div id="player-hex-chart" className="flex-1 w-full max-w-[300px] h-[300px] relative flex items-center justify-center">
                         <div className="absolute inset-0 flex items-center justify-center opacity-30">
                             <svg className="w-full h-full" viewBox="0 0 100 100">
                                 <polygon fill="none" points="50,5 95,27.5 95,72.5 50,95 5,72.5 5,27.5" stroke="#333" strokeWidth="0.5"></polygon>
@@ -286,7 +286,7 @@ const PlayerHub: React.FC = () => {
 
                 {/* Tactical Synergies */}
                 <div className="lg:col-span-3">
-                    <div className="bg-surface-dark rounded-2xl p-6 border border-white/5 shadow-lg h-full">
+                    <div id="tactical-synergies-card" className="bg-surface-dark rounded-2xl p-6 border border-white/5 shadow-lg h-full">
                         <h3 className="text-white font-bold mb-6 flex items-center justify-between">
                             Tactical Synergies
                             <span className="material-icons-outlined text-gray-500 text-sm">hub</span>
@@ -332,7 +332,7 @@ const PlayerHub: React.FC = () => {
             </div>
 
             {/* Match Performance Analytics (GRID API) */}
-            <section className="mb-12">
+            <section id="match-performance-section" className="mb-12">
                 <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-3">
                         <h3 className="text-xl font-bold text-white">Match Performance</h3>
@@ -532,7 +532,7 @@ const PlayerHub: React.FC = () => {
             </section>
 
             {/* Active Roster List */}
-            <section>
+            <section id="active-roster-selector">
                 <div className="flex items-center justify-between mb-6">
                     <h3 className="text-xl font-bold text-white">Active Roster</h3>
                     <div className="flex gap-2">

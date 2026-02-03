@@ -131,13 +131,138 @@ const AppTutorial: React.FC = () => {
         }
     ];
 
+    const playerHubTutorialSteps: Step[] = [
+        {
+            target: '#player-hub-header',
+            content: (
+                <div className="text-left">
+                    <h3 className="text-lg font-bold mb-1 italic text-primary">Player Intelligence Hub</h3>
+                    <p className="text-sm opacity-90">Deep-dive into individual performance. This page combines raw GRID data with Gemini-powered growth predictions.</p>
+                </div>
+            ),
+            disableBeacon: true,
+        },
+        {
+            target: '#gemini-potential-card',
+            content: 'Gemini analyzes current mechanics and game-sense to project the player\'s peak potential. Notice the trajectory graph indicating growth speed.',
+            placement: 'right',
+        },
+        {
+            target: '#player-card-container',
+            content: 'The high-fidelity player card displays core attributes (Mechanics, Macro, Mental, etc.) extracted from official match data.',
+            placement: 'right',
+        },
+        {
+            target: '#player-hex-chart',
+            content: 'A rapid-glance radar chart visualizing attribute balance. Perfectly balanced "Hex" shapes are rare and indicate elite versatility.',
+            placement: 'left',
+        },
+        {
+            target: '#tactical-synergies-card',
+            content: 'AI-calculated synergy scores with other roster members. High percentages lead to more successful set-plays and map control.',
+            placement: 'left',
+        },
+        {
+            target: '#match-performance-section',
+            content: 'Raw performance data from GRID. Track win-rates, KDA trends over time, and detailed damage metrics across tournaments.',
+            placement: 'top',
+        },
+        {
+            target: '#active-roster-selector',
+            content: 'Quickly switch between roster members to compare form and identifying who\'s ready for the next match.',
+            placement: 'top',
+        }
+    ];
+
+    const scoutTutorialSteps: Step[] = [
+        {
+            target: '#scout-header',
+            content: (
+                <div className="text-left">
+                    <h3 className="text-lg font-bold mb-1 italic text-primary">Sabermetrics Market Scout</h3>
+                    <p className="text-sm opacity-90">Identify and exploit market inefficiencies. This system uses advanced algorithms to find undervalued assets globally.</p>
+                </div>
+            ),
+            disableBeacon: true,
+        },
+        {
+            target: '#market-opportunities-list',
+            content: 'A real-time list of available players. Look for the "WAR" (Wins Above Replacement) metric to identify high-impact targets.',
+            placement: 'right',
+        },
+        {
+            target: '#scout-analysis-center',
+            content: 'The "Confirmed Target" view provides a deep analysis of your current selection, comparing them against the global benchmark.',
+            placement: 'bottom',
+        },
+        {
+            target: '#auto-scout-intelligence',
+            content: 'Direct AI intelligence layer. This identifies hidden patterns like early pressure consistency and volatility levels.',
+            placement: 'top',
+        },
+        {
+            target: '#market-comparison-sidebar',
+            content: 'Side-by-side metric comparison. Use this to visualize the "WAR Differential" between your target and a comparison asset.',
+            placement: 'left',
+        },
+        {
+            target: '#ai-scout-report-btn',
+            content: 'Ready to finalize? Generate a full AI Strategic Report for a comprehensive breakdown of the acquisition value.',
+            placement: 'top',
+        }
+    ];
+
+    const strategyTutorialSteps: Step[] = [
+        {
+            target: '#draft-simulator-section',
+            content: (
+                <div className="text-left">
+                    <h3 className="text-lg font-bold mb-1 italic text-primary">Strategy Lab</h3>
+                    <p className="text-sm opacity-90">Welcome to the War Room. Here you can simulate drafts and game scenarios using real-time GRID data and Gemini analysis.</p>
+                </div>
+            ),
+            disableBeacon: true,
+        },
+        {
+            target: '#draft-simulator-section',
+            content: 'The Draft Simulator tracks win probability in real-time. Select champions for both sides to see how the meta-matchup evolves.',
+            placement: 'right',
+        },
+        {
+            target: '#tactical-map-container',
+            content: 'The 3D Tactical Map visualizes pathing and position-based advantages. Use it to identify map control inefficiencies.',
+            placement: 'bottom',
+        },
+        {
+            target: '#tactical-briefing-console',
+            content: 'The Gemini Tactical Briefing console provides a technical log of patterns detected during simulation.',
+            placement: 'top',
+        },
+        {
+            target: '#scenario-variables-sidebar',
+            content: 'Fine-tune the simulation. Adjust gold advantage, game phase, and player fatigue to stress-test your team\'s strategies.',
+            placement: 'left',
+        },
+        {
+            target: '#run-simulation-btn',
+            content: 'Once your variables are set, run a full simulation to generate a Strategic Outcome report.',
+            placement: 'top',
+        }
+    ];
+
     // Determine which steps to show based on URL
     const isDashboard = location.pathname === '/dashboard' || location.pathname === '/dashboard/';
     const isHistory = location.pathname.includes('/match-history');
+    const isPlayerHub = location.pathname.includes('/player-hub');
+    const isScout = location.pathname.includes('/scout');
+    const isStrategy = location.pathname.includes('/strategy-lab');
 
     let steps = syncTutorialSteps;
     if (isDashboard) steps = dashboardTutorialSteps;
     else if (isHistory) steps = historyTutorialSteps;
+    else if (isPlayerHub) steps = playerHubTutorialSteps;
+    else if (isScout) steps = scoutTutorialSteps;
+    else if (isStrategy) steps = strategyTutorialSteps;
 
     // Separate tracking for dashboard tutorial
     useEffect(() => {
@@ -149,12 +274,24 @@ const AppTutorial: React.FC = () => {
             const seenHistory = localStorage.getItem('metacoach_history_tutorial_seen');
             if (!seenHistory) setRun(true);
             else setRun(false);
+        } else if (isPlayerHub) {
+            const seenPlayer = localStorage.getItem('metacoach_player_tutorial_seen');
+            if (!seenPlayer) setRun(true);
+            else setRun(false);
+        } else if (isScout) {
+            const seenScout = localStorage.getItem('metacoach_scout_tutorial_seen');
+            if (!seenScout) setRun(true);
+            else setRun(false);
+        } else if (isStrategy) {
+            const seenStrategy = localStorage.getItem('metacoach_strategy_tutorial_seen');
+            if (!seenStrategy) setRun(true);
+            else setRun(false);
         } else {
             const hasSeenSync = localStorage.getItem('metacoach_sync_tutorial_seen');
             if (!hasSeenSync) setRun(true);
             else setRun(false);
         }
-    }, [location.pathname, isDashboard, isHistory]);
+    }, [location.pathname, isDashboard, isHistory, isPlayerHub, isScout, isStrategy]);
 
     const handleJoyrideCallback = (data: CallBackProps) => {
         const { status, type, index, action } = data;
@@ -165,6 +302,12 @@ const AppTutorial: React.FC = () => {
                 localStorage.setItem('metacoach_dashboard_tutorial_seen', 'true');
             } else if (isHistory) {
                 localStorage.setItem('metacoach_history_tutorial_seen', 'true');
+            } else if (isPlayerHub) {
+                localStorage.setItem('metacoach_player_tutorial_seen', 'true');
+            } else if (isScout) {
+                localStorage.setItem('metacoach_scout_tutorial_seen', 'true');
+            } else if (isStrategy) {
+                localStorage.setItem('metacoach_strategy_tutorial_seen', 'true');
             } else {
                 localStorage.setItem('metacoach_sync_tutorial_seen', 'true');
             }
