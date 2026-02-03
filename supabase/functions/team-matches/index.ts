@@ -6,7 +6,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
 import { GoogleGenAI } from 'npm:@google/genai@^1.0.0'
 
-const GRID_API_URL = 'https://api-op.grid.gg/central-data/graphql'
+import { GRID_URLS, getGridHeaders } from '../_shared/grid-config.ts'
 
 /* -------------------------------------------------------------------------- */
 /*                           Gemini Fallback Logic                            */
@@ -165,9 +165,9 @@ serve(async (req) => {
       }
     `
 
-    const gridRes = await fetch(GRID_API_URL, {
+    const gridRes = await fetch(GRID_URLS.CENTRAL_DATA, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-grid-api-key': gridApiKey }, // Fixed Header Key
+      headers: getGridHeaders(gridApiKey),
       body: JSON.stringify({ query: gridQuery, variables: { titleId, teamId } })
     })
 
