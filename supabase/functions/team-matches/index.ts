@@ -61,7 +61,13 @@ async function callGeminiResearch(prompt: string): Promise<any[]> {
 
       if (!fallbackRes.ok) throw new Error(`Gemini fallback failed: ${fallbackRes.status}`);
       const data = await fallbackRes.json();
-      return parseGeminiResult(data.candidates?.[0]?.content?.parts?.[0]?.text || "");
+      let text = "";
+      if (data.candidates?.[0]?.content?.parts) {
+        const parts = data.candidates[0].content.parts;
+        const textPart = parts.find((p: any) => p.text);
+        text = textPart?.text || "";
+      }
+      return parseGeminiResult(text);
     }
 
     const data = await fetchResponse.json();
@@ -71,6 +77,12 @@ async function callGeminiResearch(prompt: string): Promise<any[]> {
       const textPart = parts.find((p: any) => p.text);
       text = textPart?.text || "";
     }
+
+    console.log(`[team-matches] Raw Gemini Response Length: ${text.length}`);
+    if (text.length < 50) {
+      console.warn(`[team-matches] Extremely short response from Gemini: "${text}"`);
+    }
+
     return parseGeminiResult(text);
   } catch (e) {
     console.error('[team-matches] Gemini Research Failed:', e)
@@ -79,10 +91,12 @@ async function callGeminiResearch(prompt: string): Promise<any[]> {
 }
 
 function parseGeminiResult(text: string): any[] {
+  if (!text) return [];
   const cleanJson = text.replace(/```json/g, '').replace(/```/g, '').trim()
   try {
     const result = JSON.parse(cleanJson)
     if (Array.isArray(result)) {
+      console.log(`[team-matches] Parsed ${result.length} matches from Gemini.`);
       return result.map((m: any) => ({
         id: m.id || `lp-${Math.random().toString(36).substr(2, 9)}`,
         startTime: m.date || new Date().toISOString(),
@@ -98,9 +112,12 @@ function parseGeminiResult(text: string): any[] {
         tournament: { name: m.tournament || 'Unknown Tournament' },
         source: 'leaguepedia_gemini'
       }))
+    } else if (result.matches && Array.isArray(result.matches)) {
+      // Handle case where AI wraps it in an object
+      return parseGeminiResult(JSON.stringify(result.matches));
     }
   } catch (e) {
-    console.error('[team-matches] JSON parse error:', e);
+    console.error('[team-matches] JSON parse error on text:', text.substring(0, 200));
   }
   return []
 }
@@ -205,6 +222,95 @@ OUTPUT SCHEMA (JSON Array):
 - type: "Official"
 `;
   return await callGeminiResearch(prompt);
+}
+
+/**
+ * Fetches data from GRID API.
+ */
+async function fetchMatchesFromGRID(apiKey: string, titleId: string | number, teamId: string | number): Promise<any[]> {
+  const gridQuery = `
+    query TeamMatches($titleId: ID!, $teamId: ID!) {
+      allSeries(
+        filter: {
+          titleId: $titleId
+          teamIds: { in: [$teamId] }
+        }
+        first: 20
+        orderBy: StartTimeScheduled
+        orderDirection: DESC
+      ) {
+        edges {
+          node {
+            id
+            startTimeScheduled
+            tournament { id name }
+            format { name nameShortened }
+            teams {
+              baseInfo { id name logoUrl nameShortened }
+              scoreAdvantage
+            }
+          }
+        }
+      }
+    }
+  `;
+
+  try {
+    const res = await fetch(GRID_URLS.CENTRAL_DATA, {
+      method: 'POST',
+      headers: getGridHeaders(apiKey),
+      body: JSON.stringify({ query: gridQuery, variables: { titleId: String(titleId), teamId: String(teamId) } })
+    });
+
+    if (!res.ok) {
+      console.warn(`[team-matches] GRID Fetch failed: ${res.status}`);
+      return [];
+    }
+
+    const json = await res.json();
+    const edges = json.data?.allSeries?.edges || [];
+    return edges.map((e: any) => processGridNode(e.node, teamId));
+  } catch (err) {
+    console.error('[team-matches] GRID fetch error:', err);
+    return [];
+  }
+}
+
+/**
+ * Merges and deduplicates matches from GRID and AI sources.
+ */
+function mergeAndRefineMatches(gridMatches: any[], aiMatches: any[], teamId: string | number): any[] {
+  const merged = [...gridMatches];
+
+  aiMatches.forEach(ai => {
+    // Check if this AI match already exists in GRID results
+    const exists = gridMatches.find(g => {
+      const gDate = new Date(g.startTime).toDateString();
+      const aiDate = new Date(ai.startTime).toDateString();
+      const sameDay = gDate === aiDate;
+
+      const gOpp = (g.opponent?.name || '').toLowerCase();
+      const aiOpp = (ai.opponent?.name || '').toLowerCase();
+      const sameOpp = gOpp.includes(aiOpp) || aiOpp.includes(gOpp);
+
+      return sameDay && (sameOpp || aiOpp === 'unknown opponent');
+    });
+
+    if (!exists) {
+      merged.push(ai);
+    } else {
+      // If it exists, merge AI details (like scores or summary) into GRID's structural match
+      if (!exists.performance_summary && ai.performance_summary) {
+        exists.performance_summary = ai.performance_summary;
+      }
+      if ((exists.score === '0-0' || !exists.score) && ai.score && ai.score !== '0-0') {
+        exists.score = ai.score;
+        exists.result = ai.result.toUpperCase();
+      }
+    }
+  });
+
+  return merged;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -332,114 +438,48 @@ serve(async (req) => {
       )
     }
 
-    console.log('[team-matches] Cache Miss (or insufficient data). Fetching from GRID/Gemini...');
+    console.log('[team-matches] Cache Miss (or insufficient data). Triggering DUAL-SOURCE Fetch...');
 
-    // 2. GRID Query (allSeries)
-    // Updated to use 'allSeries' with 'teamIds' filter
-    const gridQuery = `
-      query TeamMatches($titleId: ID!, $teamId: ID!) {
-        allSeries(
-          filter: {
-            titleId: $titleId
-            teamIds: { in: [$teamId] }
-          }
-          first: 20
-          orderBy: StartTimeScheduled
-          orderDirection: DESC
-        ) {
-          totalCount
-          edges {
-            node {
-              id
-              startTimeScheduled
-              tournament { id name }
-              format { name nameShortened }
-              teams {
-                baseInfo { id name logoUrl nameShortened }
-                scoreAdvantage
-              }
-            }
-          }
-        }
-      }
-    `
+    // 2. Dual-Source Fetch (GRID + Gemini Research in Parallel)
+    const gridPromise = fetchMatchesFromGRID(gridApiKey, titleId, teamId);
+    const aiPromise = fetchMatchesFromLeaguepedia(teamName || 'Team', titleId);
 
-    const gridRes = await fetch(GRID_URLS.CENTRAL_DATA, {
-      method: 'POST',
-      headers: getGridHeaders(gridApiKey),
-      body: JSON.stringify({ query: gridQuery, variables: { titleId, teamId } })
-    })
+    const [gridResults, aiResults] = await Promise.all([
+      gridPromise.catch(err => { console.error('[team-matches] GRID Parallel Fail:', err); return []; }),
+      aiPromise.catch(err => { console.error('[team-matches] AI Parallel Fail:', err); return []; })
+    ]);
 
-    let matches: any[] = []
-    let source = 'grid'
+    console.log(`[team-matches] Parallel Fetch Done. GRID: ${gridResults.length}, AI: ${aiResults.length}`);
 
-    if (gridRes.ok) {
-      const json = await gridRes.json()
-      console.log('[team-matches] GRID/Central-Data Response:', JSON.stringify(json).substring(0, 500))
-      const edges = json.data?.allSeries?.edges || []
+    // 3. Merging & Deduplication Engine
+    let mergedMatches = mergeAndRefineMatches(gridResults, aiResults, teamId);
 
-      if (edges.length > 0) {
-        console.log(`[team-matches] GRID found ${edges.length} matches. Entering Hybrid Refinement...`)
-        const rawMatches = edges.map((e: any) => processGridNode(e.node, teamId))
+    // Final Hybrid Refinement (For any GRID matches that Gemini might have missed or didn't have 0-0 info on)
+    // Actually, we skip another full refine pass to save time, unless matches are 0-0.
+    let matches = await refineMatchesWithGemini(mergedMatches, teamName || 'Team');
 
-        // HYBRID REFINEMENT: If GRID has 0-0 or DRAW, ask Gemini 3 Pro to find the truth.
-        matches = await refineMatchesWithGemini(rawMatches, teamName || 'Team')
-        source = 'grid_hybrid'
+    const source = (gridResults.length > 0 && aiResults.length > 0) ? 'dual_source_hybrid' :
+      gridResults.length > 0 ? 'grid' : 'leaguepedia_gemini';
 
-        // 3. UPSERT TO DB
-        await upsertMatchesToDB(supabase, matches, teamId, teamName);
-
-      } else {
-        console.warn(`[team-matches] No matches found in GRID for TeamID: ${teamId} (Title: ${titleId}). Falling back to AI...`)
-        source = 'leaguepedia_gemini'
-      }
-    } else {
-      console.error(`[team-matches] GRID Error: ${gridRes.status}. Triggering AI research fallback.`)
-      source = 'fallback_grid_error'
+    // 4. UPSERT TO DB
+    if (matches.length > 0) {
+      await upsertMatchesToDB(supabase, matches, teamId, teamName || 'Team', titleId);
     }
 
-    // 2. Fallback: Gemini + Leaguepedia (Full Research if matches still empty)
-    if (matches.length === 0) {
-      const effectiveName = teamName || 'Cloud9'
-      console.log(`[team-matches] STARTING Full AI Research for Team: "${effectiveName}" (TeamID: ${teamId})`)
-
-      try {
-        const researchStart = Date.now()
-        matches = await fetchMatchesFromLeaguepedia(effectiveName, titleId)
-        console.log(`[team-matches] AI Research finished in ${Date.now() - researchStart}ms. Found ${matches.length} matches.`)
-      } catch (err) {
-        console.error(`[team-matches] AI Research crashed:`, err)
-      }
-
-      if (matches.length > 0) {
-        source = 'leaguepedia_gemini'
-        // Optionally upsert these too? 
-        // For now, let's just return them. 
-        // Note: Full AI research results might not have sequence_numbers etc perfectly.
-      } else {
-        console.warn(`[team-matches] AI Research returned 0 matches for "${effectiveName}". Nothing left to try.`)
-      }
-    }
-
-    // Filter by pagination manually since we fetched a fresh batch
-    // In a real infinite scroll, we'd pass pagination to GRID (cursor). 
-    // Here we simulate "Load More" by returning the requested slice if possible, 
-    // but since we always fetch the latest 20 from GRID, offset > 20 won't work well without cursors.
-    // For this implementation, we allow the DB cache to handle deep history, and GRID just refreshes the "head".
-
-    // Sort needed again after merge
-    const now = new Date()
+    // Sort and Paginate
+    const now = new Date();
     const upcoming = matches.filter(m => new Date(m.startTime) > now)
-      .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
+      .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
     const history = matches.filter(m => new Date(m.startTime) <= now)
-      .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
+      .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
 
-    const unified = [...upcoming, ...history]
+    const unified = [...upcoming, ...history];
 
     return new Response(
       JSON.stringify({ matches: unified.slice(offset, offset + limit), source }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-    )
+    );
+
 
   } catch (error: any) {
     console.error('Handler error:', error)
@@ -450,13 +490,13 @@ serve(async (req) => {
   }
 })
 
-async function upsertMatchesToDB(supabase: any, matches: any[], teamId: string, teamName: string) {
+async function upsertMatchesToDB(supabase: any, matches: any[], teamId: string, teamName: string, titleId: string | number) {
   console.log('[team-matches] Persisting results to DB...')
   for (const m of matches) {
     // Upsert Series
     const { error: sErr } = await supabase.from('series').upsert({
       id: m.id,
-      title_id: 3, // hardcoded for now or pass in
+      title_id: Number(titleId),
       start_time: m.startTime,
       tournament_name: m.tournament.name,
       updated_at: new Date().toISOString()
