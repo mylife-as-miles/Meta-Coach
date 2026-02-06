@@ -1,7 +1,7 @@
 import React from 'react';
 import { useDashboardStore } from '../../stores/useDashboardStore';
 import { useSession } from '../../hooks/useAuth';
-import { useWorkspace, useMatches, useTeamProfile } from '../../hooks/useDashboardQueries';
+import { useWorkspace, useMatches, useTeamProfile, useGeminiRetrospective } from '../../hooks/useDashboardQueries';
 import MatchDetailModal from './modals/MatchDetailModal';
 import { Match } from '../../lib/mockData';
 
@@ -60,6 +60,9 @@ const MatchHistory: React.FC = () => {
     const handleLoadMore = () => {
         setVisibleCount(prev => prev + 5);
     };
+
+    // Gemini AI Retrospective Analysis
+    const { data: retrospective, isLoading: retroLoading, isError: retroError } = useGeminiRetrospective(workspace?.grid_team_id);
 
     return (
         <div className="flex flex-col">
@@ -291,39 +294,50 @@ const MatchHistory: React.FC = () => {
                         </div>
                         <div className="p-6 pb-4 border-b border-white/5 bg-white/[0.02]">
                             <div className="flex items-center gap-2 mb-1">
-                                <span className="material-symbols-outlined text-purple-400 text-lg animate-pulse">auto_awesome</span>
+                                <span className={`material-symbols-outlined text-purple-400 text-lg ${retroLoading ? 'animate-spin' : 'animate-pulse'}`}>{retroLoading ? 'sync' : 'auto_awesome'}</span>
                                 <h3 className="text-sm font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-400">Gemini Retrospective</h3>
                             </div>
                             <p className="text-xs text-gray-400">AI-detected recurring patterns across last 5 matches.</p>
                         </div>
                         <div className="p-6 space-y-4">
-                            <div className="flex gap-3 items-start">
-                                <div className="min-w-[4px] h-full min-h-[40px] bg-red-500/50 rounded-full mt-1"></div>
-                                <div>
-                                    <h4 className="text-sm font-bold text-gray-200 mb-1">Late Game Baron Control</h4>
-                                    <p className="text-xs text-gray-400 leading-relaxed">
-                                        Team performance drops significantly <span className="text-red-400 font-medium">after 25 minutes</span> during Baron setup phases. Vision control around the pit averages only 42%.
-                                    </p>
+                            {retroLoading ? (
+                                // Loading skeleton
+                                <>
+                                    {[1, 2, 3].map((i) => (
+                                        <div key={i} className="flex gap-3 items-start animate-pulse">
+                                            <div className="min-w-[4px] h-10 bg-gray-700 rounded-full mt-1"></div>
+                                            <div className="flex-1 space-y-2">
+                                                <div className="h-4 bg-gray-700 rounded w-1/2"></div>
+                                                <div className="h-3 bg-gray-800 rounded w-full"></div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </>
+                            ) : retroError ? (
+                                <div className="text-center py-4">
+                                    <span className="material-icons-outlined text-red-400 text-2xl mb-2">error_outline</span>
+                                    <p className="text-xs text-gray-400">Failed to load AI analysis. Try again later.</p>
                                 </div>
-                            </div>
-                            <div className="flex gap-3 items-start">
-                                <div className="min-w-[4px] h-full min-h-[40px] bg-primary/50 rounded-full mt-1 shadow-neon"></div>
-                                <div>
-                                    <h4 className="text-sm font-bold text-gray-200 mb-1">Mid-Jungle Synergy</h4>
-                                    <p className="text-xs text-gray-400 leading-relaxed">
-                                        Roam timings are highly synchronized. Successful gank conversion rate has increased to <span className="text-primary font-medium">68%</span> when support roams mid.
-                                    </p>
+                            ) : retrospective?.patterns?.length ? (
+                                // Real AI-generated patterns
+                                retrospective.patterns.map((pattern, idx) => (
+                                    <div key={idx} className={`flex gap-3 items-start ${idx === retrospective.patterns.length - 1 ? 'opacity-70' : ''}`}>
+                                        <div className={`min-w-[4px] h-full min-h-[40px] rounded-full mt-1 ${idx === 0 ? 'bg-red-500/50' : idx === 1 ? 'bg-primary/50 shadow-neon' : 'bg-blue-500/50'}`}></div>
+                                        <div>
+                                            <h4 className="text-sm font-bold text-gray-200 mb-1">{pattern.title}</h4>
+                                            <p className="text-xs text-gray-400 leading-relaxed">
+                                                {pattern.description}
+                                                {pattern.stat && <span className={`ml-1 font-medium ${idx === 0 ? 'text-red-400' : idx === 1 ? 'text-primary' : 'text-blue-400'}`}>{pattern.stat}</span>}
+                                            </p>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                // Fallback: No data
+                                <div className="text-center py-4">
+                                    <p className="text-xs text-gray-400">No patterns detected yet. Play more matches!</p>
                                 </div>
-                            </div>
-                            <div className="flex gap-3 items-start opacity-70">
-                                <div className="min-w-[4px] h-full min-h-[40px] bg-blue-500/50 rounded-full mt-1"></div>
-                                <div>
-                                    <h4 className="text-sm font-bold text-gray-200 mb-1">Objective Bounties</h4>
-                                    <p className="text-xs text-gray-400 leading-relaxed">
-                                        Effective use of bounties to stall games when behind gold &gt; 2k.
-                                    </p>
-                                </div>
-                            </div>
+                            )}
                             <button className="w-full mt-4 py-2.5 rounded-xl border border-purple-500/30 text-xs font-semibold text-purple-300 hover:bg-purple-500/10 transition flex items-center justify-center gap-2 cursor-pointer">
                                 Generate Full Report
                                 <span className="material-icons-outlined text-xs">arrow_forward</span>

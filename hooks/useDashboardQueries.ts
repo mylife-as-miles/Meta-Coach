@@ -1146,3 +1146,38 @@ export function useRoster(workspaceId: string | undefined) {
         enabled: !!workspaceId,
     });
 }
+
+// ============================================
+// Hook: useGeminiRetrospective (AI Pattern Analysis)
+// ============================================
+export interface GeminiRetrospectivePattern {
+    title: string;
+    description: string;
+    stat: string;
+}
+
+export interface GeminiRetrospectiveData {
+    patterns: GeminiRetrospectivePattern[];
+    overall_sentiment: string;
+}
+
+export function useGeminiRetrospective(teamId: string | undefined) {
+    return useQuery({
+        queryKey: ['gemini-retrospective', teamId],
+        queryFn: async () => {
+            if (!teamId) return null;
+
+            const { data, error } = await invokeWithTimeout<{ analysis: GeminiRetrospectiveData }>(
+                'gemini-retrospective',
+                { teamId },
+                30000 // 30s timeout for AI analysis
+            );
+
+            if (error) throw error;
+            return data?.analysis || null;
+        },
+        enabled: !!teamId,
+        staleTime: 1000 * 60 * 5, // 5 minutes cache
+        gcTime: 1000 * 60 * 30, // Keep in cache for 30 minutes
+    });
+}
