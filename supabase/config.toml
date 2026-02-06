@@ -54,3 +54,6 @@ verify_jwt = false
 
 [functions.team-statistics]
 verify_jwt = false
+
+[functions.gemini-retrospective]
+verify_jwt = false

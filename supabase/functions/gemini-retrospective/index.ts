@@ -60,7 +60,7 @@ serve(async (req) => {
         // OR try 'gemini-2.0-flash-thinking-exp' which supports the "thinking" config the user likes.
         // Let's use 'gemini-2.0-flash-thinking-exp' as it matches the "Thinking" capability.
 
-        const modelName = 'gemini-2.0-flash-thinking-exp-1219'; // Using the experimental thinking model
+        const modelName = 'gemini-3-pro-preview'; // Gemini 3 Pro for advanced reasoning
 
         const geminiBody = {
             contents: [{
