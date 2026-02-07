@@ -1288,3 +1288,215 @@ export function useRemoveFromShortlist() {
         },
     });
 }
+
+// ============================================
+// Hook: useScenarios (Saved Comparison Scenarios)
+// ============================================
+export interface Scenario {
+    id: string;
+    workspace_id: string;
+    name: string;
+    current_player_id: string | null;
+    target_player_id: string | null;
+    comparison_data: Record<string, any>;
+    recommendation: string | null;
+    status: 'draft' | 'saved' | 'archived';
+    created_at: string;
+    updated_at: string;
+}
+
+export function useScenarios(workspaceId: string | undefined) {
+    return useQuery({
+        queryKey: ['scenarios', workspaceId],
+        queryFn: async () => {
+            if (!workspaceId) return [];
+
+            const { data, error } = await supabase
+                .from('scenarios')
+                .select('*')
+                .eq('workspace_id', workspaceId)
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+            return data as Scenario[];
+        },
+        enabled: !!workspaceId,
+    });
+}
+
+// ============================================
+// Mutation: Save Scenario
+// ============================================
+export interface SaveScenarioInput {
+    workspaceId: string;
+    name: string;
+    currentPlayerId?: string;
+    targetPlayerId?: string;
+    comparisonData?: Record<string, any>;
+    recommendation?: string;
+    status?: 'draft' | 'saved' | 'archived';
+}
+
+export function useSaveScenario() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async (input: SaveScenarioInput) => {
+            const { data, error } = await supabase
+                .from('scenarios')
+                .insert({
+                    workspace_id: input.workspaceId,
+                    name: input.name,
+                    current_player_id: input.currentPlayerId || null,
+                    target_player_id: input.targetPlayerId || null,
+                    comparison_data: input.comparisonData || {},
+                    recommendation: input.recommendation || null,
+                    status: input.status || 'saved',
+                })
+                .select()
+                .single();
+
+            if (error) throw error;
+            return data;
+        },
+        onSuccess: (_, variables) => {
+            queryClient.invalidateQueries({ queryKey: ['scenarios', variables.workspaceId] });
+        },
+    });
+}
+
+// ============================================
+// Hook: useNegotiations (FIFA-style Player Talks)
+// ============================================
+export interface Negotiation {
+    id: string;
+    workspace_id: string;
+    player_id: string;
+    player_name: string;
+    status: 'pending' | 'in_progress' | 'accepted' | 'rejected' | 'expired';
+    initial_offer: number | null;
+    current_offer: number | null;
+    counter_offer: number | null;
+    asking_price: number | null;
+    rounds: number;
+    max_rounds: number;
+    agent_mood: 'happy' | 'neutral' | 'frustrated' | 'angry';
+    notes: string | null;
+    contract_terms: Record<string, any>;
+    created_at: string;
+    resolved_at: string | null;
+}
+
+export function useNegotiations(workspaceId: string | undefined) {
+    return useQuery({
+        queryKey: ['negotiations', workspaceId],
+        queryFn: async () => {
+            if (!workspaceId) return [];
+
+            const { data, error } = await supabase
+                .from('negotiations')
+                .select('*')
+                .eq('workspace_id', workspaceId)
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+            return data as Negotiation[];
+        },
+        enabled: !!workspaceId,
+    });
+}
+
+// ============================================
+// Mutation: Initiate Negotiation
+// ============================================
+export interface InitiateNegotiationInput {
+    workspaceId: string;
+    playerId: string;
+    playerName: string;
+    askingPrice: number;
+    initialOffer: number;
+}
+
+export function useInitiateNegotiation() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async (input: InitiateNegotiationInput) => {
+            const { data, error } = await supabase
+                .from('negotiations')
+                .insert({
+                    workspace_id: input.workspaceId,
+                    player_id: input.playerId,
+                    player_name: input.playerName,
+                    asking_price: input.askingPrice,
+                    initial_offer: input.initialOffer,
+                    current_offer: input.initialOffer,
+                    status: 'in_progress',
+                    rounds: 1,
+                })
+                .select()
+                .single();
+
+            if (error) throw error;
+            return data;
+        },
+        onSuccess: (_, variables) => {
+            queryClient.invalidateQueries({ queryKey: ['negotiations', variables.workspaceId] });
+        },
+    });
+}
+
+// ============================================
+// Mutation: Update Negotiation (make offer)
+// ============================================
+export interface UpdateNegotiationInput {
+    id: string;
+    workspaceId: string;
+    currentOffer?: number;
+    counterOffer?: number;
+    agentMood?: 'happy' | 'neutral' | 'frustrated' | 'angry';
+    status?: 'pending' | 'in_progress' | 'accepted' | 'rejected' | 'expired';
+    incrementRound?: boolean;
+}
+
+export function useUpdateNegotiation() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async (input: UpdateNegotiationInput) => {
+            const updates: Record<string, any> = {};
+            if (input.currentOffer !== undefined) updates.current_offer = input.currentOffer;
+            if (input.counterOffer !== undefined) updates.counter_offer = input.counterOffer;
+            if (input.agentMood !== undefined) updates.agent_mood = input.agentMood;
+            if (input.status !== undefined) {
+                updates.status = input.status;
+                if (input.status === 'accepted' || input.status === 'rejected') {
+                    updates.resolved_at = new Date().toISOString();
+                }
+            }
+
+            // Increment round if needed
+            if (input.incrementRound) {
+                const { data: current } = await supabase
+                    .from('negotiations')
+                    .select('rounds')
+                    .eq('id', input.id)
+                    .single();
+                updates.rounds = (current?.rounds || 0) + 1;
+            }
+
+            const { data, error } = await supabase
+                .from('negotiations')
+                .update(updates)
+                .eq('id', input.id)
+                .select()
+                .single();
+
+            if (error) throw error;
+            return data;
+        },
+        onSuccess: (_, variables) => {
+            queryClient.invalidateQueries({ queryKey: ['negotiations', variables.workspaceId] });
+        },
+    });
+}

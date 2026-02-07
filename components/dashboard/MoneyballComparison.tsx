@@ -1,7 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useSession } from '../../hooks/useAuth';
 import { useWorkspace, useShortlist, useRoster, invokeWithTimeout } from '../../hooks/useDashboardQueries';
+import SaveScenarioModal from './modals/SaveScenarioModal';
+import InitiateTalksModal from './modals/InitiateTalksModal';
 
 // Types
 interface ComparisonPlayer {
@@ -18,6 +20,7 @@ interface ComparisonPlayer {
         WAR: number;
     };
     contract?: string;
+    buyout?: number;
     experience?: string;
     playstyleMatch: number;
     playstyleLabel: string;
@@ -40,9 +43,17 @@ const MoneyballComparison: React.FC = () => {
     const { data: roster = [] } = useRoster(workspace?.id);
     const { data: shortlist = [] } = useShortlist(workspace?.id);
 
+    // Modal states
+    const [showSaveModal, setShowSaveModal] = useState(false);
+    const [showTalksModal, setShowTalksModal] = useState(false);
+    const [isExporting, setIsExporting] = useState(false);
+
     // Gemini AI Recommendation
     const [recommendation, setRecommendation] = useState<GeminiRecommendation | null>(null);
     const [loadingRecommendation, setLoadingRecommendation] = useState(false);
+
+    // Report container ref for PDF export
+    const reportRef = useRef<HTMLDivElement>(null);
 
     // Find selected players
     const currentPlayer = useMemo(() => {
@@ -62,6 +73,7 @@ const MoneyballComparison: React.FC = () => {
                 WAR: 4.2,
             },
             contract: '$4.5M / yr',
+            buyout: 4500000,
             experience: '6 Seasons',
             playstyleMatch: 92,
             playstyleLabel: 'Aggressive / Carry',
@@ -85,6 +97,7 @@ const MoneyballComparison: React.FC = () => {
                 WAR: shortlistPlayer.war_score || 4.0,
             },
             contract: '$150k (Est)',
+            buyout: 150000,
             experience: 'N/A',
             playstyleMatch: 88,
             playstyleLabel: 'Control / Vision',
@@ -131,6 +144,188 @@ const MoneyballComparison: React.FC = () => {
         fetchRecommendation();
     }, [currentPlayer, targetPlayer]);
 
+    // Export Report as PDF (using browser print)
+    const handleExportReport = () => {
+        setIsExporting(true);
+
+        // Create a new window for printing
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) {
+            setIsExporting(false);
+            alert('Please allow popups to export the report.');
+            return;
+        }
+
+        const printContent = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Moneyball Comparison Report - ${currentPlayer?.name} vs ${targetPlayer?.name}</title>
+                <style>
+                    * { margin: 0; padding: 0; box-sizing: border-box; }
+                    body { 
+                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                        background: #0a0b06;
+                        color: #fff;
+                        padding: 40px;
+                    }
+                    .header { 
+                        text-align: center; 
+                        margin-bottom: 40px;
+                        border-bottom: 2px solid #D2F96F;
+                        padding-bottom: 20px;
+                    }
+                    .header h1 { font-size: 28px; color: #D2F96F; margin-bottom: 8px; }
+                    .header p { color: #888; font-size: 12px; }
+                    .comparison-grid { display: flex; gap: 20px; margin-bottom: 30px; }
+                    .player-card { 
+                        flex: 1; 
+                        background: #1a1c14; 
+                        border-radius: 12px; 
+                        padding: 24px;
+                        border-top: 3px solid;
+                    }
+                    .player-card.current { border-color: #22D3EE; }
+                    .player-card.target { border-color: #D2F96F; }
+                    .player-name { font-size: 24px; font-weight: bold; margin-bottom: 8px; }
+                    .player-badge { 
+                        display: inline-block;
+                        padding: 4px 8px;
+                        border-radius: 4px;
+                        font-size: 10px;
+                        font-weight: bold;
+                        margin-bottom: 16px;
+                    }
+                    .player-badge.current { background: rgba(34, 211, 238, 0.2); color: #22D3EE; }
+                    .player-badge.target { background: rgba(210, 249, 111, 0.2); color: #D2F96F; }
+                    .stat-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.1); }
+                    .stat-label { color: #888; font-size: 12px; text-transform: uppercase; }
+                    .stat-value { font-weight: bold; font-family: monospace; }
+                    .metrics-table { 
+                        width: 100%; 
+                        background: #1a1c14; 
+                        border-radius: 12px; 
+                        overflow: hidden;
+                        margin-bottom: 30px;
+                    }
+                    .metrics-table th, .metrics-table td { 
+                        padding: 12px 16px; 
+                        text-align: left; 
+                        border-bottom: 1px solid rgba(255,255,255,0.1);
+                    }
+                    .metrics-table th { background: #12140e; color: #888; font-size: 11px; text-transform: uppercase; }
+                    .delta-positive { color: #22C55E; }
+                    .delta-negative { color: #EF4444; }
+                    .recommendation { 
+                        background: linear-gradient(90deg, rgba(139, 92, 246, 0.2), #1a1c14);
+                        border-left: 4px solid #8B5CF6;
+                        border-radius: 12px;
+                        padding: 24px;
+                    }
+                    .recommendation-header { color: #A78BFA; font-size: 12px; text-transform: uppercase; margin-bottom: 12px; }
+                    .recommendation-text { font-size: 18px; line-height: 1.6; }
+                    .footer { text-align: center; margin-top: 40px; color: #888; font-size: 11px; }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <h1>⚡ Moneyball Comparison Report</h1>
+                    <p>Generated by MetaCoach AI • ${new Date().toLocaleDateString()}</p>
+                </div>
+                
+                <div class="comparison-grid">
+                    <div class="player-card current">
+                        <div class="player-name">${currentPlayer?.name || 'Current Player'}</div>
+                        <div class="player-badge current">CURRENT ROSTER</div>
+                        <div class="stat-row">
+                            <span class="stat-label">Role</span>
+                            <span class="stat-value">${currentPlayer?.role || 'N/A'}</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Contract</span>
+                            <span class="stat-value">${currentPlayer?.contract || 'N/A'}</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">WAR</span>
+                            <span class="stat-value">${currentPlayer?.metrics.WAR.toFixed(1)}</span>
+                        </div>
+                    </div>
+                    <div class="player-card target">
+                        <div class="player-name">${targetPlayer?.name || 'Target Player'}</div>
+                        <div class="player-badge target">SCOUTED CANDIDATE</div>
+                        <div class="stat-row">
+                            <span class="stat-label">Role</span>
+                            <span class="stat-value">${targetPlayer?.role || 'N/A'}</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Buyout</span>
+                            <span class="stat-value">${targetPlayer?.contract || 'N/A'}</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">WAR</span>
+                            <span class="stat-value">${targetPlayer?.metrics.WAR.toFixed(1)}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <table class="metrics-table">
+                    <thead>
+                        <tr>
+                            <th>Metric</th>
+                            <th>${currentPlayer?.name?.toUpperCase() || 'CURRENT'}</th>
+                            <th>${targetPlayer?.name?.toUpperCase() || 'TARGET'}</th>
+                            <th>Delta</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>eOBP</td>
+                            <td>${currentPlayer?.metrics.eOBP.toFixed(3)}</td>
+                            <td>${targetPlayer?.metrics.eOBP.toFixed(3)}</td>
+                            <td class="${(targetPlayer?.metrics.eOBP || 0) - (currentPlayer?.metrics.eOBP || 0) >= 0 ? 'delta-positive' : 'delta-negative'}">${((targetPlayer?.metrics.eOBP || 0) - (currentPlayer?.metrics.eOBP || 0)).toFixed(3)}</td>
+                        </tr>
+                        <tr>
+                            <td>eSLG</td>
+                            <td>${currentPlayer?.metrics.eSLG.toFixed(3)}</td>
+                            <td>${targetPlayer?.metrics.eSLG.toFixed(3)}</td>
+                            <td class="${(targetPlayer?.metrics.eSLG || 0) - (currentPlayer?.metrics.eSLG || 0) >= 0 ? 'delta-positive' : 'delta-negative'}">${((targetPlayer?.metrics.eSLG || 0) - (currentPlayer?.metrics.eSLG || 0)).toFixed(3)}</td>
+                        </tr>
+                        <tr>
+                            <td>wOBA</td>
+                            <td>${currentPlayer?.metrics.wOBA.toFixed(3)}</td>
+                            <td>${targetPlayer?.metrics.wOBA.toFixed(3)}</td>
+                            <td class="${(targetPlayer?.metrics.wOBA || 0) - (currentPlayer?.metrics.wOBA || 0) >= 0 ? 'delta-positive' : 'delta-negative'}">${((targetPlayer?.metrics.wOBA || 0) - (currentPlayer?.metrics.wOBA || 0)).toFixed(3)}</td>
+                        </tr>
+                        <tr>
+                            <td>WAR</td>
+                            <td>${currentPlayer?.metrics.WAR.toFixed(1)}</td>
+                            <td>${targetPlayer?.metrics.WAR.toFixed(1)}</td>
+                            <td class="${(targetPlayer?.metrics.WAR || 0) - (currentPlayer?.metrics.WAR || 0) >= 0 ? 'delta-positive' : 'delta-negative'}">${((targetPlayer?.metrics.WAR || 0) - (currentPlayer?.metrics.WAR || 0)).toFixed(1)}</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="recommendation">
+                    <div class="recommendation-header">✨ Gemini AI Strategic Recommendation</div>
+                    <div class="recommendation-text">"${recommendation?.summary || 'Analysis in progress...'}"</div>
+                </div>
+
+                <div class="footer">
+                    MetaCoach • Powered by Gemini AI • Confidence: ${recommendation?.confidence?.toFixed(1) || '--'}%
+                </div>
+
+                <script>
+                    window.onload = function() { window.print(); window.close(); }
+                </script>
+            </body>
+            </html>
+        `;
+
+        printWindow.document.write(printContent);
+        printWindow.document.close();
+        setIsExporting(false);
+    };
+
     // Calculate delta
     const calculateDelta = (current: number, target: number) => {
         const delta = target - current;
@@ -163,6 +358,23 @@ const MoneyballComparison: React.FC = () => {
         `.trim().replace(/\s+/g, ' ');
     };
 
+    // Comparison data for saving
+    const comparisonData = {
+        currentPlayer: currentPlayer ? {
+            id: currentPlayer.id,
+            name: currentPlayer.name,
+            metrics: currentPlayer.metrics,
+            contract: currentPlayer.contract,
+        } : null,
+        targetPlayer: targetPlayer ? {
+            id: targetPlayer.id,
+            name: targetPlayer.name,
+            metrics: targetPlayer.metrics,
+            contract: targetPlayer.contract,
+        } : null,
+        timestamp: new Date().toISOString(),
+    };
+
     if (!currentPlayer && !targetPlayer) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
@@ -180,7 +392,7 @@ const MoneyballComparison: React.FC = () => {
     }
 
     return (
-        <div className="min-h-[calc(100vh-120px)]">
+        <div className="min-h-[calc(100vh-120px)]" ref={reportRef}>
             {/* Header */}
             <header className="flex flex-col lg:flex-row justify-between items-start lg:items-end mb-8 border-b border-white/5 pb-6 gap-4">
                 <div>
@@ -198,10 +410,18 @@ const MoneyballComparison: React.FC = () => {
                     <span className="text-xs text-gray-500 font-mono text-right mr-2 hidden md:block">
                         MARKET WINDOW<br />CLOSES IN 48H
                     </span>
-                    <button className="flex items-center gap-2 px-4 py-2 rounded-lg border border-white/10 bg-surface-dark hover:border-white/30 text-white text-sm transition">
-                        <span className="material-icons-outlined text-sm">file_download</span> Export Report
+                    <button
+                        onClick={handleExportReport}
+                        disabled={isExporting}
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg border border-white/10 bg-surface-dark hover:border-white/30 text-white text-sm transition disabled:opacity-50"
+                    >
+                        <span className="material-icons-outlined text-sm">{isExporting ? 'sync' : 'file_download'}</span>
+                        {isExporting ? 'Exporting...' : 'Export Report'}
                     </button>
-                    <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-darker border border-primary/30 text-primary font-bold text-sm hover:bg-primary/10 transition">
+                    <button
+                        onClick={() => setShowSaveModal(true)}
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-darker border border-primary/30 text-primary font-bold text-sm hover:bg-primary/10 transition"
+                    >
                         <span className="material-icons-outlined text-sm">save</span> Save Scenario
                     </button>
                 </div>
@@ -424,7 +644,10 @@ const MoneyballComparison: React.FC = () => {
                                 <div className="text-right text-[10px] text-primary mt-1">{targetPlayer?.playstyleLabel || 'Unknown'}</div>
                             </div>
                         </div>
-                        <button className="w-full mt-8 py-3 rounded-xl bg-primary text-black font-bold hover:bg-primary-dark transition shadow-[0_0_10px_rgba(210,249,111,0.5),0_0_30px_rgba(210,249,111,0.2)] flex items-center justify-center gap-2">
+                        <button
+                            onClick={() => setShowTalksModal(true)}
+                            className="w-full mt-8 py-3 rounded-xl bg-primary text-black font-bold hover:bg-primary-dark transition shadow-[0_0_10px_rgba(210,249,111,0.5),0_0_30px_rgba(210,249,111,0.2)] flex items-center justify-center gap-2"
+                        >
                             <span className="material-icons-outlined text-sm">add_circle</span>
                             Initiate Talks
                         </button>
@@ -471,6 +694,35 @@ const MoneyballComparison: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Modals */}
+            <SaveScenarioModal
+                isOpen={showSaveModal}
+                onClose={() => setShowSaveModal(false)}
+                workspaceId={workspace?.id || ''}
+                currentPlayerId={currentPlayer?.id}
+                targetPlayerId={targetPlayer?.id}
+                currentPlayerName={currentPlayer?.name || 'Current'}
+                targetPlayerName={targetPlayer?.name || 'Target'}
+                comparisonData={comparisonData}
+                recommendation={recommendation?.summary}
+            />
+
+            {targetPlayer && (
+                <InitiateTalksModal
+                    isOpen={showTalksModal}
+                    onClose={() => setShowTalksModal(false)}
+                    workspaceId={workspace?.id || ''}
+                    player={{
+                        id: targetPlayer.id,
+                        name: targetPlayer.name,
+                        role: targetPlayer.role,
+                        team: targetPlayer.team,
+                        avatarUrl: targetPlayer.avatarUrl,
+                        askingPrice: targetPlayer.buyout || 150000,
+                    }}
+                />
+            )}
         </div>
     );
 };
