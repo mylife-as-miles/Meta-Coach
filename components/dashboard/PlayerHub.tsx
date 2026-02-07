@@ -1,8 +1,8 @@
-import React, { useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useDashboardStore } from '../../stores/useDashboardStore';
 import { useSession } from '../../hooks/useAuth';
-import { useWorkspace, usePlayerStats, usePlayerStatistics, usePlayerAnalysis, useRoster } from '../../hooks/useDashboardQueries';
+import { useWorkspace, usePlayerStats, usePlayerStatistics, usePlayerAnalysis, useRoster, useShortlist } from '../../hooks/useDashboardQueries';
 import { useGridCreatePlayer, useGridDeletePlayer, useGridTeamPlayers } from '../../hooks/useGridQueries';
 import { getProxiedImageUrl } from '../../lib/imageProxy';
 import ComparePlayersModal from './modals/ComparePlayersModal';
@@ -10,8 +10,10 @@ import EditAttributesModal from './modals/EditAttributesModal';
 import AddPlayerModal from './modals/AddPlayerModal';
 
 const PlayerHub: React.FC = () => {
+    const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const [addPlayerOpen, setAddPlayerOpen] = React.useState(false);
+    const [showShortlistDropdown, setShowShortlistDropdown] = useState(false);
 
     // UI State from Zustand
     const selectedPlayer = useDashboardStore((state) => state.selectedPlayer);
@@ -32,15 +34,18 @@ const PlayerHub: React.FC = () => {
     const teamId = workspace?.grid_team_id || "1";
 
     // Use Roster Table (Local DB) instead of GRID API
-    const { data: rosterPlayers, isLoading: playersLoading } = useRoster(workspace?.id);
+    const { data: roster, isLoading: playersLoading } = useRoster(workspace?.id);
+
+    // Shortlist for comparison
+    const { data: shortlist = [] } = useShortlist(workspace?.id);
 
     // Legacy GRID hooks (kept for create/delete if needed, though they might need to update Roster table too)
     const { mutate: createPlayer } = useGridCreatePlayer();
     const { mutate: deletePlayer } = useGridDeletePlayer();
 
     const allPlayers = React.useMemo(() => {
-        if (!rosterPlayers) return [];
-        return rosterPlayers.map((player: any) => ({
+        if (!roster) return [];
+        return roster.map((player: any) => ({
             id: player.id, // Internal UUID
             name: player.ign, // Display Name
             role: player.role,
@@ -58,7 +63,7 @@ const PlayerHub: React.FC = () => {
             teamId: player.workspace_id, // or grid team id? keeping consistent
             synergy: player.synergy_score || 85 // Added to satisfy Player interface
         }));
-    }, [rosterPlayers]);
+    }, [roster]);
 
     // Fetch player micro-level stats from GRID (uses gridId if available)
     const { data: playerStats, isLoading: statsLoading } = usePlayerStats(
@@ -124,14 +129,64 @@ const PlayerHub: React.FC = () => {
                     <h1 className="text-4xl font-bold text-white tracking-tight">{selectedPlayer.name}</h1>
                 </div>
                 <div className="flex items-center gap-3 w-full md:w-auto">
+                    {/* Compare Dropdown */}
+                    <div className="relative">
+                        <button
+                            onClick={() => setShowShortlistDropdown(!showShortlistDropdown)}
+                            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-white/10 bg-surface-dark hover:border-primary/50 hover:text-white text-gray-400 text-sm transition cursor-pointer"
+                        >
+                            <span className="material-icons-outlined text-sm">compare_arrows</span> Compare
+                            <span className="material-icons-outlined text-xs">expand_more</span>
+                        </button>
+                        {showShortlistDropdown && (
+                            <div className="absolute top-full right-0 mt-2 w-64 bg-surface-dark border border-white/10 rounded-xl shadow-xl overflow-hidden z-50">
+                                <div className="px-4 py-2 border-b border-white/5 bg-surface-darker">
+                                    <span className="text-xs text-gray-400 font-mono uppercase">Compare with Shortlist</span>
+                                </div>
+                                {shortlist && shortlist.length > 0 ? (
+                                    <div className="max-h-64 overflow-y-auto">
+                                        {shortlist.map((candidate) => (
+                                            <button
+                                                key={candidate.id}
+                                                onClick={() => {
+                                                    setShowShortlistDropdown(false);
+                                                    // Navigate to comparison page
+                                                    const currentRosterPlayer = roster?.find(r => r.ign === selectedPlayer.name || r.role === selectedPlayer.role);
+                                                    navigate(`/dashboard/compare?player=${currentRosterPlayer?.id || ''}&target=${candidate.id}`);
+                                                }}
+                                                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition text-left"
+                                            >
+                                                <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold">
+                                                    {candidate.player_name.substring(0, 2).toUpperCase()}
+                                                </div>
+                                                <div className="flex-1">
+                                                    <div className="text-sm text-white font-medium">{candidate.player_name}</div>
+                                                    <div className="text-xs text-gray-500">{candidate.role || 'Unknown'} • {candidate.team_name || 'Free Agent'}</div>
+                                                </div>
+                                                <span className="text-primary text-xs font-mono">WAR {candidate.war_score?.toFixed(1) || '—'}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="px-4 py-6 text-center">
+                                        <span className="material-icons-outlined text-gray-600 text-3xl mb-2">person_search</span>
+                                        <p className="text-xs text-gray-400">No shortlisted players yet.</p>
+                                        <button
+                                            onClick={() => {
+                                                setShowShortlistDropdown(false);
+                                                navigate('/dashboard/scout');
+                                            }}
+                                            className="mt-2 text-xs text-primary hover:underline"
+                                        >
+                                            Scout players →
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
                     <button
-                        onClick={openComparePlayers}
-                        className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-white/10 bg-surface-dark hover:border-primary/50 hover:text-white text-gray-400 text-sm transition cursor-pointer"
-                    >
-                        <span className="material-icons-outlined text-sm">compare_arrows</span> Compare
-                    </button>
-                    <button
-                        onClick={() => window.location.href = '/dashboard/scout'}
+                        onClick={() => navigate('/dashboard/scout')}
                         className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-primary text-black font-bold text-sm hover:bg-primary-dark transition shadow-[0_0_5px_rgba(210,249,111,0.3),0_0_15px_rgba(210,249,111,0.1)] cursor-pointer"
                     >
                         <span className="material-icons-outlined text-sm">auto_awesome</span> Market Scout
