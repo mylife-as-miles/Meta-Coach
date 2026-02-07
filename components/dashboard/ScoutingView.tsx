@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useSession } from '../../hooks/useAuth';
-import { useWorkspace, usePlayers } from '../../hooks/useDashboardQueries';
+import { useWorkspace, usePlayers, useAddToShortlist, useShortlist } from '../../hooks/useDashboardQueries';
 import { supabase } from '../../lib/supabase';
 import ScoutingReportModal from './modals/ScoutingReportModal';
 
@@ -66,6 +66,37 @@ const ScoutingView: React.FC = () => {
     const [comparisonPlayer, setComparisonPlayer] = useState<ScoutPlayer | null>(null);
     const [isReportModalOpen, setIsReportModalOpen] = useState(false);
     const [isComparisonDropdownOpen, setIsComparisonDropdownOpen] = useState(false);
+
+    // Shortlist Mutation
+    const addToShortlist = useAddToShortlist();
+    const { data: shortlist = [] } = useShortlist(workspace?.id);
+    const isPlayerShortlisted = selectedPlayer ? shortlist.some(p => p.grid_player_id === selectedPlayer.gridId) : false;
+
+    const handleAddToShortlist = async () => {
+        if (!selectedPlayer || !workspace?.id) return;
+
+        try {
+            await addToShortlist.mutateAsync({
+                workspaceId: workspace.id,
+                playerName: selectedPlayer.name,
+                gridPlayerId: selectedPlayer.gridId,
+                role: selectedPlayer.role,
+                teamName: selectedPlayer.team,
+                warScore: parseFloat(selectedPlayer.metrics.war) || 0,
+                metadata: {
+                    avatarUrl: selectedPlayer.avatarUrl,
+                    kda: selectedPlayer.stats.kills && selectedPlayer.stats.deaths
+                        ? (selectedPlayer.stats.kills + selectedPlayer.stats.assists) / Math.max(1, selectedPlayer.stats.deaths)
+                        : null,
+                    price: selectedPlayer.price,
+                    fit: selectedPlayer.fit,
+                },
+            });
+            // Success feedback (could be a toast in production)
+        } catch (error) {
+            console.error('Failed to add to shortlist:', error);
+        }
+    };
 
     // Auto-Scout Fetcher
     React.useEffect(() => {
@@ -361,9 +392,16 @@ const ScoutingView: React.FC = () => {
                                     FULL STRATEGIC REPORT
                                 </button>
 
-                                <button className="px-8 py-3 bg-white/5 border border-white/10 text-white font-bold rounded-lg hover:bg-white/10 transition flex items-center gap-2" onClick={() => alert("Added to Shortlist (Simulation)")}>
-                                    <span className="material-icons">add</span>
-                                    ADD TO SHORTLIST
+                                <button
+                                    className={`px-8 py-3 font-bold rounded-lg transition flex items-center gap-2 ${isPlayerShortlisted
+                                        ? 'bg-primary/20 border border-primary/50 text-primary cursor-default'
+                                        : 'bg-white/5 border border-white/10 text-white hover:bg-white/10'
+                                        }`}
+                                    onClick={handleAddToShortlist}
+                                    disabled={addToShortlist.isPending || isPlayerShortlisted}
+                                >
+                                    <span className="material-icons">{isPlayerShortlisted ? 'check' : addToShortlist.isPending ? 'sync' : 'add'}</span>
+                                    {isPlayerShortlisted ? 'ON SHORTLIST' : addToShortlist.isPending ? 'ADDING...' : 'ADD TO SHORTLIST'}
                                 </button>
                             </div>
                         </div>

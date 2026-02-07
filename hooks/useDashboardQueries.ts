@@ -1181,3 +1181,110 @@ export function useGeminiRetrospective(teamId: string | undefined) {
         gcTime: 1000 * 60 * 30, // Keep in cache for 30 minutes
     });
 }
+
+// ============================================
+// Hook: useShortlist (Scouted Players)
+// ============================================
+export interface ShortlistPlayer {
+    id: string;
+    workspace_id: string;
+    player_name: string;
+    grid_player_id: string | null;
+    role: string | null;
+    team_name: string | null;
+    war_score: number | null;
+    metadata: {
+        avatarUrl?: string;
+        kda?: number;
+        cspm?: number;
+        [key: string]: any;
+    };
+    notes: string | null;
+    created_at: string;
+}
+
+export function useShortlist(workspaceId: string | undefined) {
+    return useQuery({
+        queryKey: ['shortlist', workspaceId],
+        queryFn: async () => {
+            if (!workspaceId) return [];
+
+            const { data, error } = await supabase
+                .from('shortlist')
+                .select('*')
+                .eq('workspace_id', workspaceId)
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+            return data as ShortlistPlayer[];
+        },
+        enabled: !!workspaceId,
+    });
+}
+
+// ============================================
+// Mutation: Add to Shortlist
+// ============================================
+export interface AddToShortlistInput {
+    workspaceId: string;
+    playerName: string;
+    gridPlayerId?: string;
+    role?: string;
+    teamName?: string;
+    warScore?: number;
+    metadata?: Record<string, any>;
+    notes?: string;
+}
+
+export function useAddToShortlist() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async (input: AddToShortlistInput) => {
+            const { data, error } = await supabase
+                .from('shortlist')
+                .upsert({
+                    workspace_id: input.workspaceId,
+                    player_name: input.playerName,
+                    grid_player_id: input.gridPlayerId || null,
+                    role: input.role || null,
+                    team_name: input.teamName || null,
+                    war_score: input.warScore || null,
+                    metadata: input.metadata || {},
+                    notes: input.notes || null,
+                }, {
+                    onConflict: 'workspace_id,grid_player_id'
+                })
+                .select()
+                .single();
+
+            if (error) throw error;
+            return data;
+        },
+        onSuccess: (_, variables) => {
+            queryClient.invalidateQueries({ queryKey: ['shortlist', variables.workspaceId] });
+        },
+    });
+}
+
+// ============================================
+// Mutation: Remove from Shortlist
+// ============================================
+export function useRemoveFromShortlist() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async ({ id, workspaceId }: { id: string; workspaceId: string }) => {
+            const { error } = await supabase
+                .from('shortlist')
+                .delete()
+                .eq('id', id);
+
+            if (error) throw error;
+            return { id, workspaceId };
+        },
+        onSuccess: (result) => {
+            queryClient.invalidateQueries({ queryKey: ['shortlist', result.workspaceId] });
+        },
+    });
+}
